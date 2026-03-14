@@ -13,27 +13,38 @@ See `docs/adrs/` for key architecture decisions:
 ## Repository Layout
 
 ```
-packages/
-  stack/        # Git stacking CLI (Clipanion/Bun, being ported to Go)
+backend/          # Python backend (pattern-stack + agentic-patterns)
+  features/       # Single-model data services (atoms → features layer)
+  molecules/      # Multi-feature business logic
+  organisms/      # REST API, CLI (thin interface layer)
+  config/         # Settings
+  tests/          # pytest suite
 docs/
-  adrs/         # Architecture Decision Records (append-only, numbered)
-  specs/        # Implementation specs (frontmatter status tracking)
-    archive/    # Completed/abandoned specs
+  adrs/           # Architecture Decision Records (append-only, numbered)
+  specs/          # Implementation specs (frontmatter status tracking)
+    archive/      # Completed/abandoned specs
+  epics/          # Groups of related issues (EP-NNN)
+  issues/         # Individual work units, 1:1 with branches/PRs (SB-NNN)
 ```
 
-## Stack CLI (packages/stack)
+## Stack CLI
 
 ```bash
-bun run packages/stack/src/cli.ts <command>
+stack <command>
 # commands: create, status, nav, push, submit, restack, sync
 ```
 
+Installed globally via Bun. State stored in `~/.claude/stacks/`.
+Branch naming: `user/stack-name/index-description` (e.g. `dug/sb-backend/1-bootstrap`).
+
 ## Documentation
 
-Docs follow templates in `docs/adrs/_template.md` and `docs/specs/_template.md`.
+Docs follow templates in `docs/{adrs,specs,epics,issues}/_template.md`.
 
 - **ADRs:** Numbered, append-only. Status: Draft → Accepted → Superseded.
 - **Specs:** Dated, frontmatter-tracked. Status: draft → in-progress → implemented | abandoned.
+- **Epics:** Numbered (EP-NNN). Groups of related issues. Status: planning → active → completed.
+- **Issues:** Numbered (SB-NNN). 1:1 with branches/PRs. Frontmatter tracks epic, depends_on, stack, stack_index.
 - Archive completed specs to `docs/specs/archive/`.
 
 ## Related Repositories
