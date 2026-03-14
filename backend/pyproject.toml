@@ -1,0 +1,61 @@
+[project]
+name = "stack-bench-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pattern-stack",
+    "agentic-patterns",
+    "fastapi",
+    "uvicorn[standard]",
+    "alembic",
+    "asyncpg",
+    "httpx",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[tool.uv.sources]
+pattern-stack = { git = "https://github.com/pattern-stack/backend-patterns.git" }
+agentic-patterns = { git = "https://github.com/pattern-stack/agentic-patterns.git" }
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "TCH"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/"]
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = [
+    "pattern_stack.*",
+    "agentic_patterns.*",
+]
+ignore_missing_imports = true
+follow_imports = "silent"
+disallow_any_unimported = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "unit: Fast unit tests",
+    "integration: Tests with external dependencies",
+    "slow: Tests that take > 1 second",
+]
+
+[tool.coverage.run]
+source = ["features", "molecules", "organisms"]
+
+[tool.coverage.report]
+fail_under = 80
