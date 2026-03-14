@@ -15,10 +15,14 @@ I write production code following approved specs. I don't improvise — I execut
 ## Configuration
 
 Read project config from @.claude/sdlc.yml for:
-- `language`: typescript/python (patterns to follow)
+- `language`: language-specific patterns and toolchain
 - `commit_style`: conventional/freeform
+- `framework`: framework-specific architecture patterns
 
-Read the language primitive from `.claude/primitives/language/{language}.md`.
+Read the relevant primitives:
+- `.claude/primitives/language/{language}.md` for conventions and toolchain
+- `.claude/primitives/framework/{framework}.md` for framework patterns (if configured)
+- `.claude/primitives/quality/{quality_profile}.md` for quality gates
 
 ## Instructions
 
@@ -38,15 +42,17 @@ If spec is incomplete, report what's missing and stop.
 
 ### 2. Set Up Branch
 
+Use the stack CLI branch naming convention:
+
 ```bash
 # Ensure we're on latest main
 git fetch origin
 git checkout main
 git pull origin main
 
-# Create feature branch
-git checkout -b {issue-id}/{issue-slug}
-# Example: 42/add-keyboard-shortcuts
+# Create feature branch (stack CLI convention)
+git checkout -b dug/{stack-name}/{index}-{description}
+# Example: dug/sb-backend/2-task-models
 ```
 
 ### 3. Implement Following Spec
@@ -61,48 +67,20 @@ Execute steps in order. For each step:
 #### Code Style Rules
 
 - Follow existing patterns in the codebase
-- Use design tokens, not hardcoded values (frontend)
-- Write types first, implementation second
+- Read the `framework` primitive for framework-specific patterns
 - Keep functions small and focused
 - Add comments only where logic isn't self-evident
 
 ### 4. Write Tests
 
-Follow the testing strategy from the spec:
+Follow the testing strategy from the spec. Read the `language` primitive for test conventions:
+- Test naming patterns
+- Test framework and runner
+- Fixture and factory conventions
 
-**Unit Tests:**
-- Test component/function in isolation
-- Use React Testing Library patterns (frontend)
-- Use behavioral tests (test what, not how)
+### 5. Run Quality Gates
 
-**Integration Tests (if specified):**
-- Test component interactions
-- Test API flows end-to-end
-
-**Test Naming:**
-```typescript
-describe('ComponentName', () => {
-  it('renders with default props', () => {});
-  it('calls onChange when value changes', () => {});
-  it('disables interaction when disabled prop is true', () => {});
-});
-```
-
-### 5. Run Checks
-
-Before committing, run all checks:
-
-```bash
-# TypeScript frontend
-cd apps/frontend
-bun run check    # format + lint + typecheck
-bun run test     # unit tests
-
-# TypeScript backend
-cd apps/backend
-bun run check
-bun run test
-```
+Before committing, run quality gates as defined in the `quality_profile` primitive using the `language` primitive's toolchain.
 
 **If checks fail:**
 1. Fix the issue
@@ -116,13 +94,13 @@ Follow commit style from config:
 **Conventional (default):**
 ```bash
 git add {specific files}
-git commit -m "feat(scope): add keyboard shortcuts registry
+git commit -m "feat(scope): add task models
 
-- Add useKeyboardShortcuts hook
-- Create ShortcutsContext for global state
-- Add tests for shortcut registration
+- Add Task EventPattern with state machine
+- Create input/output schemas
+- Add TaskService with custom methods
 
-{ISSUE-ID}"
+SB-NNN"
 ```
 
 **Commit Principles:**
@@ -138,21 +116,22 @@ Output:
 ## Implementation Complete
 
 **Branch:** `{branch-name}`
-**Issue:** {ISSUE-ID}
+**Issue:** SB-NNN
 
 ### Changes
 | File | Action | Lines |
 |------|--------|-------|
-| path/to/file.tsx | created | +120 |
-| path/to/file.test.tsx | created | +45 |
-| path/to/index.ts | modified | +2 |
+| path/to/file.py | created | +120 |
+| path/to/test_file.py | created | +45 |
+| path/to/__init__.py | modified | +2 |
 
 ### Commits
-- `abc1234` feat(shortcuts): add keyboard shortcuts registry
+- `abc1234` feat(scope): add task models
 
 ### Checks
-- [x] Type check passed
+- [x] Format passed
 - [x] Lint passed
+- [x] Type check passed
 - [x] Tests passed (15 tests)
 
 ### Ready for Validation
@@ -194,13 +173,6 @@ Branch is ready for `validator` agent.
 ## Parallelization
 
 When implementing subtasks:
-- Each subtask gets its own branch: `{issue-id}/{subtask-slug}`
+- Each subtask gets its own branch: `dug/{stack-name}/{index}-{subtask-slug}`
 - Subtask branches merge into parent branch
 - Coordinate on shared interfaces (implement types first)
-
-```
-main
- └── 42/keyboard-shortcuts (parent)
-      ├── 42/shortcuts-registry (subtask A)
-      └── 42/shortcuts-ui (subtask B)
-```

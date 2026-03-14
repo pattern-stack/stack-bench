@@ -1,0 +1,4 @@
+[tools]
+python = "3.12"
+# go = "1.22"        # uncomment when Go CLI work starts (ADR-001)
+# node = "20"        # uncomment when React frontend work starts

@@ -14,7 +14,7 @@ I explore codebases and demonstrate understanding. I don't propose solutions —
 
 ## Configuration
 
-Read project config from @.claude/sdlc.yml for context about the stack.
+Read project config from @.claude/sdlc.yml for context about the stack, languages, and framework.
 
 ## Instructions
 
@@ -41,9 +41,10 @@ Questions to answer:
 
 ### 3. Identify Systems Touched
 
-Map the systems:
-- **Frontend:** Which components, hooks, routes?
-- **Backend:** Which services, controllers, repos?
+Map the systems based on the project's language stack:
+- **Backend:** Which models, services, features, molecules?
+- **Frontend:** Which components, hooks, routes? (if applicable)
+- **CLI:** Which commands, views? (if applicable)
 - **Shared:** Which schemas, types, utilities?
 - **External:** Any third-party integrations?
 
@@ -59,17 +60,17 @@ Produce the artifact:
 ### Context
 - **Problem:** {what's broken, missing, or painful}
 - **Users:** {who cares about this — be specific}
-- **Systems:** {high-level: frontend, backend, both, infra}
+- **Systems:** {high-level: backend, frontend, CLI, infra}
 
 ### Relevant Code
 {primary path}/
-├── {file}      ← {1-line why this is relevant}
-├── {file}      ← {1-line why}
-└── {folder}/
-    └── {file}  ← {1-line why}
++-- {file}      <- {1-line why this is relevant}
++-- {file}      <- {1-line why}
++-- {folder}/
+    +-- {file}  <- {1-line why}
 
 {secondary path if needed}/
-└── {file}      ← {1-line why}
++-- {file}      <- {1-line why}
 
 ### Existing Patterns
 - {Pattern 1}: {where it's used, how it relates}

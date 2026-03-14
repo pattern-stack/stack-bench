@@ -269,10 +269,10 @@ Job (existing, updated)
 | Entity | Pattern | Status | Notes |
 |--------|---------|--------|-------|
 | **Conversation Domain** | | | |
-| Conversation | BasePattern | Exists | Add project_id, task_id, agent_definition_id FKs |
+| Conversation | EventPattern | Exists | Add project_id, task_id, agent_definition_id FKs |
 | Message | BasePattern | Exists | No changes |
 | MessagePart | BasePattern | Exists | No changes |
-| ToolCall | BasePattern | Exists | No changes |
+| ToolCall | EventPattern | Exists | No changes |
 | **Agent Domain** | | | |
 | RoleTemplate | Base (UUIDMixin) | Exists | Persona, judgments, responsibilities. Pre-ship coding roles as seed data |
 | AgentDefinition | Base (UUIDMixin) | Exists | Mission, background, awareness → RoleTemplate. Pre-ship 5 SDLC agents as seed data |

@@ -15,8 +15,13 @@ I turn planned issues into implementation specs. I write pseudocode, define inte
 ## Configuration
 
 Read project config from @.claude/sdlc.yml for:
-- `language`: typescript/python patterns
+- `language`: language-specific patterns and conventions
 - `quality_profile`: strictness level
+- `framework`: framework-specific architecture patterns
+
+Read the `language` and `framework` primitives for language-specific and framework-specific patterns:
+- `.claude/primitives/language/{language}.md`
+- `.claude/primitives/framework/{framework}.md` (if configured)
 
 Reference existing specs in `.claude/specs/` for format examples.
 
@@ -25,7 +30,7 @@ Reference existing specs in `.claude/specs/` for format examples.
 ### 1. Receive Issue Context
 
 Input:
-- Issue ID and title from task tracker (e.g., `{ISSUE-ID}`)
+- Issue ID and title (e.g., `SB-NNN`)
 - Issue description and acceptance criteria
 - Understanding artifact (for broader context)
 - Related specs (if this depends on other work)
@@ -40,18 +45,20 @@ For this specific issue:
 
 ### 3. Define Architecture
 
-Draw the component relationships:
+Draw the component relationships. Examples:
+
+For backend services:
 ```
-{Component A} ──uses──→ {Component B}
-      │
-      └──renders──→ {Component C}
+{Service} --calls--> {DependencyService} --uses--> {Repository}
+     |
+     +--emits--> {Event}
 ```
 
-Or for backend:
+For frontend components:
 ```
-{Controller} ──calls──→ {Service} ──uses──→ {Repository}
-                             │
-                             └──emits──→ {Event}
+{Component A} --uses--> {Component B}
+      |
+      +--renders--> {Component C}
 ```
 
 ### 4. List All Files
@@ -60,54 +67,48 @@ Be exhaustive:
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `path/to/NewComponent.tsx` | create | Main component |
-| `path/to/NewComponent.types.ts` | create | Type definitions |
-| `path/to/NewComponent.test.tsx` | create | Unit tests |
-| `path/to/index.ts` | modify | Add export |
-| `path/to/existing.ts` | modify | Add hook usage |
+| `path/to/new_file.py` | create | Main implementation |
+| `path/to/schemas/input.py` | create | Input schemas |
+| `path/to/test_new.py` | create | Unit tests |
+| `path/to/existing.py` | modify | Add integration |
 
 ### 5. Define Interfaces
 
-Write the types/interfaces in pseudocode:
+Write the types/interfaces in pseudocode. Use the conventions of the project's primary language:
 
-```typescript
-interface ComponentProps {
-  // What the component receives
-  value: string;
-  onChange: (value: string) => void;
+```
+# Pseudocode — not actual implementation
+class MyCreate:
+    name: str (required)
+    description: str (optional)
 
-  // Optional configuration
-  disabled?: boolean;
-}
-
-// Internal state shape
-type State = {
-  isOpen: boolean;
-  selectedItem: Item | null;
-};
+class MyResponse:
+    id: uuid
+    name: str
+    status: str
+    created_at: datetime
 ```
 
 ### 6. Write Implementation Steps
 
 Ordered steps with enough detail to execute:
 
-1. **Create type definitions** (`Component.types.ts`)
-   - Define `ComponentProps` interface
-   - Define internal `State` type
+1. **Create type definitions** (`schemas/input.py`)
+   - Define create/update schemas
    - Export all types
 
-2. **Implement component** (`Component.tsx`)
-   - Set up state with `useState`
-   - Implement `handleX` callback
-   - Render with conditional logic for `isOpen`
+2. **Implement model** (`models.py`)
+   - Define fields and pattern configuration
+   - Set up state machine (if applicable)
 
-3. **Add tests** (`Component.test.tsx`)
-   - Test: renders with default props
-   - Test: calls onChange when X happens
-   - Test: disabled state prevents interaction
+3. **Add service** (`service.py`)
+   - Inherit from base service
+   - Add custom methods
 
-4. **Update exports** (`index.ts`)
-   - Add Component to barrel export
+4. **Add tests** (`tests/test_*.py`)
+   - Test: model creation
+   - Test: service CRUD
+   - Test: edge cases
 
 ### 7. Note Open Questions
 
@@ -123,7 +124,7 @@ Write to `.claude/specs/{issue-slug}.md`:
 ```markdown
 # {Issue Title} Spec
 
-**Issue:** {ISSUE-ID}
+**Issue:** SB-NNN
 **Status:** Draft | Approved
 **Last Updated:** {date}
 
@@ -143,9 +144,7 @@ Write to `.claude/specs/{issue-slug}.md`:
 
 ## Interfaces
 
-```typescript
-{Type definitions}
-```
+{Pseudocode type definitions}
 
 ## Implementation Steps
 
@@ -160,7 +159,6 @@ Write to `.claude/specs/{issue-slug}.md`:
 
 - Unit: {what to test}
 - Integration: {if applicable}
-- Visual: {if UI component}
 
 ## Open Questions
 

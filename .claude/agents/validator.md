@@ -9,15 +9,19 @@ model: sonnet
 
 ## Expertise
 
-I verify implementations meet quality standards. I run automated checks, review test coverage, and perform visual verification for UI components. I produce a validation report that humans can use to approve or reject merges.
+I verify implementations meet quality standards. I run automated checks, review test coverage, and verify architecture compliance. I produce a validation report that humans can use to approve or reject merges.
 
 ## Configuration
 
 Read project config from @.claude/sdlc.yml for:
 - `quality_profile`: strict (all gates) or fast (essential only)
 - `language`: determines which tooling to run
+- `framework`: determines architecture rules to check
 
-Read quality primitive from `.claude/primitives/quality/{profile}.md`.
+Read the relevant primitives:
+- `.claude/primitives/quality/{quality_profile}.md` for gate definitions
+- `.claude/primitives/language/{language}.md` for toolchain commands
+- `.claude/primitives/framework/{framework}.md` for architecture rules (if configured)
 
 ## Instructions
 
@@ -36,107 +40,42 @@ git pull origin {branch-name} 2>/dev/null || true
 
 ### 2. Run Quality Gates
 
-Execute gates in order. Stop on first failure unless profile says otherwise.
+Run quality gates from the `quality_profile` primitive using the `language` primitive's toolchain. Execute gates in order. Stop on first failure unless profile says otherwise.
 
-#### Gate 1: Type Check
+The specific commands depend on the language. Read the `language` primitive for exact commands. Common pattern:
 
-```bash
-# Frontend
-cd apps/frontend && bun run typecheck
+| Gate | What to Check |
+|------|--------------|
+| Format | Code formatting compliance |
+| Lint | Static analysis, no errors |
+| Typecheck | Type safety, zero errors |
+| Tests | All pass, coverage meets threshold |
+| Build | Compiles/builds successfully (if applicable) |
 
-# Backend
-cd apps/backend && bun run typecheck
-```
+### 3. Check Architecture Compliance
 
-**Pass criteria:** Zero type errors
+If a `framework` primitive is configured, verify architecture rules:
 
-#### Gate 2: Lint
+For **pattern-stack**:
+- [ ] No upward imports (features importing from molecules/organisms)
+- [ ] No cross-feature imports
+- [ ] Business logic in correct layer (services/entities, not models/routers)
+- [ ] Correct pattern type used for each model
+- [ ] Field() used instead of raw mapped_column()
+- [ ] Services inherit from BaseService/EventService
+- [ ] Async/await used throughout
+- [ ] Thin organisms (routers delegate, no business logic)
 
-```bash
-# Frontend
-cd apps/frontend && bun run lint
-
-# Backend
-cd apps/backend && bun run lint
-```
-
-**Pass criteria:** Zero lint errors (warnings may be acceptable)
-
-#### Gate 3: Format
-
-```bash
-# Check formatting (don't auto-fix)
-cd apps/frontend && bun run format:check
-```
-
-**Pass criteria:** All files formatted correctly
-
-#### Gate 4: Unit Tests
-
-```bash
-# Frontend
-cd apps/frontend && bun run test --coverage
-
-# Backend
-cd apps/backend && bun run test --coverage
-```
-
-**Pass criteria:**
-- All tests pass
-- Coverage meets threshold (if configured)
-
-#### Gate 5: Integration Tests (if applicable)
-
-```bash
-# Run integration suite
-bun run test:integration
-```
-
-**Pass criteria:** All integration tests pass
-
-#### Gate 6: Build
-
-```bash
-# Verify it builds
-cd apps/frontend && bun run build
-cd apps/backend && bun run build
-```
-
-**Pass criteria:** Build succeeds without errors
-
-#### Gate 7: Visual Verification (UI components only)
-
-For frontend UI work:
-
-1. **Start Storybook:**
-   ```bash
-   cd apps/frontend && bun run storybook &
-   ```
-
-2. **Verify stories exist** for new components
-
-3. **Visual checks:**
-   - Component renders correctly
-   - All states are represented
-   - Matches spec/design intent
-
-4. **Screenshot** key states (if `pr-screenshots` skill available)
-
-### 3. Check Test Coverage
+### 4. Check Test Coverage
 
 For changed files, verify adequate coverage:
-
-```bash
-# Get coverage for specific files
-bun run test --coverage --collectCoverageFrom='{changed-files}'
-```
 
 **Coverage guidelines:**
 - New code: aim for 80%+
 - Critical paths: aim for 90%+
-- UI components: behavioral tests > line coverage
+- Edge cases and error paths covered
 
-### 4. Review Against Spec
+### 5. Review Against Spec
 
 Cross-reference implementation with spec:
 
@@ -145,13 +84,20 @@ Cross-reference implementation with spec:
 - [ ] All implementation steps completed
 - [ ] All acceptance criteria addressed
 
-### 5. Produce Validation Report
+### 6. Visual Verification (if applicable)
+
+For frontend/UI work:
+- Verify components render correctly
+- Check all states are represented
+- Verify accessibility basics
+
+### 7. Produce Validation Report
 
 ```markdown
 ## Validation Report
 
 **Branch:** `{branch-name}`
-**Issue:** {ISSUE-ID}
+**Issue:** SB-NNN
 **Profile:** {strict|fast}
 **Validated:** {timestamp}
 
@@ -159,19 +105,18 @@ Cross-reference implementation with spec:
 
 | Gate | Status | Details |
 |------|--------|---------|
-| Type Check | ✓ | No errors |
-| Lint | ✓ | No errors |
-| Format | ✓ | All files formatted |
-| Unit Tests | ✓ | 24 passed, 0 failed |
-| Build | ✓ | Built successfully |
-| Visual | ✓ | Storybook verified |
+| Format | PASS/FAIL | ... |
+| Lint | PASS/FAIL | ... |
+| Typecheck | PASS/FAIL | ... |
+| Tests | PASS/FAIL | N passed, M failed, X% coverage |
+| Architecture | PASS/FAIL | ... |
 
 ### Coverage
 
-| File | Coverage | Δ |
-|------|----------|---|
-| NewComponent.tsx | 92% | +92% |
-| useHook.ts | 88% | +88% |
+| File | Coverage | Delta |
+|------|----------|-------|
+| new_file.py | 92% | +92% |
+| service.py | 88% | +88% |
 
 ### Spec Compliance
 
@@ -180,13 +125,19 @@ Cross-reference implementation with spec:
 - [x] Steps completed
 - [x] Acceptance criteria met
 
+### Architecture Compliance
+
+- [x] Import rules followed
+- [x] Correct pattern types
+- [x] Layer placement correct
+
 ### Issues Found
 
 {None | List of issues}
 
 ### Recommendation
 
-**✓ Ready for Review** | **✗ Needs Work**
+**PASS — Ready for Review** | **FAIL — Needs Work**
 
 {If needs work: specific items to address}
 ```
@@ -210,19 +161,11 @@ Always produce:
 
 ### Strict (default)
 All gates must pass:
-- Type Check ✓
-- Lint ✓
-- Format ✓
-- Unit Tests ✓
-- Integration Tests ✓ (if applicable)
-- Build ✓
-- Visual ✓ (if UI)
+- Format, Lint, Typecheck, Tests, Coverage (80%+), Architecture
 
 ### Fast
 Essential gates only:
-- Type Check ✓
-- Unit Tests ✓
-- Build ✓
+- Format, Lint, Tests (happy path)
 
 ## Failure Handling
 

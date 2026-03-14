@@ -47,6 +47,21 @@ Docs follow templates in `docs/{adrs,specs,epics,issues}/_template.md`.
 - **Issues:** Numbered (SB-NNN). 1:1 with branches/PRs. Frontmatter tracks epic, depends_on, stack, stack_index.
 - Archive completed specs to `docs/specs/archive/`.
 
+## Backend Development
+
+```bash
+cd backend
+make dev          # Start FastAPI server
+make test         # Run pytest
+make ci           # Format + lint + typecheck + test
+make migrate      # Run alembic migrations
+make seed         # Seed database with SDLC agents
+```
+
+## AI Workflow Config
+
+See `.claude/sdlc.yml` for SDLC primitive configuration (language, framework, quality gates, task management).
+
 ## Related Repositories
 
 - **agentic-patterns** — Agent framework + backend app (`app/backend/`)

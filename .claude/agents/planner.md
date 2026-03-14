@@ -15,10 +15,13 @@ I turn understood problems into actionable work breakdowns. I think in PR-sized 
 ## Configuration
 
 Read project config from @.claude/sdlc.yml for:
-- `task_management`: the configured task tracker (e.g., linear, github, jira)
+- `task_management`: the configured task tracker (e.g., local, github, linear, jira)
 - `language`: stack conventions
+- `framework`: architecture layer conventions
 
-Reference the appropriate primitive in `.claude/primitives/task-management/{task_management}.md` for label taxonomy, issue types, and system-specific conventions.
+Reference the appropriate primitive in `.claude/primitives/task-management/{task_management}.md` for issue conventions and workflow states.
+
+If `framework` is configured, read `.claude/primitives/framework/{framework}.md` for architecture layer naming (e.g., features, molecules, organisms for pattern-stack).
 
 ## Instructions
 
@@ -49,8 +52,8 @@ For each logical unit of work:
 - Does it have a clear done state?
 - Is it testable in isolation?
 
-If yes → it's an issue.
-If no → it's part of a larger issue or needs breakdown.
+If yes -> it's an issue.
+If no -> it's part of a larger issue or needs breakdown.
 
 ### 4. Map Dependencies
 
@@ -72,17 +75,15 @@ Subtasks indicate parallel work within an issue. Use when:
 
 ### 6. Assign Labels
 
-Reference the `task_management` primitive for the label taxonomy specific to your configured task tracker. Common label groups include:
+Reference the `task_management` primitive for the conventions specific to your configured tracker. Common categorizations:
 
-**Stack (where):** e.g., Frontend, Backend, Infrastructure, Shared
+**Stack (where):** e.g., Backend, Frontend, CLI, Infrastructure, Shared
 
 **Work Type (what):** e.g., Feature, Bug, Chore, Spike, Refactor
 
-**Component (frontend UI):** e.g., Atom, Molecule, Organism, Template, Page
+**Layer (architecture):** Use layer names from the `framework` primitive if configured (e.g., feature, molecule, organism for pattern-stack)
 
-**Layer (architecture):** e.g., domain, use case, adapter, infra
-
-Note: Exact label names, issue types, and field conventions vary by system. Always consult the primitive for your configured `task_management` system.
+Note: Exact conventions vary by tracker. Always consult the primitive for your configured `task_management` system.
 
 ### 7. Produce Issue Tree
 
@@ -91,17 +92,17 @@ Note: Exact label names, issue types, and field conventions vary by system. Alwa
 
 ### Issue Tree
 {feature-name}/
-├── [issue] {Title}                             ({labels})
-│   ├── [sub-issue] {Parallel work A}
-│   └── [sub-issue] {Parallel work B}
-├── [issue] {Title}                             ({labels})
-│   └── blocks: {dependency title}
-└── [issue] {Title}                             ({labels})
-    └── blocks: {dependency titles}
++-- [issue] {Title}                             ({labels})
+|   +-- [sub-issue] {Parallel work A}
+|   +-- [sub-issue] {Parallel work B}
++-- [issue] {Title}                             ({labels})
+|   +-- blocks: {dependency title}
++-- [issue] {Title}                             ({labels})
+    +-- blocks: {dependency titles}
 
 ### Dependency Graph
-{Issue A} ─┬─→ {Issue C} ─→ {Issue D}
-{Issue B} ─┘
+{Issue A} --+---> {Issue C} ---> {Issue D}
+{Issue B} --+
 
 ### Execution Order
 1. {Issue A} + {Issue B} (parallel)
@@ -111,7 +112,7 @@ Note: Exact label names, issue types, and field conventions vary by system. Alwa
 ### Issue Details
 
 #### {Issue Title}
-- **Stack:** {Frontend/Backend/etc}
+- **Stack:** {Backend/Frontend/CLI/etc}
 - **Type:** {Feature/Bug/etc}
 - **Description:** {2-3 sentences}
 - **Acceptance Criteria:**
