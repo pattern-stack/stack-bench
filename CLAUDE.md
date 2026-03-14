@@ -51,11 +51,12 @@ Docs follow templates in `docs/{adrs,specs,epics,issues}/_template.md`.
 
 ```bash
 cd backend
-make dev          # Start FastAPI server
-make test         # Run pytest
-make ci           # Format + lint + typecheck + test
-make migrate      # Run alembic migrations
-make seed         # Seed database with SDLC agents
+just dev          # Start FastAPI server
+just test         # Run pytest
+just ci           # Format + lint + typecheck + test
+just migrate      # Run alembic migrations
+just seed         # Seed database with SDLC agents
+pts services up   # Start Postgres via pts-managed docker-compose
 ```
 
 ## AI Workflow Config

@@ -7,7 +7,7 @@ from pydantic import Field
 class AppSettings(BaseSettings):  # type: ignore[misc]
     APP_NAME: str = Field(default="Stack Bench")
     APP_VERSION: str = Field(default="0.1.0")
-    DATABASE_URL: str = Field(default="postgresql+asyncpg://stackbench:stackbench@localhost:5434/stackbench")
+    DATABASE_URL: str = Field(default="postgresql+asyncpg://stack-bench:password@localhost:5832/stack-bench")
     WEBHOOK_SECRET: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
 

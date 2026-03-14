@@ -1,0 +1,36 @@
+# Stack Bench Backend
+
+# Start dev server
+dev:
+    uvicorn organisms.api.app:app --reload --host 0.0.0.0 --port ${API_PORT:-8400}
+
+# Run tests
+test:
+    pytest
+
+# Run all quality gates
+ci: format lint typecheck test
+
+# Format code
+format:
+    ruff format .
+
+# Lint code
+lint:
+    ruff check . --fix
+
+# Type check
+typecheck:
+    mypy .
+
+# Run database migrations
+migrate:
+    alembic upgrade head
+
+# Generate a new migration
+migration msg:
+    alembic revision --autogenerate -m "{{msg}}"
+
+# Seed the database
+seed:
+    @echo "No seed data yet"

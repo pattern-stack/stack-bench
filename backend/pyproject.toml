@@ -55,3 +55,20 @@ source = ["features", "molecules", "organisms"]
 
 [tool.coverage.report]
 fail_under = 80
+
+# Pattern Stack Configuration
+[tool.pts]
+project = "auto-detected"
+
+[tool.pts.apps.backend]
+command = "uv run uvicorn organisms.api.app:app --reload"
+port_env = "BACKEND_PORT"
+
+[tool.pts.services.postgres]
+enabled = true
+
+[tool.pts.services.pgadmin]
+enabled = false
+
+[tool.pts.services.redis]
+enabled = false
