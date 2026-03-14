@@ -1,32 +1,24 @@
-Create an implementation plan using the builder+validator agent team pattern.
+Create an implementation plan using the architect+builder+validator team pattern.
 
 ## Process
 
-1. **Research Phase** (you, the coordinator):
+1. **Architecture Phase** (`team/architect`):
    - Understand the request
-   - Read relevant files and understand the codebase context
-   - Identify the scope of changes needed
+   - Explore codebase, read relevant pattern-stack skill docs
+   - Produce implementation spec at `specs/<date>-<kebab-case-name>.md`
 
-2. **Planning Phase** (you):
-   - Draft an implementation spec (see `/plan` format)
-   - Write it to `specs/<date>-<kebab-case-name>.md`
+2. **Review Phase** (`team/validator`):
+   - Validator reviews the spec for completeness, correctness, conflicts, minimal scope
+   - Incorporate feedback into the spec
 
-3. **Validation Phase** (validator agent):
-   - Delegate to the `validator` agent to review the plan
-   - The validator checks for:
-     - Completeness (any missing steps?)
-     - Correctness (will this actually work?)
-     - Conflicts (does it break existing code?)
-     - Minimal scope (is anything unnecessary?)
-   - Incorporate validator feedback into the spec
+3. **Build Phase** (`team/builder`):
+   - Builder implements step by step following the finalized spec
+   - TDD: tests first, then implementation
+   - Runs `make ci` to verify all gates pass
 
-4. **Execution Phase** (builder agent):
-   - Delegate implementation to the `builder` agent with the finalized spec
-   - Builder implements step by step
-
-5. **Review Phase** (validator agent):
-   - Delegate final review to the `validator` agent
-   - Validator runs quality gates (per `quality_profile` primitive)
+4. **Validate Phase** (`team/validator`):
+   - Validator runs quality gates
+   - Checks architecture compliance
    - Reports any issues for the builder to fix
 
 ## Output
