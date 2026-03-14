@@ -1,0 +1,9 @@
+language: python           # Primary backend language
+languages:                 # All languages in the project
+  - python
+  - typescript
+  - go
+framework: pattern-stack
+quality_profile: strict
+commit_style: conventional
+task_management: local     # docs/issues/ convention

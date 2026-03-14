@@ -4,9 +4,9 @@ title: Project bootstrap
 status: draft
 epic: EP-001
 depends_on: []
-branch: dug/sb-backend/1-bootstrap
+branch: dug/sb-bootstrap/1-bootstrap
 pr:
-stack: sb-backend
+stack: sb-bootstrap
 stack_index: 1
 created: 2026-03-14
 ---
