@@ -1,5 +1,6 @@
 role_templates:
-  - name: understander
+  - seed_key: understander
+    name: understander
     source: library
     archetype: Analyst
     default_model: claude-sonnet-4-20250514
@@ -11,7 +12,8 @@ role_templates:
       - Produce clear problem statements
     description: "Analyzes and understands requirements, producing clear problem statements."
 
-  - name: planner
+  - seed_key: planner
+    name: planner
     source: library
     archetype: Architect
     default_model: claude-sonnet-4-20250514
@@ -23,7 +25,8 @@ role_templates:
       - Create actionable plans
     description: "Designs implementation plans with clear steps and risk assessment."
 
-  - name: specifier
+  - seed_key: specifier
+    name: specifier
     source: library
     archetype: Writer
     default_model: claude-sonnet-4-20250514
@@ -35,7 +38,8 @@ role_templates:
       - Document edge cases
     description: "Writes detailed implementation specifications."
 
-  - name: implementer
+  - seed_key: implementer
+    name: implementer
     source: library
     archetype: Implementer
     default_model: claude-sonnet-4-20250514
@@ -47,7 +51,8 @@ role_templates:
       - Write tests
     description: "Implements code following specifications and best practices."
 
-  - name: reviewer
+  - seed_key: reviewer
+    name: reviewer
     source: library
     archetype: Reviewer
     default_model: claude-sonnet-4-20250514
@@ -60,27 +65,32 @@ role_templates:
     description: "Reviews implementations for quality, correctness, and compliance."
 
 agent_definitions:
-  - name: understander
+  - seed_key: agent-understander
+    name: understander
     role_template: understander
     mission: "Analyze the given task or issue to produce a clear understanding of what needs to be done, why, and what constraints exist."
     background: "Expert requirements analyst with deep software engineering knowledge."
 
-  - name: planner
+  - seed_key: agent-planner
+    name: planner
     role_template: planner
     mission: "Create an actionable implementation plan that balances quality with delivery speed."
     background: "Senior software architect experienced in incremental delivery."
 
-  - name: specifier
+  - seed_key: agent-specifier
+    name: specifier
     role_template: specifier
     mission: "Write a detailed implementation specification that a builder can follow without ambiguity."
     background: "Technical writer and software designer focused on clarity."
 
-  - name: implementer
+  - seed_key: agent-implementer
+    name: implementer
     role_template: implementer
     mission: "Implement the specified changes with high code quality, following project conventions."
     background: "Senior full-stack developer with expertise in Python and TypeScript."
 
-  - name: reviewer
+  - seed_key: agent-reviewer
+    name: reviewer
     role_template: reviewer
     mission: "Validate the implementation against the specification, architecture rules, and quality standards."
     background: "Staff engineer focused on code quality and architecture compliance."
