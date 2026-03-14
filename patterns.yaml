@@ -16,7 +16,8 @@ services:
 
 apps:
   backend:
-    command: "uv run uvicorn backend.organisms.api.app:app --reload"
+    command: "uv run uvicorn organisms.api.app:app --reload"
+    working_dir: "backend"
     port: 8000
   frontend:
     command: "npm run dev"

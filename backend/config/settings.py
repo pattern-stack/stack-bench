@@ -1,7 +1,11 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pattern_stack.atoms.config.settings import Settings as BaseSettings
 from pydantic import Field
+
+# Project root is one level up from backend/
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class AppSettings(BaseSettings):  # type: ignore[misc]
@@ -12,7 +16,7 @@ class AppSettings(BaseSettings):  # type: ignore[misc]
     ANTHROPIC_API_KEY: str = Field(default="")
 
     model_config = {
-        "env_file": ".env",
+        "env_file": str(PROJECT_ROOT / ".env"),
         "case_sensitive": True,
     }
 

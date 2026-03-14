@@ -50,13 +50,18 @@ Docs follow templates in `docs/{adrs,specs,epics,issues}/_template.md`.
 ## Backend Development
 
 ```bash
+# pts commands (from project root)
+pts dev           # Start backend + frontend + Postgres
+pts services up   # Start Postgres only
+pts test          # Run pytest
+pts quality       # Format + lint + typecheck + test
+pts format        # Format code
+pts lint          # Lint code
+
+# just commands (from backend/)
 cd backend
-just dev          # Start FastAPI server
-just test         # Run pytest
-just ci           # Format + lint + typecheck + test
 just migrate      # Run alembic migrations
-just seed         # Seed database with SDLC agents
-pts services up   # Start Postgres via pts-managed docker-compose
+just seed         # Seed database with SDLC agents (pts db seed)
 ```
 
 ## AI Workflow Config
