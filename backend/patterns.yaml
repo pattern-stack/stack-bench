@@ -1,0 +1,12 @@
+app:
+  name: stack-bench
+  version: 0.1.0
+
+database:
+  url: postgresql+asyncpg://stackbench:stackbench@localhost:5434/stackbench
+
+cache:
+  backend: memory
+
+events:
+  enabled: true
