@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+from datetime import datetime  # noqa: TCH003
+from typing import TYPE_CHECKING, Any
+from uuid import UUID  # noqa: TCH003
+
+from pydantic import BaseModel
+
+from features.conversations.schemas.output import ConversationResponse
+from molecules.agents.assembler import AgentAssembler
+from molecules.entities.conversation_entity import ConversationEntity
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class ConversationDetailResponse(BaseModel):
+    """Full conversation with messages."""
+
+    id: UUID
+    agent_name: str
+    model: str
+    state: str
+    exchange_count: int
+    total_input_tokens: int
+    total_output_tokens: int
+    messages: list[dict[str, Any]]
+    tool_calls: list[dict[str, Any]]
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class AgentDetailResponse(BaseModel):
+    """Agent configuration details."""
+
+    name: str
+    role_name: str
+    model: str
+    mission: str
+    background: str | None = None
+    model_config = {"from_attributes": True}
+
+
+class ConversationAPI:
+    """API facade for conversation domain.
+
+    Both REST and CLI consume this. Permissions will be added here when auth is implemented.
+    """
+
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+        self.entity = ConversationEntity(db)
+        self.assembler = AgentAssembler(db)
+
+    async def create(self, agent_name: str, model: str | None = None) -> ConversationResponse:
+        """Create a new conversation."""
+        conv = await self.entity.create_conversation(agent_name, model)
+        await self.db.commit()
+        return ConversationResponse.model_validate(conv)
+
+    async def get(self, conversation_id: UUID) -> ConversationDetailResponse:
+        """Get a conversation with messages and tool calls."""
+        data = await self.entity.get_with_messages(conversation_id)
+        conv = data["conversation"]
+        messages = [
+            {
+                "id": str(m["message"].id),
+                "kind": m["message"].kind,
+                "sequence": m["message"].sequence,
+                "parts": [
+                    {
+                        "type": p.part_type,
+                        "content": p.content,
+                    }
+                    for p in m["parts"]
+                ],
+            }
+            for m in data["messages"]
+        ]
+        tool_calls_data = [
+            {
+                "id": str(tc.id),
+                "tool_name": tc.tool_name,
+                "state": tc.state,
+            }
+            for tc in data["tool_calls"]
+        ]
+        return ConversationDetailResponse(
+            id=conv.id,
+            agent_name=conv.agent_name,
+            model=conv.model,
+            state=conv.state,
+            exchange_count=conv.exchange_count,
+            total_input_tokens=conv.total_input_tokens,
+            total_output_tokens=conv.total_output_tokens,
+            messages=messages,
+            tool_calls=tool_calls_data,
+            created_at=conv.created_at,
+            updated_at=conv.updated_at,
+        )
+
+    async def list(self) -> list[ConversationResponse]:
+        """List all conversations."""
+        convs = await self.entity.list_conversations()
+        return [ConversationResponse.model_validate(c) for c in convs]
+
+    async def delete(self, conversation_id: UUID) -> None:
+        """Soft-delete a conversation."""
+        await self.entity.delete_conversation(conversation_id)
+        await self.db.commit()
+
+    async def list_agents(self) -> list[str]:  # type: ignore[valid-type]
+        """List available agent names."""
+        return await self.assembler.list_available()
+
+    async def get_agent(self, name: str) -> AgentDetailResponse:
+        """Get agent configuration details."""
+        config = await self.assembler.assemble(name)
+        return AgentDetailResponse(
+            name=config.name,
+            role_name=config.role_name,
+            model=config.model,
+            mission=config.mission,
+            background=config.background,
+        )
