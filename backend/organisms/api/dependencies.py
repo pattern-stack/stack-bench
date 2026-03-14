@@ -1,17 +1,17 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from molecules.apis.conversation_api import ConversationAPI
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Get database session. Will be wired to real engine in SB-007."""
-    # Placeholder — SB-007 wires the real session factory
-    raise NotImplementedError("Database session not configured. See SB-007.")
-    yield
+async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    """Get database session from app state."""
+    session_factory = request.app.state.session_factory
+    async with session_factory() as session:
+        yield session
 
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]

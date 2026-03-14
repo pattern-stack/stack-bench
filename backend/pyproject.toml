@@ -9,6 +9,7 @@ dependencies = [
     "uvicorn[standard]",
     "alembic",
     "asyncpg",
+    "pyyaml",
     "httpx",
     "pytest",
     "pytest-asyncio",
