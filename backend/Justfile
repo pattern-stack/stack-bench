@@ -1,36 +1,16 @@
 # Stack Bench Backend
+# Most commands handled by pts (pts dev, pts test, pts quality, pts format, pts lint)
 
-# Start dev server
-dev:
-    uvicorn organisms.api.app:app --reload --host 0.0.0.0 --port ${API_PORT:-8500}
-
-# Run tests
-test:
-    pytest
-
-# Run all quality gates
-ci: format lint typecheck test
-
-# Format code
-format:
-    ruff format .
-
-# Lint code
-lint:
-    ruff check . --fix
-
-# Type check
-typecheck:
-    mypy .
+export PYTHONPATH := justfile_directory()
 
 # Run database migrations
 migrate:
-    alembic upgrade head
+    uv run alembic upgrade head
 
 # Generate a new migration
 migration msg:
-    alembic revision --autogenerate -m "{{msg}}"
+    uv run alembic revision --autogenerate -m "{{msg}}"
 
-# Seed the database
+# Seed the database with SDLC agents
 seed:
-    @echo "No seed data yet"
+    pts db seed seeds/agents.yaml
