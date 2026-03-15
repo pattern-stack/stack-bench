@@ -114,6 +114,16 @@ func (m Model) submit() (Model, tea.Cmd) {
 func (m Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	chunk := msg.Chunk
 
+	if chunk.Error != nil {
+		m.Streaming = false
+		m.streamCh = nil
+		m.Messages = append(m.Messages, Message{
+			Role:    RoleAssistant,
+			Content: "Error: " + chunk.Error.Error(),
+		})
+		return m, nil
+	}
+
 	if chunk.Content != "" {
 		// Append to the last assistant message, or create a new one
 		if len(m.Messages) > 0 && m.Messages[len(m.Messages)-1].Role == RoleAssistant {

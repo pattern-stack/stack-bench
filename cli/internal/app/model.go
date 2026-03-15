@@ -145,9 +145,13 @@ func (m Model) updateAgentSelect(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateChat(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Check for quit from chat (esc with empty input)
+	// Esc: if input has text, clear it first; if empty, go back to agent select
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		if keyMsg.String() == "esc" && m.chat.Input == "" {
+		if keyMsg.String() == "esc" {
+			if m.chat.Input != "" {
+				m.chat.Input = ""
+				return m, nil
+			}
 			m.phase = PhaseSelectAgent
 			return m, nil
 		}

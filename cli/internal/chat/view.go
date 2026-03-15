@@ -63,15 +63,33 @@ func (m Model) renderMessages(maxH int) string {
 		rendered = append(rendered, ui.Accent.Render("  ..."))
 	}
 
-	// Show the tail that fits
-	start := len(rendered) - maxH
-	if start < 0 {
-		start = 0
+	// Calculate visual line counts for scroll offset
+	totalLines := 0
+	lineHeights := make([]int, len(rendered))
+	for i, r := range rendered {
+		h := lipgloss.Height(r)
+		lineHeights[i] = h
+		totalLines += h
+	}
+
+	// Show the tail that fits by counting visual lines
+	start := len(rendered)
+	remaining := maxH
+	for start > 0 && remaining > 0 {
+		start--
+		remaining -= lineHeights[start]
+	}
+	if remaining < 0 {
+		start++
 	}
 	visible := rendered[start:]
 
 	// Pad to fill height
-	padN := maxH - len(visible)
+	visibleLines := 0
+	for _, r := range visible {
+		visibleLines += lipgloss.Height(r)
+	}
+	padN := maxH - visibleLines
 	var lines []string
 	for i := 0; i < padN; i++ {
 		lines = append(lines, "")
