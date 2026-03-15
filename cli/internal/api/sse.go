@@ -45,6 +45,10 @@ func ParseSSE(body io.ReadCloser) <-chan SSEEvent {
 			}
 			// Ignore comments (lines starting with ':') and unknown prefixes
 		}
+
+		if err := scanner.Err(); err != nil {
+			ch <- SSEEvent{Event: "error", Data: `{"error_type":"scan_error","message":"` + err.Error() + `"}`}
+		}
 	}()
 	return ch
 }

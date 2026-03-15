@@ -122,7 +122,14 @@ func renderMessage(msg Message, width int) string {
 			contentWidth = 20
 		}
 		rendered := ui.RenderMarkdown(msg.Content, contentWidth)
-		return fmt.Sprintf("  %s %s", prefix, rendered)
+		lines := strings.Split(rendered, "\n")
+		if len(lines) > 1 {
+			indent := strings.Repeat(" ", lipgloss.Width("  "+prefix+" "))
+			for i := 1; i < len(lines); i++ {
+				lines[i] = indent + lines[i]
+			}
+		}
+		return fmt.Sprintf("  %s %s", prefix, strings.Join(lines, "\n"))
 	case RoleSystem:
 		sysStyle := lipgloss.NewStyle().Foreground(t.Categories[theme.CatSystem])
 		return fmt.Sprintf("  %s %s", sysStyle.Render("sys:"), sysStyle.Render(msg.Content))

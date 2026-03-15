@@ -181,7 +181,7 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 
 	// Use a client without timeout for SSE streaming — the stream is
 	// long-lived and cancellation is handled via ctx.
-	streamClient := &http.Client{}
+	streamClient := &http.Client{Transport: c.HTTPClient.Transport}
 	resp, err := streamClient.Do(req)
 	if err != nil {
 		return nil, err
