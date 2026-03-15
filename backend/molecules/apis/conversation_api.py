@@ -24,6 +24,8 @@ class ConversationDetailResponse(BaseModel):
     exchange_count: int
     total_input_tokens: int
     total_output_tokens: int
+    branched_from_id: UUID | None = None
+    branched_at_sequence: int | None = None
     messages: list[dict[str, Any]]
     tool_calls: list[dict[str, Any]]
     created_at: datetime
@@ -94,6 +96,8 @@ class ConversationAPI:
             exchange_count=conv.exchange_count,
             total_input_tokens=conv.total_input_tokens,
             total_output_tokens=conv.total_output_tokens,
+            branched_from_id=conv.branched_from_id,
+            branched_at_sequence=conv.branched_at_sequence,
             messages=messages,
             tool_calls=tool_calls_data,
             created_at=conv.created_at,

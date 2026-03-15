@@ -194,6 +194,7 @@ class ConversationEntity:
         # Copy messages up to at_sequence
         for msg_data in data["messages"]:
             msg = msg_data["message"]
+            # Messages must be ordered by sequence ASC (guaranteed by MessageService.get_by_conversation)
             if msg.sequence > at_sequence:
                 break
 

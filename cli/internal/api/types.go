@@ -55,8 +55,9 @@ type Conversation struct {
 	ExchangeCount     int       `json:"exchange_count"`
 	TotalInputTokens  int       `json:"total_input_tokens"`
 	TotalOutputTokens int       `json:"total_output_tokens"`
-	BranchedFromID    *string   `json:"branched_from_id,omitempty"`
-	CreatedAt         time.Time `json:"created_at"`
+	BranchedFromID     *string   `json:"branched_from_id,omitempty"`
+	BranchedAtSequence *int     `json:"branched_at_sequence,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
 
