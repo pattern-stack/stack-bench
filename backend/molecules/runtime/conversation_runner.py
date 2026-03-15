@@ -193,8 +193,8 @@ class ConversationRunner:
         """Get the default runner for production use.
 
         Returns:
-            A Claude API runner instance.
+            An AgentRunner instance (uses LiteLLM under the hood).
         """
-        from agentic_patterns.core.systems.runners.claude_api import ClaudeRunner
+        from agentic_patterns.core.systems.runners.agent import AgentRunner
 
-        return ClaudeRunner()
+        return AgentRunner()
