@@ -5,7 +5,7 @@ from pattern_stack.atoms.capabilities import HistoryCapability
 from pattern_stack.atoms.patterns import EventPattern, Field, StatePhase
 
 
-class Job(EventPattern):  # type: ignore[misc]
+class Job(EventPattern):
     __tablename__ = "jobs"
 
     class Pattern:

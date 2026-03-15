@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar
-from uuid import UUID
 
 from pattern_stack.atoms.seeding.spec import SeedSpec
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from pattern_stack.atoms.seeding.context import SeedContext
 
 

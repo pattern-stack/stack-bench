@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure git for private deps
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -47,7 +50,7 @@ jobs:
         run: |
           cd backend
           uv run pytest tests/ \
-            --cov=features,molecules,organisms \
+            --cov=features --cov=molecules --cov=organisms \
             --cov-report=xml \
             --cov-report=term \
             --cov-fail-under=80
@@ -68,6 +71,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure git for private deps
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -101,6 +107,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure git for private deps
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
       - name: Set up Python
         uses: actions/setup-python@v5

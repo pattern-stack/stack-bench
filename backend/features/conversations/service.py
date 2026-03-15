@@ -4,5 +4,5 @@ from .models import Conversation
 from .schemas.input import ConversationCreate, ConversationUpdate
 
 
-class ConversationService(BaseService[Conversation, ConversationCreate, ConversationUpdate]):  # type: ignore[misc]
+class ConversationService(BaseService[Conversation, ConversationCreate, ConversationUpdate]):
     model = Conversation

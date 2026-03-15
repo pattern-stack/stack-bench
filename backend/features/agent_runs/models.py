@@ -5,7 +5,7 @@ from pattern_stack.atoms.capabilities import HistoryCapability
 from pattern_stack.atoms.patterns import EventPattern, Field, StatePhase
 
 
-class AgentRun(EventPattern):  # type: ignore[misc]
+class AgentRun(EventPattern):
     __tablename__ = "agent_runs"
 
     class Pattern:
