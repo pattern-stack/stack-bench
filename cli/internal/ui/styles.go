@@ -1,10 +1,6 @@
 package ui
 
-import (
-	"strings"
-
-	"github.com/charmbracelet/lipgloss"
-)
+import "github.com/charmbracelet/lipgloss"
 
 // Colors used throughout the CLI.
 var (
@@ -24,28 +20,3 @@ var (
 	Red    = lipgloss.NewStyle().Foreground(ColorRed)
 	Accent = lipgloss.NewStyle().Foreground(ColorAccent)
 )
-
-// PadRight pads s with spaces to width w, measured by visual width.
-func PadRight(s string, w int) string {
-	v := lipgloss.Width(s)
-	if v >= w {
-		return s
-	}
-	return s + strings.Repeat(" ", w-v)
-}
-
-// MaxI returns the larger of a or b.
-func MaxI(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-// MinI returns the smaller of a or b.
-func MinI(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

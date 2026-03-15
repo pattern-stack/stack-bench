@@ -30,117 +30,137 @@ type ResponseMsg struct {
 
 // Model holds the state for the chat view.
 type Model struct {
-	Messages       []Message
-	Input          string
-	Width, Height  int
-	ConversationID string
-	AgentName      string
-	Client         api.Client
-	Streaming      bool                   // true while receiving a streamed response
-	streamCh       <-chan api.StreamChunk  // active stream channel during response
+	messages       []Message
+	input          string
+	width, height  int
+	conversationID string
+	agentName      string
+	client         api.Client
+	streaming      bool                  // true while receiving a streamed response
+	streamCh       <-chan api.StreamChunk // active stream channel during response
 }
 
 // New creates a fresh chat model.
 func New(client api.Client, agentName string) Model {
 	return Model{
-		Client:    client,
-		AgentName: agentName,
+		client:    client,
+		agentName: agentName,
 	}
 }
 
 // SetSize updates the viewport dimensions.
 func (m *Model) SetSize(w, h int) {
-	m.Width = w
-	m.Height = h
+	m.width = w
+	m.height = h
+}
+
+// SetConversationID sets the conversation identifier.
+func (m *Model) SetConversationID(id string) {
+	m.conversationID = id
+}
+
+// GetConversationID returns the current conversation identifier.
+func (m *Model) GetConversationID() string {
+	return m.conversationID
+}
+
+// IsInputEmpty reports whether the user input buffer is empty.
+func (m *Model) IsInputEmpty() bool {
+	return m.input == ""
+}
+
+// ClearInput resets the user input buffer.
+func (m *Model) ClearInput() {
+	m.input = ""
 }
 
 // Update handles key input and streaming response messages.
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	case ResponseMsg:
 		return m.handleResponse(msg)
 	}
-	return m, nil
+	return *m, nil
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
-	if m.Streaming {
+func (m *Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+	if m.streaming {
 		// While streaming, ignore most input
-		return m, nil
+		return *m, nil
 	}
 
 	switch msg.Type {
 	case tea.KeyBackspace:
-		if len(m.Input) > 0 {
-			m.Input = m.Input[:len(m.Input)-1]
+		if len(m.input) > 0 {
+			m.input = m.input[:len(m.input)-1]
 		}
 	case tea.KeyEnter:
 		return m.submit()
 	case tea.KeyRunes:
-		m.Input += string(msg.Runes)
+		m.input += string(msg.Runes)
 	}
 
-	return m, nil
+	return *m, nil
 }
 
-func (m Model) submit() (Model, tea.Cmd) {
-	text := strings.TrimSpace(m.Input)
+func (m *Model) submit() (Model, tea.Cmd) {
+	text := strings.TrimSpace(m.input)
 	if text == "" {
-		return m, nil
+		return *m, nil
 	}
 
-	m.Messages = append(m.Messages, Message{Role: RoleUser, Content: text})
-	m.Input = ""
-	m.Streaming = true
+	m.messages = append(m.messages, Message{Role: RoleUser, Content: text})
+	m.input = ""
+	m.streaming = true
 
 	// Start the stream and store the channel for continuation reads
-	client := m.Client
-	convID := m.ConversationID
+	client := m.client
+	convID := m.conversationID
 	ch, err := client.SendMessage(context.Background(), convID, text)
 	if err != nil {
-		m.Streaming = false
-		m.Messages = append(m.Messages, Message{
+		m.streaming = false
+		m.messages = append(m.messages, Message{
 			Role:    RoleAssistant,
 			Content: "Error: " + err.Error(),
 		})
-		return m, nil
+		return *m, nil
 	}
 	m.streamCh = ch
-	return m, readStream(ch)
+	return *m, readStream(ch)
 }
 
-func (m Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
+func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	chunk := msg.Chunk
 
 	if chunk.Error != nil {
-		m.Streaming = false
+		m.streaming = false
 		m.streamCh = nil
-		m.Messages = append(m.Messages, Message{
+		m.messages = append(m.messages, Message{
 			Role:    RoleAssistant,
 			Content: "Error: " + chunk.Error.Error(),
 		})
-		return m, nil
+		return *m, nil
 	}
 
 	if chunk.Content != "" {
 		// Append to the last assistant message, or create a new one
-		if len(m.Messages) > 0 && m.Messages[len(m.Messages)-1].Role == RoleAssistant {
-			m.Messages[len(m.Messages)-1].Content += chunk.Content
+		if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == RoleAssistant {
+			m.messages[len(m.messages)-1].Content += chunk.Content
 		} else {
-			m.Messages = append(m.Messages, Message{Role: RoleAssistant, Content: chunk.Content})
+			m.messages = append(m.messages, Message{Role: RoleAssistant, Content: chunk.Content})
 		}
 	}
 
 	if chunk.Done {
-		m.Streaming = false
+		m.streaming = false
 		m.streamCh = nil
-		return m, nil
+		return *m, nil
 	}
 
 	// Continue reading the next chunk from the stream
-	return m, readStream(m.streamCh)
+	return *m, readStream(m.streamCh)
 }
 
 // readStream returns a tea.Cmd that reads the next chunk from a stream channel.

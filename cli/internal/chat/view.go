@@ -10,8 +10,8 @@ import (
 )
 
 // View renders the full chat view to fill the given dimensions.
-func (m Model) View() string {
-	if m.Width < 20 || m.Height < 4 {
+func (m *Model) View() string {
+	if m.width < 20 || m.height < 4 {
 		return ""
 	}
 
@@ -20,7 +20,7 @@ func (m Model) View() string {
 
 	headerH := lipgloss.Height(header)
 	promptH := lipgloss.Height(prompt)
-	bodyH := m.Height - headerH - promptH
+	bodyH := m.height - headerH - promptH
 	if bodyH < 1 {
 		bodyH = 1
 	}
@@ -30,21 +30,24 @@ func (m Model) View() string {
 	return header + "\n" + body + "\n" + prompt
 }
 
-func (m Model) renderHeader() string {
-	agent := m.AgentName
+func (m *Model) renderHeader() string {
+	agent := m.agentName
 	if agent == "" {
 		agent = "no agent"
 	}
 	left := " " + ui.Bold.Render("CHAT")
 	right := ui.Dim.Render("agent: ") + ui.Accent.Render(agent)
-	fill := ui.MaxI(0, m.Width-lipgloss.Width(left)-lipgloss.Width(right))
+	fill := m.width - lipgloss.Width(left) - lipgloss.Width(right)
+	if fill < 0 {
+		fill = 0
+	}
 	line := left + strings.Repeat(" ", fill) + right
-	sep := ui.Dim.Render(strings.Repeat("─", m.Width))
+	sep := ui.Dim.Render(strings.Repeat("─", m.width))
 	return line + "\n" + sep
 }
 
-func (m Model) renderMessages(maxH int) string {
-	if len(m.Messages) == 0 {
+func (m *Model) renderMessages(maxH int) string {
+	if len(m.messages) == 0 {
 		empty := ui.Dim.Render("  No messages yet. Type below to start a conversation.")
 		pad := maxH - 1
 		if pad < 0 {
@@ -55,21 +58,18 @@ func (m Model) renderMessages(maxH int) string {
 
 	// Render each message as one or more lines
 	var rendered []string
-	for _, msg := range m.Messages {
+	for _, msg := range m.messages {
 		rendered = append(rendered, renderMessage(msg))
 	}
 
-	if m.Streaming {
+	if m.streaming {
 		rendered = append(rendered, ui.Accent.Render("  ..."))
 	}
 
-	// Calculate visual line counts for scroll offset
-	totalLines := 0
+	// Calculate visual line heights for scroll offset
 	lineHeights := make([]int, len(rendered))
 	for i, r := range rendered {
-		h := lipgloss.Height(r)
-		lineHeights[i] = h
-		totalLines += h
+		lineHeights[i] = lipgloss.Height(r)
 	}
 
 	// Show the tail that fits by counting visual lines
@@ -109,9 +109,9 @@ func renderMessage(msg Message) string {
 	return ""
 }
 
-func (m Model) renderPrompt() string {
-	sep := ui.Dim.Render(strings.Repeat("─", m.Width))
-	cursor := m.Input + "_"
+func (m *Model) renderPrompt() string {
+	sep := ui.Dim.Render(strings.Repeat("─", m.width))
+	cursor := m.input + "_"
 	prompt := fmt.Sprintf(" %s %s", ui.Dim.Render("you:"), ui.Fg.Render(cursor))
 	return sep + "\n" + prompt
 }

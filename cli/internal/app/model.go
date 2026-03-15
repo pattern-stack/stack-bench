@@ -94,7 +94,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.loadErr = msg.Err
 			return m, nil
 		}
-		m.chat.ConversationID = msg.ConversationID
+		m.chat.SetConversationID(msg.ConversationID)
 		m.phase = PhaseChat
 		return m, nil
 	}
@@ -148,8 +148,8 @@ func (m Model) updateChat(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Esc: if input has text, clear it first; if empty, go back to agent select
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		if keyMsg.String() == "esc" {
-			if m.chat.Input != "" {
-				m.chat.Input = ""
+			if !m.chat.IsInputEmpty() {
+				m.chat.ClearInput()
 				return m, nil
 			}
 			m.phase = PhaseSelectAgent
