@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure git for private deps
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -42,8 +45,6 @@ jobs:
         run: |
           cd backend
           uv sync
-        env:
-          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Run tests with coverage
         run: |
@@ -62,8 +63,6 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           cd backend && uv run coverage report >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
-        env:
-          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
   lint:
     name: Lint
@@ -72,6 +71,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure git for private deps
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -91,8 +93,6 @@ jobs:
         run: |
           cd backend
           uv sync
-        env:
-          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Run ruff linter
         run: cd backend && uv run ruff check .
@@ -108,6 +108,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure git for private deps
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -126,8 +129,6 @@ jobs:
         run: |
           cd backend
           uv sync
-        env:
-          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Run mypy
         run: cd backend && uv run mypy features molecules organisms
