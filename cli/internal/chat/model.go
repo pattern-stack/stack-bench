@@ -33,11 +33,11 @@ type Model struct {
 	Messages       []Message
 	Input          string
 	Width, Height  int
-	Scroll         int
 	ConversationID string
 	AgentName      string
 	Client         api.Client
-	Streaming      bool // true while receiving a streamed response
+	Streaming      bool                   // true while receiving a streamed response
+	streamCh       <-chan api.StreamChunk  // active stream channel during response
 }
 
 // New creates a fresh chat model.
@@ -82,18 +82,6 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Input += string(msg.Runes)
 	}
 
-	// Vim-style scroll when input is empty
-	if m.Input == "" {
-		switch msg.String() {
-		case "j", "down":
-			m.Scroll++
-		case "k", "up":
-			if m.Scroll > 0 {
-				m.Scroll--
-			}
-		}
-	}
-
 	return m, nil
 }
 
@@ -107,25 +95,20 @@ func (m Model) submit() (Model, tea.Cmd) {
 	m.Input = ""
 	m.Streaming = true
 
-	// Return a command that sends the message to the backend
+	// Start the stream and store the channel for continuation reads
 	client := m.Client
 	convID := m.ConversationID
-	return m, func() tea.Msg {
-		ch, err := client.SendMessage(context.Background(), convID, text)
-		if err != nil {
-			return ResponseMsg{Chunk: api.StreamChunk{
-				Content: "Error: " + err.Error(),
-				Done:    true,
-				Error:   err,
-			}}
-		}
-		// Read the first chunk (the tea runtime will call Update for each)
-		chunk, ok := <-ch
-		if !ok {
-			return ResponseMsg{Chunk: api.StreamChunk{Done: true}}
-		}
-		return ResponseMsg{Chunk: chunk}
+	ch, err := client.SendMessage(context.Background(), convID, text)
+	if err != nil {
+		m.Streaming = false
+		m.Messages = append(m.Messages, Message{
+			Role:    RoleAssistant,
+			Content: "Error: " + err.Error(),
+		})
+		return m, nil
 	}
+	m.streamCh = ch
+	return m, readStream(ch)
 }
 
 func (m Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
@@ -142,9 +125,21 @@ func (m Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 
 	if chunk.Done {
 		m.Streaming = false
+		m.streamCh = nil
 		return m, nil
 	}
 
-	// Continue reading from the stream (for future real streaming)
-	return m, nil
+	// Continue reading the next chunk from the stream
+	return m, readStream(m.streamCh)
+}
+
+// readStream returns a tea.Cmd that reads the next chunk from a stream channel.
+func readStream(ch <-chan api.StreamChunk) tea.Cmd {
+	return func() tea.Msg {
+		chunk, ok := <-ch
+		if !ok {
+			return ResponseMsg{Chunk: api.StreamChunk{Done: true}}
+		}
+		return ResponseMsg{Chunk: chunk}
+	}
 }
