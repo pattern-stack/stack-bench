@@ -61,10 +61,10 @@ class AgentAssembler:
             name=agent_def.name,
             role_name=role_tmpl.name,
             model=model,
-            persona=cast(dict[str, Any], role_tmpl.persona),
+            persona=cast("dict[str, Any]", role_tmpl.persona),
             mission=agent_def.mission,
             background=agent_def.background,
-            awareness=cast(dict[str, Any], agent_def.awareness),
+            awareness=cast("dict[str, Any]", agent_def.awareness),
         )
 
     async def list_available(self) -> list[str]:
