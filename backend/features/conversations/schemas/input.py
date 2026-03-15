@@ -9,6 +9,8 @@ class ConversationCreate(BaseModel):
     model: str | None = None
     metadata_: dict[str, Any] | None = None
     agent_config: dict[str, Any] | None = None
+    branched_from_id: Any | None = None
+    branched_at_sequence: int | None = None
 
 
 class ConversationUpdate(BaseModel):

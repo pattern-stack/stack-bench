@@ -14,6 +14,8 @@ class ConversationResponse(BaseModel):
     exchange_count: int
     total_input_tokens: int
     total_output_tokens: int
+    branched_from_id: UUID | None = None
+    branched_at_sequence: int | None = None
     created_at: datetime
     updated_at: datetime
 

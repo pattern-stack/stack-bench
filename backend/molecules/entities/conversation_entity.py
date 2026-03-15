@@ -148,6 +148,86 @@ class ConversationEntity:
         conversations, _count = result
         return list(conversations)
 
+    async def list_filtered(
+        self,
+        *,
+        agent_name: str | None = None,
+        state: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[Conversation], int]:
+        """List conversations with optional filters."""
+        filters: dict[str, Any] = {}
+        if agent_name is not None:
+            filters["agent_name"] = agent_name
+        if state is not None:
+            filters["state"] = state
+
+        conversations, count = await self.conversation_service.list(
+            self.db,
+            offset=offset,
+            limit=limit,
+            filters=filters if filters else None,
+            order_by=["-created_at"],
+        )
+        return list(conversations), count
+
+    async def branch_conversation(
+        self,
+        conversation_id: UUID,
+        at_sequence: int,
+    ) -> Conversation:
+        """Branch a conversation by copying messages up to at_sequence.
+
+        Creates a new conversation linked to the original via branched_from_id,
+        then copies all messages (with their parts) up to and including
+        the given sequence number.
+        """
+        source = await self.get_conversation(conversation_id)
+        data = await self.get_with_messages(conversation_id)
+
+        # Create the branched conversation
+        branch = await self.conversation_service.create(
+            self.db,
+            ConversationCreate(
+                agent_name=source.agent_name,
+                model=source.model,
+                agent_config=source.agent_config,
+                branched_from_id=source.id,
+                branched_at_sequence=at_sequence,
+            ),
+        )
+
+        # Copy messages up to at_sequence
+        copied_count = 0
+        for msg_data in data["messages"]:
+            msg = msg_data["message"]
+            if msg.sequence > at_sequence:
+                break
+
+            parts = [
+                {
+                    "type": p.part_type,
+                    "content": p.content,
+                    "tool_call_id": p.tool_call_id,
+                    "tool_name": p.tool_name,
+                    "tool_arguments": p.tool_arguments,
+                }
+                for p in msg_data["parts"]
+            ]
+
+            await self.add_message(
+                conversation_id=branch.id,
+                kind=msg.kind,
+                sequence=msg.sequence,
+                parts=parts,
+                input_tokens=msg.input_tokens,
+                output_tokens=msg.output_tokens,
+            )
+            copied_count += 1
+
+        return branch  # type: ignore[no-any-return]
+
     async def delete_conversation(self, conversation_id: UUID) -> None:
         """Soft-delete a conversation."""
         conv = await self.get_conversation(conversation_id)
