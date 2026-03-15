@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os/exec"
 	"sync"
@@ -28,7 +29,6 @@ type LocalNode struct {
 	mu     sync.Mutex
 	cmd    *exec.Cmd
 	status NodeStatus
-	stdout bytes.Buffer
 	stderr bytes.Buffer
 }
 
@@ -73,7 +73,8 @@ func (n *LocalNode) Start(ctx context.Context) error {
 		"--port", fmt.Sprintf("%d", n.port),
 	)
 	cmd.Dir = n.backendDir
-	cmd.Stdout = &n.stdout
+	cmd.Stdout = io.Discard
+	// stderr is captured for startup failure diagnostics only
 	cmd.Stderr = &n.stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
@@ -86,6 +87,13 @@ func (n *LocalNode) Start(ctx context.Context) error {
 	n.cmd = cmd
 	n.mu.Unlock()
 
+	// Detect early process exit
+	exitedCh := make(chan struct{})
+	go func() {
+		n.cmd.Wait()
+		close(exitedCh)
+	}()
+
 	// Poll health endpoint until ready
 	healthURL := n.BaseURL() + "/health"
 	client := &http.Client{Timeout: 2 * time.Second}
@@ -93,6 +101,9 @@ func (n *LocalNode) Start(ctx context.Context) error {
 
 	for time.Now().Before(deadline) {
 		select {
+		case <-exitedCh:
+			n.setStatus(StatusStopped)
+			return fmt.Errorf("backend process exited prematurely: %s", n.stderr.String())
 		case <-ctx.Done():
 			_ = n.Stop()
 			return ctx.Err()
@@ -104,6 +115,7 @@ func (n *LocalNode) Start(ctx context.Context) error {
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
 				n.setStatus(StatusHealthy)
+				n.stderr.Reset()
 				return nil
 			}
 		}
