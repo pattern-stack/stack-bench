@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
 from molecules.runtime.agent_factory import AgentFactory
 from molecules.runtime.conversation_runner import ConversationRunner
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -99,23 +98,18 @@ def test_agent_factory_sets_mission() -> None:
 
 @pytest.mark.unit
 def test_conversation_runner_init() -> None:
-    """ConversationRunner should compose entity and assembler."""
+    """ConversationRunner should compose entity (which owns the assembler)."""
     db = AsyncMock()
     runner = ConversationRunner(db)
 
     assert runner.db is db
     assert runner.entity is not None
-    assert runner.assembler is not None
+    assert runner.entity.assembler is not None
 
 
 @pytest.mark.unit
 async def test_send_streams_sse_events() -> None:
     """send() should yield SSE-formatted strings from MockRunner stream events."""
-    from agentic_patterns.core.systems.core.events import (
-        MessageChunkEvent,
-        MessageCompleteEvent,
-        MessageStartEvent,
-    )
     from agentic_patterns.core.systems.runners.mock import MockResponse, MockRunner
 
     db = AsyncMock()
@@ -126,10 +120,8 @@ async def test_send_streams_sse_events() -> None:
     config = _make_agent_config()
 
     runner.entity.get_conversation = AsyncMock(return_value=conv)
-    runner.entity.get_with_messages = AsyncMock(
-        return_value={"conversation": conv, "messages": [], "tool_calls": []}
-    )
-    runner.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
+    runner.entity.assembler.assemble = AsyncMock(return_value=config)
 
     # Use MockRunner
     mock_runner = MockRunner()
@@ -159,11 +151,9 @@ async def test_send_persists_user_message() -> None:
     config = _make_agent_config()
 
     runner.entity.get_conversation = AsyncMock(return_value=conv)
-    runner.entity.get_with_messages = AsyncMock(
-        return_value={"conversation": conv, "messages": [], "tool_calls": []}
-    )
+    runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.assemble = AsyncMock(return_value=config)
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -174,7 +164,9 @@ async def test_send_persists_user_message() -> None:
 
     # Should have persisted user message (kind="request")
     calls = runner.entity.add_message.call_args_list
-    user_calls = [c for c in calls if c.kwargs.get("kind") == "request" or (c.args and len(c.args) > 1 and c.args[1] == "request")]
+    user_calls = [
+        c for c in calls if c.kwargs.get("kind") == "request" or (c.args and len(c.args) > 1 and c.args[1] == "request")
+    ]
     assert len(user_calls) >= 1
 
 
@@ -190,11 +182,9 @@ async def test_send_persists_assistant_response() -> None:
     config = _make_agent_config()
 
     runner.entity.get_conversation = AsyncMock(return_value=conv)
-    runner.entity.get_with_messages = AsyncMock(
-        return_value={"conversation": conv, "messages": [], "tool_calls": []}
-    )
+    runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.assemble = AsyncMock(return_value=config)
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="I am a reply", input_tokens=15, output_tokens=25))
@@ -204,13 +194,17 @@ async def test_send_persists_assistant_response() -> None:
 
     # Should have persisted assistant response (kind="response")
     calls = runner.entity.add_message.call_args_list
-    response_calls = [c for c in calls if c.kwargs.get("kind") == "response" or (c.args and len(c.args) > 1 and c.args[1] == "response")]
+    response_calls = [
+        c
+        for c in calls
+        if c.kwargs.get("kind") == "response" or (c.args and len(c.args) > 1 and c.args[1] == "response")
+    ]
     assert len(response_calls) >= 1
 
 
 @pytest.mark.unit
-async def test_send_transitions_state_to_active() -> None:
-    """send() should transition conversation state from 'created' to 'active'."""
+async def test_send_calls_add_message() -> None:
+    """send() should call add_message for both user request and assistant response."""
     from agentic_patterns.core.systems.runners.mock import MockResponse, MockRunner
 
     db = AsyncMock()
@@ -220,11 +214,9 @@ async def test_send_transitions_state_to_active() -> None:
     config = _make_agent_config()
 
     runner.entity.get_conversation = AsyncMock(return_value=conv)
-    runner.entity.get_with_messages = AsyncMock(
-        return_value={"conversation": conv, "messages": [], "tool_calls": []}
-    )
+    runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.assemble = AsyncMock(return_value=config)
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -232,8 +224,8 @@ async def test_send_transitions_state_to_active() -> None:
     async for _ in runner.send(conv.id, "Hello", agent_runner=mock_runner):
         pass
 
-    # Conversation should be transitioned (add_message handles this internally)
-    assert runner.entity.add_message.called
+    # add_message should be called for both request and response
+    assert runner.entity.add_message.call_count == 2
 
 
 @pytest.mark.unit
@@ -284,7 +276,7 @@ async def test_send_builds_history_from_db() -> None:
         }
     )
     runner.entity.add_message = AsyncMock()
-    runner.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.assemble = AsyncMock(return_value=config)
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -308,11 +300,9 @@ async def test_send_commits_after_completion() -> None:
     config = _make_agent_config()
 
     runner.entity.get_conversation = AsyncMock(return_value=conv)
-    runner.entity.get_with_messages = AsyncMock(
-        return_value={"conversation": conv, "messages": [], "tool_calls": []}
-    )
+    runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.assemble = AsyncMock(return_value=config)
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -335,11 +325,9 @@ async def test_send_handles_error_gracefully() -> None:
     config = _make_agent_config()
 
     runner.entity.get_conversation = AsyncMock(return_value=conv)
-    runner.entity.get_with_messages = AsyncMock(
-        return_value={"conversation": conv, "messages": [], "tool_calls": []}
-    )
+    runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.assemble = AsyncMock(return_value=config)
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="", error=RuntimeError("LLM failed")))
@@ -351,3 +339,77 @@ async def test_send_handles_error_gracefully() -> None:
     # Should have yielded an error event
     error_events = [e for e in events if "error" in e.lower()]
     assert len(error_events) > 0
+
+
+@pytest.mark.unit
+def test_build_message_history_with_tool_call_parts() -> None:
+    """_build_message_history should include tool call fields when present on parts."""
+    db = AsyncMock()
+    runner = ConversationRunner(db)
+
+    # Simulate a message with a tool-call part
+    msg = MagicMock()
+    msg.kind = "response"
+
+    tool_part = MagicMock()
+    tool_part.part_type = "tool_use"
+    tool_part.content = None
+    tool_part.tool_call_id = "call_abc123"
+    tool_part.tool_name = "read_file"
+    tool_part.tool_arguments = {"path": "/tmp/test.py"}
+
+    result_part = MagicMock()
+    result_part.part_type = "tool_result"
+    result_part.content = "file contents here"
+    result_part.tool_call_id = "call_abc123"
+    result_part.tool_name = None
+    result_part.tool_arguments = None
+
+    history = runner._build_message_history(
+        [
+            {"message": msg, "parts": [tool_part, result_part]},
+        ]
+    )
+
+    assert len(history) == 1
+    parts = history[0]["parts"]
+    assert len(parts) == 2
+
+    # First part should have tool call fields
+    assert parts[0]["tool_call_id"] == "call_abc123"
+    assert parts[0]["tool_name"] == "read_file"
+    assert parts[0]["arguments"] == {"path": "/tmp/test.py"}
+
+    # Second part should have tool_call_id but not tool_name
+    assert parts[1]["tool_call_id"] == "call_abc123"
+    assert "tool_name" not in parts[1]
+    assert "arguments" not in parts[1]
+
+
+@pytest.mark.unit
+async def test_handle_error_with_created_state() -> None:
+    """_handle_error should transition created -> active -> failed."""
+    db = AsyncMock()
+    runner = ConversationRunner(db)
+
+    conv = _make_conversation(state="created")
+
+    # Track state transitions
+    transitions: list[str] = []
+    original_state = "created"
+
+    def mock_transition(new_state: str) -> None:
+        nonlocal original_state
+        transitions.append(new_state)
+        conv.state = new_state
+
+    conv.transition_to = MagicMock(side_effect=mock_transition)
+
+    runner.entity.get_conversation = AsyncMock(return_value=conv)
+
+    await runner._handle_error(conv.id, RuntimeError("test error"))
+
+    # Should have transitioned through created -> active -> failed
+    assert transitions == ["active", "failed"]
+    assert conv.error_message == "test error"
+    db.flush.assert_awaited()

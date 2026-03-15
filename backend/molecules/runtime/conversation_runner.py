@@ -1,22 +1,27 @@
 """ConversationRunner — bridges stack-bench DB with agentic-patterns runtime.
 
 Loads conversation history from DB, assembles an agent via AgentFactory,
-calls the runner with streaming, and yields SSE events. Persists messages
-and token counts back to DB after the stream completes.
+calls the runner with streaming, and yields SSE events. Persists messages,
+tool calls, and token counts back to DB after the stream completes.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
-from agentic_patterns.core.systems.core.events import MessageCompleteEvent
+from agentic_patterns.core.systems.core.events import (
+    MessageCompleteEvent,
+    ToolCallEndEvent,
+    ToolCallStartEvent,
+)
 from agentic_patterns.core.systems.streaming import SSEFormatter
 
-from molecules.agents.assembler import AgentAssembler
+from features.tool_calls.schemas.input import ToolCallCreate, ToolCallUpdate
 from molecules.entities.conversation_entity import ConversationEntity
 from molecules.runtime.agent_factory import AgentFactory
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
     from uuid import UUID
 
     from agentic_patterns.core.systems.runners.base import RunnerProtocol
@@ -31,19 +36,19 @@ class ConversationRunner:
     - Assemble agent via AgentFactory
     - Stream execution through a runner
     - Yield SSE-formatted events
-    - Persist user message, assistant response, and token counts to DB
+    - Persist user message, assistant response, tool calls, and token counts to DB
     """
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.entity = ConversationEntity(db)
-        self.assembler = AgentAssembler(db)
 
     async def send(
         self,
         conversation_id: UUID,
         message: str,
         *,
+        working_directory: str | None = None,
         agent_runner: RunnerProtocol | None = None,
     ) -> AsyncIterator[str]:
         """Send a message and stream SSE events.
@@ -51,6 +56,8 @@ class ConversationRunner:
         Args:
             conversation_id: UUID of the conversation
             message: User message text
+            working_directory: Optional working directory for tool execution.
+                              Stored in the conversation's metadata_ dict.
             agent_runner: Runner to use (injectable for testing).
                          If None, creates a default Claude runner.
 
@@ -60,6 +67,13 @@ class ConversationRunner:
         # 1. Load conversation and validate
         conv = await self.entity.get_conversation(conversation_id)
 
+        # Store working_directory in conversation metadata if provided
+        if working_directory is not None:
+            metadata = conv.metadata_ or {}
+            metadata["working_directory"] = working_directory
+            conv.metadata_ = metadata
+            await self.db.flush()
+
         # 2. Load full history from DB
         data = await self.entity.get_with_messages(conversation_id)
         db_messages = data["messages"]
@@ -68,7 +82,7 @@ class ConversationRunner:
         message_history = self._build_message_history(db_messages)
 
         # 4. Assemble agent from DB config
-        config = await self.assembler.assemble(conv.agent_name, model_override=conv.model)
+        config = await self.entity.assembler.assemble(conv.agent_name, model_override=conv.model)
         agent = AgentFactory.create(config)
 
         # 5. Determine next sequence number
@@ -90,6 +104,7 @@ class ConversationRunner:
         full_response = ""
         input_tokens = 0
         output_tokens = 0
+        pending_tool_calls: dict[str, Any] = {}  # tool_call_id -> ToolCall record
 
         try:
             async for event in runner.run_stream(
@@ -105,6 +120,35 @@ class ConversationRunner:
                     full_response = event.content
                     input_tokens = event.input_tokens
                     output_tokens = event.output_tokens
+
+                # Persist tool call start
+                elif isinstance(event, ToolCallStartEvent):
+                    tc = await self.entity.tool_call_service.create(
+                        self.db,
+                        ToolCallCreate(
+                            conversation_id=conversation_id,
+                            tool_call_id=event.tool_call_id,
+                            tool_name=event.tool_name,
+                            arguments=event.arguments or None,
+                        ),
+                    )
+                    pending_tool_calls[event.tool_call_id] = tc
+
+                # Persist tool call result
+                elif isinstance(event, ToolCallEndEvent):
+                    tc = pending_tool_calls.get(event.tool_call_id)
+                    if tc is not None:
+                        new_state = "failed" if event.error else "executed"
+                        tc.transition_to(new_state)
+                        await self.entity.tool_call_service.update(
+                            self.db,
+                            tc.id,
+                            ToolCallUpdate(
+                                result=str(event.result) if event.result is not None else None,
+                                error=event.error,
+                                duration_ms=event.duration_ms,
+                            ),
+                        )
 
         except Exception as e:
             # Yield error as SSE event
@@ -163,10 +207,12 @@ class ConversationRunner:
                     part_dict["arguments"] = part.tool_arguments
                 converted_parts.append(part_dict)
 
-            history.append({
-                "kind": msg.kind,
-                "parts": converted_parts,
-            })
+            history.append(
+                {
+                    "kind": msg.kind,
+                    "parts": converted_parts,
+                }
+            )
 
         return history
 
