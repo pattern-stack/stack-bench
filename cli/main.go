@@ -176,6 +176,38 @@ const (
 )
 
 // ═══════════════════════════════════════════════════════════════════
+// Terminal layer types
+// ═══════════════════════════════════════════════════════════════════
+
+type termLine struct {
+	content string
+	isCmd   bool   // true = command line (has $ prefix), false = output
+	agent   string // "" = user, "test-runner" etc = agent-written
+}
+
+type termContext int
+
+const (
+	tcStacks termContext = iota
+	tcStreamsOverview
+	tcStreamTask
+	tcStreamAgent
+)
+
+type termPanel struct {
+	ctx    termContext
+	label  string // "session-mgmt/3-session-api" etc
+	lines  []termLine
+	pinned bool
+}
+
+type knock struct {
+	agent  string // "test-runner", "reviewer"
+	reason string // "noticed a test failure in test_refresh"
+	active bool   // true = showing, false = acknowledged/dismissed
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Chat message types
 // ═══════════════════════════════════════════════════════════════════
 
@@ -226,6 +258,14 @@ type model struct {
 
 	// Chat — contextual messages per view
 	chatByContext map[chatContext][]chatMsg
+
+	// Terminal layer
+	termVisible    bool
+	termPinned     bool
+	termPanels     map[termContext]*termPanel
+	termFocused    bool // true = terminal focused, false = main view focused
+	activeKnock    *knock
+	knockDismissed bool
 }
 
 func (m model) navItems() []navItem {
@@ -251,6 +291,7 @@ func initialModel() model {
 		streamLvl:     lvOverview,
 		toolsExpanded: true,
 		chatByContext:  fakeChatMessages(),
+		termPanels:    fakeTerminals(),
 	}
 }
 
@@ -272,8 +313,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "q":
-			if m.tab != tabChat {
+			if m.tab != tabChat && !m.termFocused {
 				return m, tea.Quit
+			}
+		case "ctrl+j":
+			m.termVisible = !m.termVisible
+			if !m.termVisible {
+				m.termFocused = false
+				m.termPinned = false
+			}
+			return m, nil
+		case "ctrl+p":
+			if m.termVisible {
+				m.termPinned = !m.termPinned
+			}
+			return m, nil
+		case "ctrl+k":
+			if m.activeKnock != nil && m.activeKnock.active {
+				m.activeKnock.active = false
+				m.knockDismissed = true
+			}
+			return m, nil
+		case "esc":
+			if m.termFocused {
+				m.termFocused = false
+				return m, nil
 			}
 		case "tab":
 			if m.tab == tabStreams && m.streamLvl == lvAgent {
@@ -284,6 +348,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "shift+tab":
 			m.tab = (m.tab + tabCount - 1) % tabCount
+			return m, nil
+		}
+		if m.termFocused {
 			return m, nil
 		}
 		switch m.tab {
@@ -313,12 +380,40 @@ func (m model) View() string {
 	case tabStacks:
 		content := m.viewStacks()
 		contentH := lipgloss.Height(content)
-		chatH := totalH - contentH
-		if chatH < 0 {
-			chatH = 0
+
+		if m.termVisible {
+			termCtx := m.currentTermContext()
+			termH := maxI(4, totalH*35/100)
+			knockLine := m.renderKnock(m.width)
+			knockH := 0
+			if knockLine != "" {
+				knockH = 1
+			}
+			chatH := totalH - contentH - termH - knockH
+			if chatH < 2 {
+				chatH = 2
+			}
+			// Recalculate termH if content is too tall
+			termH = totalH - contentH - chatH - knockH
+			if termH < 3 {
+				termH = 3
+			}
+			term := m.renderTerminal(m.width, termH, termCtx)
+			chat := m.renderChat(m.width, chatH, ctxStacks)
+			combined := content + "\n" + term
+			if knockLine != "" {
+				combined += "\n" + knockLine
+			}
+			combined += chat
+			body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(combined)
+		} else {
+			chatH := totalH - contentH
+			if chatH < 0 {
+				chatH = 0
+			}
+			chat := m.renderChat(m.width, chatH, ctxStacks)
+			body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(content + chat)
 		}
-		chat := m.renderChat(m.width, chatH, ctxStacks)
-		body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(content + chat)
 	case tabStreams:
 		content := m.viewStreams()
 		contentH := lipgloss.Height(content)
@@ -328,12 +423,39 @@ func (m model) View() string {
 		} else if m.streamLvl == lvAgent {
 			ctx = ctxStreamAgent
 		}
-		chatH := totalH - contentH
-		if chatH < 0 {
-			chatH = 0
+
+		if m.termVisible {
+			termCtx := m.currentTermContext()
+			termH := maxI(4, totalH*35/100)
+			knockLine := m.renderKnock(m.width)
+			knockH := 0
+			if knockLine != "" {
+				knockH = 1
+			}
+			chatH := totalH - contentH - termH - knockH
+			if chatH < 2 {
+				chatH = 2
+			}
+			termH = totalH - contentH - chatH - knockH
+			if termH < 3 {
+				termH = 3
+			}
+			term := m.renderTerminal(m.width, termH, termCtx)
+			chat := m.renderChat(m.width, chatH, ctx)
+			combined := content + "\n" + term
+			if knockLine != "" {
+				combined += "\n" + knockLine
+			}
+			combined += chat
+			body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(combined)
+		} else {
+			chatH := totalH - contentH
+			if chatH < 0 {
+				chatH = 0
+			}
+			chat := m.renderChat(m.width, chatH, ctx)
+			body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(content + chat)
 		}
-		chat := m.renderChat(m.width, chatH, ctx)
-		body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(content + chat)
 	case tabChat:
 		body = m.viewChat(totalH)
 	}
@@ -358,20 +480,47 @@ func (m model) renderTabs() string {
 
 func (m model) renderStatus() string {
 	var hint string
-	switch m.tab {
-	case tabStacks:
-		hint = "j/k:navigate  enter:expand  s:submit  p:publish  1-3:jump stack  q:quit"
-	case tabStreams:
-		switch m.streamLvl {
-		case lvOverview:
-			hint = "j/k:navigate  enter:drill-in  q:quit"
-		case lvTask:
-			hint = "j/k:navigate  enter:drill-in  esc:back  q:quit"
-		case lvAgent:
-			hint = "j/k:scroll  tab:switch pane  enter:toggle tools  esc:back  q:quit"
+	if m.termFocused {
+		hint = "esc:unfocus terminal  ctrl+j:hide  ctrl+p:pin/unpin"
+	} else if m.termVisible {
+		termHint := "  ctrl+j:hide  ctrl+p:pin"
+		if m.termPinned {
+			termHint = "  ctrl+j:hide  ctrl+p:unpin"
 		}
-	case tabChat:
-		hint = "tab:switch view"
+		if m.activeKnock != nil && m.activeKnock.active {
+			termHint += "  ctrl+k:ack knock"
+		}
+		switch m.tab {
+		case tabStacks:
+			hint = "j/k:navigate  enter:expand" + termHint
+		case tabStreams:
+			switch m.streamLvl {
+			case lvOverview:
+				hint = "j/k:navigate  enter:drill-in" + termHint
+			case lvTask:
+				hint = "j/k:navigate  enter:drill-in  esc:back" + termHint
+			case lvAgent:
+				hint = "j/k:scroll  tab:pane  esc:back" + termHint
+			}
+		case tabChat:
+			hint = "tab:switch view" + termHint
+		}
+	} else {
+		switch m.tab {
+		case tabStacks:
+			hint = "j/k:navigate  enter:expand  s:submit  p:publish  1-3:jump stack  ctrl+j:terminal  q:quit"
+		case tabStreams:
+			switch m.streamLvl {
+			case lvOverview:
+				hint = "j/k:navigate  enter:drill-in  ctrl+j:terminal  q:quit"
+			case lvTask:
+				hint = "j/k:navigate  enter:drill-in  esc:back  ctrl+j:terminal  q:quit"
+			case lvAgent:
+				hint = "j/k:scroll  tab:switch pane  enter:toggle tools  esc:back  ctrl+j:terminal  q:quit"
+			}
+		case tabChat:
+			hint = "tab:switch view"
+		}
 	}
 	return dimS.Render(strings.Repeat("─", m.width)) + "\n" + dimS.Render(" "+hint)
 }
@@ -1109,6 +1258,124 @@ func aggregateFiles(t taskSession) []fileDiff {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// TERMINAL LAYER
+// ═══════════════════════════════════════════════════════════════════
+
+func (m model) currentTermContext() termContext {
+	switch {
+	case m.tab == tabStacks:
+		return tcStacks
+	case m.tab == tabStreams && m.streamLvl == lvOverview:
+		return tcStreamsOverview
+	case m.tab == tabStreams && m.streamLvl == lvTask:
+		return tcStreamTask
+	case m.tab == tabStreams && m.streamLvl == lvAgent:
+		return tcStreamAgent
+	default:
+		return tcStacks
+	}
+}
+
+func (m model) renderTerminal(width, availH int, ctx termContext) string {
+	panel, ok := m.termPanels[ctx]
+	if !ok || availH < 3 {
+		return ""
+	}
+
+	var lines []string
+
+	// Header line
+	header := m.renderTermHeader(width, panel, ctx)
+	lines = append(lines, header)
+
+	// Terminal content — fill available space minus header and cursor line
+	contentH := availH - 2 // header + cursor line
+	if contentH < 0 {
+		contentH = 0
+	}
+
+	// Render lines (show tail that fits)
+	start := len(panel.lines) - contentH
+	if start < 0 {
+		start = 0
+	}
+	visible := panel.lines[start:]
+	for _, tl := range visible {
+		lines = append(lines, m.renderTermLine(tl, ctx))
+	}
+
+	// Pad if needed
+	padN := contentH - len(visible)
+	for i := 0; i < padN; i++ {
+		lines = append(lines, "")
+	}
+
+	// Cursor line
+	if ctx == tcStreamAgent {
+		lines = append(lines, " "+dimS.Render("$ _")+"  "+dimS.Render("[read-only]"))
+	} else {
+		lines = append(lines, " "+fgS.Render("$ _"))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func (m model) renderTermHeader(width int, panel *termPanel, ctx termContext) string {
+	var left, right string
+	d := dimS.Render
+
+	if ctx == tcStreamAgent {
+		left = d("── agent: ") + accentS.Render(panel.label) + d(" ── ") + dimS.Render("observing")
+		right = d(" [read-only] ──")
+	} else {
+		left = d("── terminal: ") + fgS.Render(panel.label)
+		if m.termPinned {
+			right = d(" [pinned] ──")
+		} else {
+			right = d(" [ctx] ──")
+		}
+	}
+
+	fill := width - lipgloss.Width(left) - lipgloss.Width(right)
+	if fill < 1 {
+		fill = 1
+	}
+	return left + d(" "+strings.Repeat("─", fill-1)) + right
+}
+
+func (m model) renderTermLine(tl termLine, ctx termContext) string {
+	if tl.content == "" {
+		return ""
+	}
+	if tl.isCmd {
+		cmd := fgS.Render(tl.content)
+		if tl.agent != "" {
+			cmd = fgS.Render(tl.content) + "  " + magS.Render("["+tl.agent+"]")
+		}
+		return " " + cmd
+	}
+	// Output lines
+	content := tl.content
+	// Highlight PASSED/FAILED in test output
+	if strings.Contains(content, "FAILED") {
+		return " " + redS.Render(content)
+	}
+	if strings.Contains(content, "PASSED") {
+		return " " + greenS.Render(content)
+	}
+	return " " + dimS.Render(content)
+}
+
+func (m model) renderKnock(width int) string {
+	if m.activeKnock == nil || !m.activeKnock.active {
+		return ""
+	}
+	k := m.activeKnock
+	line := " " + accentS.Render("*knock*") + "  " + boldS.Render(k.agent) + " " + fgS.Render(k.reason)
+	return line
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // CHAT VIEW
 // ═══════════════════════════════════════════════════════════════════
 
@@ -1476,6 +1743,79 @@ func fakeTasks() []taskSession {
 	}
 }
 
+func fakeTerminals() map[termContext]*termPanel {
+	return map[termContext]*termPanel{
+		tcStacks: {
+			ctx:   tcStacks,
+			label: "session-mgmt/3-session-api",
+			lines: []termLine{
+				{content: "$ git status", isCmd: true},
+				{content: "On branch dug/session-mgmt/3-session-api"},
+				{content: "Changes not staged for commit:"},
+				{content: "  modified:   organisms/rest/sessions.py"},
+				{content: "  modified:   features/sessions/models.py"},
+				{content: ""},
+				{content: "$ git log --oneline -3", isCmd: true},
+				{content: "m1n2o3p Fix concurrent session handling"},
+				{content: "i7j8k9l Add session refresh logic"},
+				{content: "e4f5a6b Wire session middleware"},
+			},
+		},
+		tcStreamsOverview: {
+			ctx:   tcStreamsOverview,
+			label: "session-mgmt/3-session-api",
+			lines: []termLine{
+				{content: "$ git status", isCmd: true},
+				{content: "On branch dug/session-mgmt/3-session-api"},
+				{content: "Changes not staged for commit:"},
+				{content: "  modified:   organisms/rest/sessions.py"},
+				{content: "  modified:   features/sessions/models.py"},
+			},
+		},
+		tcStreamTask: {
+			ctx:   tcStreamTask,
+			label: "SB-042 session-api",
+			lines: []termLine{
+				{content: "$ cd ~/worktrees/sb-042-session-api", isCmd: true},
+				{content: "$ just test -- -k test_session", isCmd: true},
+				{content: "======================== test session ========================"},
+				{content: "tests/test_session_api.py::test_create PASSED"},
+				{content: "tests/test_session_api.py::test_get PASSED"},
+				{content: "tests/test_session_api.py::test_list PASSED"},
+				{content: "tests/test_session_api.py::test_refresh FAILED"},
+				{content: "FAILED tests/test_session_api.py::test_refresh - AssertionError: 201 != 200"},
+				{content: "=================== 1 failed, 3 passed in 1.4s =================="},
+			},
+		},
+		tcStreamAgent: {
+			ctx:   tcStreamAgent,
+			label: "Builder",
+			lines: []termLine{
+				{content: "$ cat organisms/rest/sessions.py", isCmd: true, agent: "Builder"},
+				{content: "from fastapi import APIRouter, Depends"},
+				{content: "from features.sessions.service import SessionService"},
+				{content: ""},
+				{content: "router = APIRouter(prefix=\"/sessions\")"},
+				{content: ""},
+				{content: "@router.post(\"/\")"},
+				{content: "async def create_session(data: SessionCreate):"},
+				{content: "    return await service.create(db, data)"},
+				{content: "$ just test -- -k test_refresh", isCmd: true, agent: "Builder"},
+				{content: "FAILED tests/test_session_api.py::test_refresh - AssertionError: 201 != 200"},
+				{content: "=================== 1 failed in 0.8s =================="},
+			},
+		},
+	}
+}
+
+func fakeKnock() *knock {
+	return &knock{
+		agent:  "test-runner",
+		reason: "noticed a test failure in test_refresh",
+		active: true,
+	}
+}
+
 func fakeChatMessages() map[chatContext][]chatMsg {
 	return map[chatContext][]chatMsg{
 		ctxStacks: {
@@ -1545,7 +1885,7 @@ func maxI(a, b int) int {
 // ═══════════════════════════════════════════════════════════════════
 
 func main() {
-	dump := flag.String("dump", "", "Dump: stacks, streams, streams:task, streams:agent, chat")
+	dump := flag.String("dump", "", "Dump: stacks, stacks:term, streams, streams:task, streams:task:term, streams:agent, streams:agent:term, chat")
 	flag.Parse()
 
 	if *dump != "" {
@@ -1559,7 +1899,14 @@ func main() {
 			fmt.Sscanf(args[1], "%d", &m.height)
 		}
 
-		parts := strings.SplitN(*dump, ":", 2)
+		dumpVal := *dump
+		// Check for :term suffix
+		showTerm := strings.HasSuffix(dumpVal, ":term")
+		if showTerm {
+			dumpVal = strings.TrimSuffix(dumpVal, ":term")
+		}
+
+		parts := strings.SplitN(dumpVal, ":", 2)
 		switch parts[0] {
 		case "stacks":
 			m.tab = tabStacks
@@ -1581,6 +1928,16 @@ func main() {
 			fmt.Fprintf(os.Stderr, "unknown: %s\n", *dump)
 			os.Exit(1)
 		}
+
+		if showTerm {
+			m.termVisible = true
+			// Add knock for task and agent contexts
+			tc := m.currentTermContext()
+			if tc == tcStreamTask || tc == tcStreamAgent {
+				m.activeKnock = fakeKnock()
+			}
+		}
+
 		fmt.Println(m.View())
 		return
 	}
