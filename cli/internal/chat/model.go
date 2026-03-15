@@ -83,6 +83,11 @@ func (m *Model) ClearInput() {
 	m.autocomplete.Deactivate()
 }
 
+// AppendMessage adds a message to the chat history.
+func (m *Model) AppendMessage(msg Message) {
+	m.messages = append(m.messages, msg)
+}
+
 // Update handles key input and streaming response messages.
 func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
