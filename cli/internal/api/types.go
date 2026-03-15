@@ -63,14 +63,16 @@ type Conversation struct {
 
 // ConversationDetailResponse is the full conversation with messages.
 type ConversationDetailResponse struct {
-	ID            string                 `json:"id"`
-	AgentName     string                 `json:"agent_name"`
-	Model         string                 `json:"model"`
-	State         string                 `json:"state"`
-	ExchangeCount int                    `json:"exchange_count"`
-	Messages      []ConversationMessage  `json:"messages"`
-	CreatedAt     time.Time              `json:"created_at"`
-	UpdatedAt     time.Time              `json:"updated_at"`
+	ID                 string                 `json:"id"`
+	AgentName          string                 `json:"agent_name"`
+	Model              string                 `json:"model"`
+	State              string                 `json:"state"`
+	ExchangeCount      int                    `json:"exchange_count"`
+	Messages           []ConversationMessage  `json:"messages"`
+	BranchedFromID     *string                `json:"branched_from_id,omitempty"`
+	BranchedAtSequence *int                   `json:"branched_at_sequence,omitempty"`
+	CreatedAt          time.Time              `json:"created_at"`
+	UpdatedAt          time.Time              `json:"updated_at"`
 }
 
 // ConversationMessage is a message within a conversation detail response.
