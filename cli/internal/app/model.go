@@ -11,6 +11,7 @@ import (
 	"github.com/dugshub/stack-bench/cli/internal/api"
 	"github.com/dugshub/stack-bench/cli/internal/chat"
 	"github.com/dugshub/stack-bench/cli/internal/command"
+	"github.com/dugshub/stack-bench/cli/internal/runtime"
 	"github.com/dugshub/stack-bench/cli/internal/ui"
 )
 
@@ -39,6 +40,7 @@ type Model struct {
 	width, height int
 	phase         Phase
 	client        api.Client
+	manager       *runtime.Manager
 
 	// Agent selection
 	agents      []api.AgentSummary
@@ -48,27 +50,36 @@ type Model struct {
 	// Chat
 	chat     chat.Model
 	registry *command.Registry
+
+	// Runtime health
+	healthStatuses map[string]runtime.NodeStatus
 }
 
 // New creates the initial app model.
-func New(client api.Client) Model {
+func New(client api.Client, mgr *runtime.Manager) Model {
 	reg := command.DefaultRegistry()
 	return Model{
 		width:    80,
 		height:   24,
 		phase:    PhaseSelectAgent,
 		client:   client,
+		manager:  mgr,
 		registry: reg,
 	}
 }
 
-// Init starts the app by loading available agents.
+// Init starts the app by loading available agents and health monitoring.
 func (m Model) Init() tea.Cmd {
 	client := m.client
-	return func() tea.Msg {
+	loadAgents := func() tea.Msg {
 		agents, err := client.ListAgents(context.Background())
 		return AgentsLoadedMsg{Agents: agents, Err: err}
 	}
+
+	if m.manager != nil {
+		return tea.Batch(loadAgents, runtime.HealthTick(m.manager))
+	}
+	return loadAgents
 }
 
 // Update handles all incoming messages.
@@ -104,6 +115,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case command.SwitchAgentMsg:
 		m.phase = PhaseSelectAgent
+		return m, nil
+
+	case runtime.HealthTickMsg:
+		m.healthStatuses = msg.Statuses
+		if m.manager != nil {
+			return m, runtime.HealthTick(m.manager)
+		}
 		return m, nil
 	}
 
@@ -241,6 +259,32 @@ func (m Model) renderStatus() string {
 	case PhaseChat:
 		hint = "enter: send  esc: back to agents  ctrl+c: quit"
 	}
+
+	// Health indicator
+	var healthIndicator string
+	if m.manager != nil {
+		status, ok := m.healthStatuses["backend"]
+		if !ok {
+			status = runtime.StatusStarting
+		}
+		switch status {
+		case runtime.StatusHealthy:
+			healthIndicator = ui.Green.Render("●") + ui.Dim.Render(" backend")
+		case runtime.StatusUnhealthy:
+			healthIndicator = ui.Red.Render("●") + ui.Dim.Render(" backend")
+		case runtime.StatusStarting:
+			healthIndicator = ui.Dim.Render("○ backend")
+		default:
+			healthIndicator = ui.Dim.Render("○ backend")
+		}
+	}
+
 	sep := ui.Dim.Render(strings.Repeat("─", m.width))
-	return sep + "\n" + ui.Dim.Render(" "+hint)
+
+	left := ui.Dim.Render(" " + hint)
+	if healthIndicator != "" {
+		fill := max(0, m.width-lipgloss.Width(left)-lipgloss.Width(healthIndicator)-1)
+		return sep + "\n" + left + strings.Repeat(" ", fill) + healthIndicator
+	}
+	return sep + "\n" + left
 }
