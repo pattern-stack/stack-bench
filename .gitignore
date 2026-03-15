@@ -8,6 +8,7 @@ dist/
 
 # Go
 bin/
+cli/sb
 
 # React / Node
 node_modules/
