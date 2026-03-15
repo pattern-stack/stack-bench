@@ -16,12 +16,12 @@ Wire the Go CLI to the Python backend so users can have real conversations with 
 
 | ID | Title | Status | Depends On | GH |
 |----|-------|--------|------------|-----|
-| SB-008 | Backend conversation runtime (ConversationRunner + SSE) | done | — | #10 / PR #16 |
-| SB-009 | CLI chat mode (restructure + clean UI) | done | — | #11 / PR #17 |
-| SB-010 | Wire CLI chat to backend (HTTP client + SSE) | done | SB-008, SB-009 | #12 / PR #18 |
-| SB-011 | Go runtime manager (AgentNode + LocalNode) | done | SB-010 | #13 / PR #19 |
-| SB-012 | Conversation recall, restore, branch | done | SB-011 | #14 / PR #20 |
-| SB-013 | Streaming markdown renderer (Bubble Tea component) | done | — | #15 / PR #18 |
+| SB-008 | Backend conversation runtime (ConversationRunner + SSE) | in-progress | — | #10 / PR #16 |
+| SB-009 | CLI chat mode (restructure + clean UI) | in-progress | — | #11 / PR #17 |
+| SB-010 | Wire CLI chat to backend (HTTP client + SSE) | in-progress | SB-008, SB-009 | #12 / PR #18 |
+| SB-011 | Go runtime manager (AgentNode + LocalNode) | in-progress | SB-010 | #13 / PR #19 |
+| SB-012 | Conversation recall, restore, branch | in-progress | SB-011 | #14 / PR #20 |
+| SB-013 | Streaming markdown renderer (Bubble Tea component) | in-progress | — | #15 / PR #18 |
 
 ## Dependency Graph
 
@@ -29,7 +29,7 @@ Wire the Go CLI to the Python backend so users can have real conversations with 
 SB-008 (backend) ──┐
                     ├──→ SB-010 (wire) ──→ SB-011 (runtime) ──→ SB-012 (recall)
 SB-009 (CLI)     ──┘
-SB-013 (markdown) ──→ SB-009 (used by chat view)
+SB-013 (markdown) ──→ SB-010 (bundled in same PR)
 ```
 
 ## Stacking Strategy
