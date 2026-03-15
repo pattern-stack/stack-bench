@@ -59,11 +59,9 @@ func (m *Manager) Nodes() []AgentNode {
 // Chain it to repeat: return the cmd again from Update when you receive HealthTickMsg.
 func HealthTick(mgr *Manager) tea.Cmd {
 	return tea.Tick(healthTickInterval, func(_ time.Time) tea.Msg {
-		// Perform active health checks on LocalNodes
+		// Perform active health checks on all nodes
 		for _, node := range mgr.Nodes() {
-			if ln, ok := node.(*LocalNode); ok {
-				ln.CheckHealth()
-			}
+			node.CheckHealth()
 		}
 		return HealthTickMsg{Statuses: mgr.HealthSummary()}
 	})

@@ -41,6 +41,9 @@ type AgentNode interface {
 	// Health returns the cached health status.
 	Health() NodeStatus
 
+	// CheckHealth performs an active health check and updates the cached status.
+	CheckHealth() NodeStatus
+
 	// BaseURL returns the HTTP base URL for this node's API.
 	BaseURL() string
 }
