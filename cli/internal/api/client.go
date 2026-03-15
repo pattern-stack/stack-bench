@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // Agent represents an available agent from the backend.
@@ -21,9 +22,20 @@ type Message struct {
 	Content string
 }
 
+// ChunkType identifies the kind of streaming event.
+type ChunkType string
+
+const (
+	ChunkText      ChunkType = "text"
+	ChunkThinking  ChunkType = "thinking"
+	ChunkToolStart ChunkType = "tool_start"
+	ChunkToolEnd   ChunkType = "tool_end"
+)
+
 // StreamChunk is a piece of a streaming response from the backend.
 type StreamChunk struct {
 	Content string
+	Type    ChunkType // "text", "thinking", "tool_start", "tool_end"
 	Done    bool
 	Error   error
 }
@@ -49,10 +61,14 @@ type HTTPClient struct {
 var _ Client = (*HTTPClient)(nil)
 
 // NewHTTPClient creates a client pointing at the given backend base URL.
+// The default timeout of 30s applies to non-streaming requests.
+// For SSE streaming, context cancellation is used instead.
 func NewHTTPClient(baseURL string) *HTTPClient {
 	return &HTTPClient{
-		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
+		BaseURL: baseURL,
+		HTTPClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
 	}
 }
 
@@ -163,7 +179,10 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 
-	resp, err := c.HTTPClient.Do(req)
+	// Use a client without timeout for SSE streaming — the stream is
+	// long-lived and cancellation is handled via ctx.
+	streamClient := &http.Client{}
+	resp, err := streamClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -61,6 +61,23 @@ type SSEMessageCompleteData struct {
 	OutputTokens int    `json:"output_tokens"`
 }
 
+// SSEReasoningData is the JSON payload for reasoning/thinking events.
+type SSEReasoningData struct {
+	Content string `json:"content"`
+}
+
+// SSEToolStartData is the JSON payload for tool start events.
+type SSEToolStartData struct {
+	ToolName string `json:"tool_name"`
+	Input    string `json:"input"`
+}
+
+// SSEToolEndData is the JSON payload for tool end events.
+type SSEToolEndData struct {
+	ToolName string `json:"tool_name"`
+	Output   string `json:"output"`
+}
+
 // SSEErrorData is the JSON payload for error / agent.error events.
 type SSEErrorData struct {
 	ErrorType string `json:"error_type"`
@@ -76,14 +93,36 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{Content: d.Delta}
+		return &StreamChunk{Content: d.Delta, Type: ChunkText}
 
 	case "agent.message.complete":
-		var d SSEMessageCompleteData
+		// Content was already streamed incrementally via chunks.
+		// Only signal completion — do not repeat the full content.
+		return &StreamChunk{Done: true, Type: ChunkText}
+
+	case "agent.reasoning", "thinking":
+		var d SSEReasoningData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
-			return &StreamChunk{Done: true}
+			return nil
 		}
-		return &StreamChunk{Content: d.Content, Done: true}
+		return &StreamChunk{Content: d.Content, Type: ChunkThinking}
+
+	case "agent.tool.start", "tool_start":
+		var d SSEToolStartData
+		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
+			return nil
+		}
+		return &StreamChunk{Content: d.ToolName, Type: ChunkToolStart}
+
+	case "agent.tool.end", "tool_end":
+		var d SSEToolEndData
+		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
+			return nil
+		}
+		return &StreamChunk{Content: d.Output, Type: ChunkToolEnd}
+
+	case "done":
+		return &StreamChunk{Done: true, Type: ChunkText}
 
 	case "agent.error", "error":
 		var d SSEErrorData
