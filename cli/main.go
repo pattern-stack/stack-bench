@@ -176,6 +176,32 @@ const (
 )
 
 // ═══════════════════════════════════════════════════════════════════
+// Chat message types
+// ═══════════════════════════════════════════════════════════════════
+
+type chatRole int
+
+const (
+	chatUser chatRole = iota
+	chatAI
+)
+
+type chatMsg struct {
+	role    chatRole
+	content string
+}
+
+type chatContext int
+
+const (
+	ctxStacks chatContext = iota
+	ctxStreams
+	ctxStreamTask
+	ctxStreamAgent
+	ctxChat
+)
+
+// ═══════════════════════════════════════════════════════════════════
 // Model
 // ═══════════════════════════════════════════════════════════════════
 
@@ -198,8 +224,8 @@ type model struct {
 	fileCursor    int
 	toolsExpanded bool
 
-	// Chat
-	chatMsgs []string
+	// Chat — contextual messages per view
+	chatByContext map[chatContext][]chatMsg
 }
 
 func (m model) navItems() []navItem {
@@ -224,11 +250,7 @@ func initialModel() model {
 		tasks:         fakeTasks(),
 		streamLvl:     lvOverview,
 		toolsExpanded: true,
-		chatMsgs: []string{
-			"Working on session API — 4 commits so far.",
-			"Next: wire refresh endpoint, then submit for review.",
-			"jwt-middleware/2 is blocked waiting on this.",
-		},
+		chatByContext:  fakeChatMessages(),
 	}
 }
 
@@ -280,18 +302,40 @@ func (m model) View() string {
 	}
 	tabs := m.renderTabs()
 	status := m.renderStatus()
-	ch := m.height - lipgloss.Height(tabs) - lipgloss.Height(status)
-	if ch < 1 {
-		ch = 1
+	// Total available height between tabs and status bar
+	totalH := m.height - lipgloss.Height(tabs) - lipgloss.Height(status)
+	if totalH < 1 {
+		totalH = 1
 	}
+
 	var body string
 	switch m.tab {
 	case tabStacks:
-		body = m.viewStacks(ch)
+		content := m.viewStacks()
+		contentH := lipgloss.Height(content)
+		chatH := totalH - contentH
+		if chatH < 0 {
+			chatH = 0
+		}
+		chat := m.renderChat(m.width, chatH, ctxStacks)
+		body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(content + chat)
 	case tabStreams:
-		body = m.viewStreams(ch)
+		content := m.viewStreams()
+		contentH := lipgloss.Height(content)
+		ctx := ctxStreams
+		if m.streamLvl == lvTask {
+			ctx = ctxStreamTask
+		} else if m.streamLvl == lvAgent {
+			ctx = ctxStreamAgent
+		}
+		chatH := totalH - contentH
+		if chatH < 0 {
+			chatH = 0
+		}
+		chat := m.renderChat(m.width, chatH, ctx)
+		body = lipgloss.NewStyle().Width(m.width).Height(totalH).Render(content + chat)
 	case tabChat:
-		body = m.viewChat(ch)
+		body = m.viewChat(totalH)
 	}
 	return tabs + "\n" + body + "\n" + status
 }
@@ -393,7 +437,7 @@ func (m model) updateStacks(k string) model {
 	return m
 }
 
-func (m model) viewStacks(h int) string {
+func (m model) viewStacks() string {
 	p := m.project
 	items := m.navItems()
 	var lines []string
@@ -534,7 +578,7 @@ func (m model) viewStacks(h int) string {
 			}
 		}
 	}
-	return lipgloss.NewStyle().Width(m.width).Height(h).Render(strings.Join(lines, "\n"))
+	return strings.Join(lines, "\n")
 }
 
 func (m model) renderCommitBox(b branch, stackColor lipgloss.AdaptiveColor) []string {
@@ -592,14 +636,14 @@ func (m model) updateStreams(k string) model {
 	return m
 }
 
-func (m model) viewStreams(h int) string {
+func (m model) viewStreams() string {
 	switch m.streamLvl {
 	case lvOverview:
-		return m.viewStreamsL1(h)
+		return m.viewStreamsL1()
 	case lvTask:
-		return m.viewStreamsL2(h)
+		return m.viewStreamsL2()
 	case lvAgent:
-		return m.viewStreamsL3(h)
+		return m.viewStreamsL3()
 	}
 	return ""
 }
@@ -629,7 +673,7 @@ func (m model) updateStreamsL1(k string) model {
 	return m
 }
 
-func (m model) viewStreamsL1(h int) string {
+func (m model) viewStreamsL1() string {
 	var lines []string
 	tL := boldS.Render(" STREAMS")
 	tR := dimS.Render(fmt.Sprintf("%d task sessions", len(m.tasks)))
@@ -673,7 +717,7 @@ func (m model) viewStreamsL1(h int) string {
 		lines = append(lines, padR(aL, m.width-lipgloss.Width(aR))+aR)
 	}
 
-	return lipgloss.NewStyle().Width(m.width).Height(h).Render(strings.Join(lines, "\n"))
+	return strings.Join(lines, "\n")
 }
 
 // --- Level 2: Task Detail ---
@@ -707,7 +751,7 @@ func (m model) updateStreamsL2(k string) model {
 	return m
 }
 
-func (m model) viewStreamsL2(h int) string {
+func (m model) viewStreamsL2() string {
 	t := m.tasks[m.taskCur]
 	var lines []string
 
@@ -790,7 +834,7 @@ func (m model) viewStreamsL2(h int) string {
 		}
 	}
 
-	return lipgloss.NewStyle().Width(m.width).Height(h).Render(strings.Join(lines, "\n"))
+	return strings.Join(lines, "\n")
 }
 
 // --- Level 3: Agent Detail ---
@@ -827,7 +871,7 @@ func (m model) updateStreamsL3(k string) model {
 	return m
 }
 
-func (m model) viewStreamsL3(h int) string {
+func (m model) viewStreamsL3() string {
 	t := m.tasks[m.taskCur]
 	ag := t.agents[m.agentCur]
 	var lines []string
@@ -855,13 +899,15 @@ func (m model) viewStreamsL3(h int) string {
 	lines = append(lines, " "+dimS.Render(strings.Repeat("─", m.width-2)))
 	lines = append(lines, "")
 
+	// Use a generous max for scrollable content — the chat bar will fill remaining space
+	maxPane := maxI(20, m.height-12)
 	if m.agentPane == 0 {
-		lines = append(lines, m.renderMessages(ag, h-6)...)
+		lines = append(lines, m.renderMessages(ag, maxPane)...)
 	} else {
-		lines = append(lines, m.renderFilesPane(ag, h-6)...)
+		lines = append(lines, m.renderFilesPane(ag, maxPane)...)
 	}
 
-	return lipgloss.NewStyle().Width(m.width).Height(h).Render(strings.Join(lines, "\n"))
+	return strings.Join(lines, "\n")
 }
 
 func (m model) renderMessages(ag taskAgent, maxH int) []string {
@@ -1080,10 +1126,94 @@ func (m model) viewChat(h int) string {
 	var lines []string
 	lines = append(lines, " "+dimS.Render("context: ")+lipgloss.NewStyle().Foreground(ctxColor).Render(ctx))
 	lines = append(lines, "")
-	for _, msg := range m.chatMsgs {
-		lines = append(lines, "  "+dimS.Render(msg))
+
+	// Gather all messages from all contexts for the full chat view
+	allMsgs := m.allChatMessages()
+	for _, msg := range allMsgs {
+		lines = append(lines, m.renderChatMsg(msg))
 	}
+
+	// Prompt line at the bottom
+	lines = append(lines, "")
+	promptH := h - len(lines) - 1 // leave room for prompt
+	if promptH > 0 {
+		// Pad to push prompt to bottom
+		for i := 0; i < promptH; i++ {
+			lines = append(lines, "")
+		}
+	}
+	lines = append(lines, " "+dimS.Render("you:")+fgS.Render(" _"))
+
 	return lipgloss.NewStyle().Width(m.width).Height(h).Render(strings.Join(lines, "\n"))
+}
+
+func (m model) allChatMessages() []chatMsg {
+	// For the full chat tab, show a combined timeline
+	order := []chatContext{ctxStacks, ctxStreams, ctxStreamTask, ctxStreamAgent}
+	var all []chatMsg
+	for _, ctx := range order {
+		if msgs, ok := m.chatByContext[ctx]; ok {
+			all = append(all, msgs...)
+		}
+	}
+	return all
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CHAT BAR — persistent across all views
+// ═══════════════════════════════════════════════════════════════════
+
+func (m model) renderChat(width, availH int, ctx chatContext) string {
+	if availH < 3 {
+		return ""
+	}
+
+	msgs, ok := m.chatByContext[ctx]
+	if !ok || len(msgs) == 0 {
+		return ""
+	}
+
+	// Separator line (1 line) + prompt (1 line) = 2 lines overhead
+	// Remaining lines are for messages
+	msgSpace := availH - 2 // separator + prompt
+
+	// Render messages bottom-aligned — show as many recent as fit
+	var rendered []string
+	for _, msg := range msgs {
+		rendered = append(rendered, m.renderChatMsg(msg))
+	}
+
+	// Take the tail that fits
+	start := len(rendered) - msgSpace
+	if start < 0 {
+		start = 0
+	}
+	visible := rendered[start:]
+
+	var lines []string
+	// Thin separator
+	lines = append(lines, dimS.Render(" "+strings.Repeat("·", minI(width-2, 40))))
+
+	// Pad to push messages + prompt to bottom
+	padLines := msgSpace - len(visible)
+	for i := 0; i < padLines; i++ {
+		lines = append(lines, "")
+	}
+
+	lines = append(lines, visible...)
+	lines = append(lines, " "+dimS.Render("you:")+fgS.Render(" _"))
+
+	return "\n" + strings.Join(lines, "\n")
+}
+
+func (m model) renderChatMsg(msg chatMsg) string {
+	switch msg.role {
+	case chatUser:
+		return " " + dimS.Render("you: ") + fgS.Render(msg.content)
+	case chatAI:
+		return " " + accentS.Render(" sb: ") + fgS.Render(msg.content)
+	}
+	return ""
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1342,6 +1472,31 @@ func fakeTasks() []taskSession {
 					files:    []fileDiff{},
 				},
 			},
+		},
+	}
+}
+
+func fakeChatMessages() map[chatContext][]chatMsg {
+	return map[chatContext][]chatMsg{
+		ctxStacks: {
+			{chatAI, "session-api is looking good, 4 commits deep"},
+			{chatAI, "jwt-middleware is blocked on that -- want me to start the auth tests while we wait?"},
+			{chatUser, "yeah go for it"},
+		},
+		ctxStreams: {
+			{chatAI, "builder is 3/4 done on the endpoints"},
+			{chatUser, "how's the token refresh coming along?"},
+			{chatAI, "implementer just started, reading the existing service first"},
+		},
+		ctxStreamTask: {
+			{chatAI, "architect and reviewer both signed off"},
+			{chatAI, "builder is writing the router now, 3 endpoints passing"},
+			{chatUser, "nice, let me know when validator picks it up"},
+		},
+		ctxStreamAgent: {
+			{chatAI, "those test results look clean"},
+			{chatUser, "want me to add edge cases for expired tokens?"},
+			{chatAI, "yes, cover the race condition case too"},
 		},
 	}
 }
