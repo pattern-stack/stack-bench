@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  UV_VERSION: "0.8.0"
+  PYTHONUNBUFFERED: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          uv sync
+
+      - name: Run tests with coverage
+        run: |
+          cd backend
+          uv run pytest tests/ \
+            --cov=features,molecules,organisms \
+            --cov-report=xml \
+            --cov-report=term \
+            --cov-fail-under=80
+
+      - name: Generate coverage summary
+        if: always()
+        run: |
+          echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cd backend && uv run coverage report >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          uv sync
+
+      - name: Run ruff linter
+        run: cd backend && uv run ruff check .
+
+      - name: Run ruff formatter
+        run: cd backend && uv run ruff format --check .
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          uv sync
+
+      - name: Run mypy
+        run: cd backend && uv run mypy features molecules organisms
+
+  ci-gate:
+    name: CI Gate
+    needs: [test, lint, type-check]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.test.result }}" != "success" || \
+                "${{ needs.lint.result }}" != "success" || \
+                "${{ needs.type-check.result }}" != "success" ]]; then
+            echo "CI failed:"
+            echo "  Test: ${{ needs.test.result }}"
+            echo "  Lint: ${{ needs.lint.result }}"
+            echo "  Type Check: ${{ needs.type-check.result }}"
+            exit 1
+          fi
+          echo "All CI checks passed."
