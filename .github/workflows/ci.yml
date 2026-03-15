@@ -42,6 +42,8 @@ jobs:
         run: |
           cd backend
           uv sync
+        env:
+          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Run tests with coverage
         run: |
@@ -60,6 +62,8 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           cd backend && uv run coverage report >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
+        env:
+          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
   lint:
     name: Lint
@@ -87,6 +91,8 @@ jobs:
         run: |
           cd backend
           uv sync
+        env:
+          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Run ruff linter
         run: cd backend && uv run ruff check .
@@ -120,6 +126,8 @@ jobs:
         run: |
           cd backend
           uv sync
+        env:
+          UV_GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Run mypy
         run: cd backend && uv run mypy features molecules organisms
