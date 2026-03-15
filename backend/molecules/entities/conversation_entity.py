@@ -141,13 +141,6 @@ class ConversationEntity:
 
         return msg
 
-    async def list_conversations(self) -> list[Conversation]:
-        """List all conversations."""
-        result = await self.conversation_service.list(self.db)
-        # BaseService.list returns tuple[list, int]
-        conversations, _count = result
-        return list(conversations)
-
     async def list_filtered(
         self,
         *,
@@ -199,7 +192,6 @@ class ConversationEntity:
         )
 
         # Copy messages up to at_sequence
-        copied_count = 0
         for msg_data in data["messages"]:
             msg = msg_data["message"]
             if msg.sequence > at_sequence:
@@ -224,7 +216,6 @@ class ConversationEntity:
                 input_tokens=msg.input_tokens,
                 output_tokens=msg.output_tokens,
             )
-            copied_count += 1
 
         return branch  # type: ignore[no-any-return]
 

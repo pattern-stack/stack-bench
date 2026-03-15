@@ -49,13 +49,15 @@ func (e *APIError) Error() string {
 
 // Conversation is a summary of a past conversation for the picker.
 type Conversation struct {
-	ID              string    `json:"id"`
-	AgentName       string    `json:"agent_name"`
-	State           string    `json:"state"`
-	ExchangeCount   int       `json:"exchange_count"`
-	BranchedFromID  *string   `json:"branched_from_id,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID                string    `json:"id"`
+	AgentName         string    `json:"agent_name"`
+	State             string    `json:"state"`
+	ExchangeCount     int       `json:"exchange_count"`
+	TotalInputTokens  int       `json:"total_input_tokens"`
+	TotalOutputTokens int       `json:"total_output_tokens"`
+	BranchedFromID    *string   `json:"branched_from_id,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // ConversationDetailResponse is the full conversation with messages.

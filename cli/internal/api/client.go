@@ -224,10 +224,18 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 
 func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([]Conversation, error) {
 	url := c.BaseURL + "/conversations/"
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// Server-side filtering via query parameters
+	q := req.URL.Query()
+	if agentName != "" {
+		q.Set("agent_name", agentName)
+	}
+	req.URL.RawQuery = q.Encode()
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -239,22 +247,11 @@ func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([
 		return nil, fmt.Errorf("list conversations: HTTP %d", resp.StatusCode)
 	}
 
-	var all []Conversation
-	if err := json.NewDecoder(resp.Body).Decode(&all); err != nil {
+	var conversations []Conversation
+	if err := json.NewDecoder(resp.Body).Decode(&conversations); err != nil {
 		return nil, err
 	}
-
-	// Client-side filter by agent name if specified
-	if agentName == "" {
-		return all, nil
-	}
-	var filtered []Conversation
-	for _, c := range all {
-		if c.AgentName == agentName {
-			filtered = append(filtered, c)
-		}
-	}
-	return filtered, nil
+	return conversations, nil
 }
 
 func (c *HTTPClient) GetConversation(ctx context.Context, id string) (*ConversationDetailResponse, error) {
