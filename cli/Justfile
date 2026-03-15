@@ -1,0 +1,14 @@
+set shell := ["zsh", "-c"]
+export PATH := env("HOME") + "/.local/share/mise/shims:" + env("PATH")
+
+dev:
+    go run .
+
+build:
+    go build -o sb .
+
+dump view="stacks" width="120" height="40":
+    go build -o sb . && ./sb --dump {{view}} {{width}} {{height}}
+
+tidy:
+    go mod tidy
