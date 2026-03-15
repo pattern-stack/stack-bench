@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from features.agent_definitions.service import AgentDefinitionService
 from features.role_templates.service import RoleTemplateService
@@ -61,10 +61,10 @@ class AgentAssembler:
             name=agent_def.name,
             role_name=role_tmpl.name,
             model=model,
-            persona=role_tmpl.persona,
+            persona=cast(dict[str, Any], role_tmpl.persona),
             mission=agent_def.mission,
             background=agent_def.background,
-            awareness=agent_def.awareness,
+            awareness=cast(dict[str, Any], agent_def.awareness),
         )
 
     async def list_available(self) -> list[str]:

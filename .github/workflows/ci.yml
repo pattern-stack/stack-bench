@@ -50,7 +50,7 @@ jobs:
         run: |
           cd backend
           uv run pytest tests/ \
-            --cov=features,molecules,organisms \
+            --cov=features --cov=molecules --cov=organisms \
             --cov-report=xml \
             --cov-report=term \
             --cov-fail-under=80

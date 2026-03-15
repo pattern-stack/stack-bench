@@ -3,7 +3,7 @@ from uuid import UUID
 from pattern_stack.atoms.patterns import EventPattern, Field, StatePhase
 
 
-class ToolCall(EventPattern):  # type: ignore[misc]
+class ToolCall(EventPattern):
     __tablename__ = "tool_calls"
 
     class Pattern:

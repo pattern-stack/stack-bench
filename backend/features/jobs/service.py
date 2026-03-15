@@ -4,5 +4,5 @@ from .models import Job
 from .schemas.input import JobCreate, JobUpdate
 
 
-class JobService(BaseService[Job, JobCreate, JobUpdate]):  # type: ignore[misc]
+class JobService(BaseService[Job, JobCreate, JobUpdate]):
     model = Job

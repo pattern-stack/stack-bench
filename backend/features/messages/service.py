@@ -8,7 +8,7 @@ from .models import Message
 from .schemas.input import MessageCreate, MessageUpdate
 
 
-class MessageService(BaseService[Message, MessageCreate, MessageUpdate]):  # type: ignore[misc]
+class MessageService(BaseService[Message, MessageCreate, MessageUpdate]):
     model = Message
 
     async def get_by_conversation(self, db: AsyncSession, conversation_id: UUID, *, limit: int = 100) -> list[Message]:

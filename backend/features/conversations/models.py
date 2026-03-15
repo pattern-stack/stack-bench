@@ -3,7 +3,7 @@ from uuid import UUID
 from pattern_stack.atoms.patterns import EventPattern, Field, StatePhase
 
 
-class Conversation(EventPattern):  # type: ignore[misc]
+class Conversation(EventPattern):
     __tablename__ = "conversations"
 
     class Pattern:

@@ -6,7 +6,7 @@ from .models import RoleTemplate
 from .schemas.input import RoleTemplateCreate, RoleTemplateUpdate
 
 
-class RoleTemplateService(BaseService[RoleTemplate, RoleTemplateCreate, RoleTemplateUpdate]):  # type: ignore[misc]
+class RoleTemplateService(BaseService[RoleTemplate, RoleTemplateCreate, RoleTemplateUpdate]):
     model = RoleTemplate
 
     async def get_by_name(self, db: AsyncSession, name: str) -> RoleTemplate | None:

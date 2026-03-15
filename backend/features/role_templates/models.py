@@ -1,7 +1,7 @@
 from pattern_stack.atoms.patterns import BasePattern, Field
 
 
-class RoleTemplate(BasePattern):  # type: ignore[misc]
+class RoleTemplate(BasePattern):
     __tablename__ = "role_templates"
 
     class Pattern:
