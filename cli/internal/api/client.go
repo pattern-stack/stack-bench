@@ -1,6 +1,12 @@
 package api
 
-import "context"
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
 
 // Agent represents an available agent from the backend.
 type Agent struct {
@@ -23,7 +29,6 @@ type StreamChunk struct {
 }
 
 // Client defines the interface for communicating with the stack-bench backend.
-// SB-010 will provide a real HTTP implementation; this package provides a stub.
 type Client interface {
 	// ListAgents returns all available agents.
 	ListAgents(ctx context.Context) ([]Agent, error)
@@ -33,6 +38,160 @@ type Client interface {
 
 	// CreateConversation starts a new conversation with the given agent.
 	CreateConversation(ctx context.Context, agentID string) (string, error)
+}
+
+// HTTPClient communicates with the stack-bench backend over HTTP.
+type HTTPClient struct {
+	BaseURL    string
+	HTTPClient *http.Client
+}
+
+var _ Client = (*HTTPClient)(nil)
+
+// NewHTTPClient creates a client pointing at the given backend base URL.
+func NewHTTPClient(baseURL string) *HTTPClient {
+	return &HTTPClient{
+		BaseURL:    baseURL,
+		HTTPClient: &http.Client{},
+	}
+}
+
+func (c *HTTPClient) ListAgents(ctx context.Context) ([]Agent, error) {
+	// GET /agents/ returns list[str] (agent names)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agents/", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("list agents: HTTP %d", resp.StatusCode)
+	}
+
+	var names []string
+	if err := json.NewDecoder(resp.Body).Decode(&names); err != nil {
+		return nil, err
+	}
+
+	// Fetch details for each agent to get role info
+	agents := make([]Agent, 0, len(names))
+	for _, name := range names {
+		detail, err := c.getAgentDetail(ctx, name)
+		if err != nil {
+			// Fall back to name-only if detail fetch fails
+			agents = append(agents, Agent{ID: name, Name: name, Role: ""})
+			continue
+		}
+		agents = append(agents, Agent{
+			ID:   detail.Name,
+			Name: detail.RoleName,
+			Role: detail.Mission,
+		})
+	}
+
+	return agents, nil
+}
+
+func (c *HTTPClient) getAgentDetail(ctx context.Context, name string) (*AgentResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agents/"+name, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("get agent %s: HTTP %d", name, resp.StatusCode)
+	}
+
+	var detail AgentResponse
+	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+		return nil, err
+	}
+	return &detail, nil
+}
+
+func (c *HTTPClient) CreateConversation(ctx context.Context, agentID string) (string, error) {
+	body, err := json.Marshal(CreateConversationRequest{AgentName: agentID})
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/conversations/", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("create conversation: HTTP %d", resp.StatusCode)
+	}
+
+	var conv ConversationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&conv); err != nil {
+		return "", err
+	}
+	return conv.ID, nil
+}
+
+func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, content string) (<-chan StreamChunk, error) {
+	body, err := json.Marshal(SendMessageRequest{Message: content})
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("%s/conversations/%s/send", c.BaseURL, conversationID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("send message: HTTP %d", resp.StatusCode)
+	}
+
+	// Parse SSE stream into StreamChunks
+	sseCh := ParseSSE(resp.Body)
+	ch := make(chan StreamChunk, 16)
+	go func() {
+		defer close(ch)
+		for evt := range sseCh {
+			chunk := ChunkFromSSE(evt)
+			if chunk != nil {
+				ch <- *chunk
+				if chunk.Done {
+					return
+				}
+			}
+		}
+		// Stream ended without a done event
+		ch <- StreamChunk{Done: true}
+	}()
+
+	return ch, nil
 }
 
 // StubClient is a no-op client that returns empty results.
