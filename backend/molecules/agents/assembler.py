@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from agentic_patterns.core.atoms.datatypes import Awareness, Background, Mission, Persona
 from agentic_patterns.core.organisms.agents import Agent, AgentBuilder
 from agentic_patterns.core.organisms.roles import RoleBuilder
+
 from features.agent_definitions.service import AgentDefinitionService
 from features.role_templates.service import RoleTemplateService
 from molecules.exceptions import AgentNotFoundError
