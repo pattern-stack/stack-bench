@@ -18,7 +18,7 @@ from agentic_patterns.core.systems.streaming import SSEFormatter
 
 from features.tool_calls.schemas.input import ToolCallCreate, ToolCallUpdate
 from molecules.entities.conversation_entity import ConversationEntity
-from molecules.runtime.agent_factory import AgentFactory
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 
 class ConversationRunner:
+    # TODO: This will become the inner loop of an ADR-001 AgentNode
     """Molecule that bridges DB conversations with agentic-patterns execution.
 
     Responsibilities:
@@ -82,8 +83,7 @@ class ConversationRunner:
         message_history = self._build_message_history(db_messages)
 
         # 4. Assemble agent from DB config
-        config = await self.entity.assembler.assemble(conv.agent_name, model_override=conv.model)
-        agent = AgentFactory.create(config)
+        agent = await self.entity.assembler.build_agent(conv.agent_name, model_override=conv.model)
 
         # 5. Determine next sequence number
         next_sequence = len(db_messages) + 1
@@ -225,6 +225,7 @@ class ConversationRunner:
         """
         conv = await self.entity.get_conversation(conversation_id)
         if conv.state in ("created", "active"):
+            # TODO: Use transition_through() when available in pattern-stack
             try:
                 if conv.state == "created":
                     conv.transition_to("active")
@@ -241,6 +242,7 @@ class ConversationRunner:
         Returns:
             An AgentRunner instance (uses LiteLLM under the hood).
         """
+        # TODO: Use RunnerPool for phase-based runner selection
         from agentic_patterns.core.systems.runners.agent import AgentRunner
 
         return AgentRunner()

@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from agentic_patterns.core.atoms.datatypes import Awareness, Background, Mission, Persona
+from agentic_patterns.core.organisms.agents import Agent, AgentBuilder
+from agentic_patterns.core.organisms.roles import RoleBuilder
 from features.agent_definitions.service import AgentDefinitionService
 from features.role_templates.service import RoleTemplateService
 from molecules.exceptions import AgentNotFoundError
@@ -65,6 +68,47 @@ class AgentAssembler:
             mission=agent_def.mission,
             background=agent_def.background,
             awareness=agent_def.awareness,
+        )
+
+    async def build_agent(
+        self,
+        agent_name: str,
+        *,
+        model_override: str | None = None,
+    ) -> Agent:
+        """Assemble config and build a canonical agentic-patterns Agent.
+
+        Uses RoleBuilder and AgentBuilder per ADR-001.
+        """
+        config = await self.assemble(agent_name, model_override=model_override)
+
+        persona = Persona(
+            identity=config.persona.get("identity", config.persona.get("name", "AI Assistant")),
+            tone=config.persona.get("tone", "professional and helpful"),
+            priorities=config.persona.get("priorities", []),
+            principles=config.persona.get("principles", []),
+        )
+
+        role = (
+            RoleBuilder(config.role_name)
+            .with_persona(persona)
+            .with_default_model(config.model)
+            .build()
+        )
+
+        background = Background(**config.background) if isinstance(config.background, dict) else Background()
+
+        awareness = Awareness(**config.awareness) if config.awareness else Awareness()
+
+        mission = Mission(objective=config.mission)
+
+        return (
+            AgentBuilder(role)
+            .with_background(background)
+            .with_awareness(awareness)
+            .with_mission(mission)
+            .with_model(config.model)
+            .build()
         )
 
     async def list_available(self) -> list[str]:

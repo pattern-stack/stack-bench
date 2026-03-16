@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import pytest
 
-from molecules.runtime.agent_factory import AgentFactory
 from molecules.runtime.conversation_runner import ConversationRunner
 
 # ---------------------------------------------------------------------------
@@ -40,57 +39,6 @@ def _make_conversation(
     return conv
 
 
-def _make_agent_config() -> MagicMock:
-    from molecules.agents.assembler import AgentConfig
-
-    return AgentConfig(
-        name="test-agent",
-        role_name="Engineer",
-        model="claude-sonnet-4-20250514",
-        persona={"name": "Test Agent", "title": "Test"},
-        mission="Help with testing",
-        background=None,
-        awareness={},
-    )
-
-
-# ---------------------------------------------------------------------------
-# AgentFactory tests
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-def test_agent_factory_creates_agent_from_config() -> None:
-    """AgentFactory.create should produce an agentic-patterns Agent."""
-    from agentic_patterns.core.organisms.agents import Agent
-
-    config = _make_agent_config()
-    agent = AgentFactory.create(config)
-
-    assert isinstance(agent, Agent)
-    assert agent.role.name == "Engineer"
-    assert agent.get_model() == "claude-sonnet-4-20250514"
-
-
-@pytest.mark.unit
-def test_agent_factory_uses_model_from_config() -> None:
-    """AgentFactory should use the model specified in AgentConfig."""
-    config = _make_agent_config()
-    config.model = "claude-opus-4-20250514"
-
-    agent = AgentFactory.create(config)
-    assert agent.get_model() == "claude-opus-4-20250514"
-
-
-@pytest.mark.unit
-def test_agent_factory_sets_mission() -> None:
-    """AgentFactory should set the agent's mission from config."""
-    config = _make_agent_config()
-    agent = AgentFactory.create(config)
-
-    assert agent.mission.objective == "Help with testing"
-
-
 # ---------------------------------------------------------------------------
 # ConversationRunner tests
 # ---------------------------------------------------------------------------
@@ -117,11 +65,9 @@ async def test_send_streams_sse_events() -> None:
 
     # Prepare mocks
     conv = _make_conversation()
-    config = _make_agent_config()
-
     runner.entity.get_conversation = AsyncMock(return_value=conv)
     runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
-    runner.entity.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
 
     # Use MockRunner
     mock_runner = MockRunner()
@@ -148,12 +94,10 @@ async def test_send_persists_user_message() -> None:
     runner = ConversationRunner(db)
 
     conv = _make_conversation()
-    config = _make_agent_config()
-
     runner.entity.get_conversation = AsyncMock(return_value=conv)
     runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.entity.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -179,12 +123,10 @@ async def test_send_persists_assistant_response() -> None:
     runner = ConversationRunner(db)
 
     conv = _make_conversation()
-    config = _make_agent_config()
-
     runner.entity.get_conversation = AsyncMock(return_value=conv)
     runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.entity.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="I am a reply", input_tokens=15, output_tokens=25))
@@ -211,12 +153,10 @@ async def test_send_calls_add_message() -> None:
     runner = ConversationRunner(db)
 
     conv = _make_conversation(state="created")
-    config = _make_agent_config()
-
     runner.entity.get_conversation = AsyncMock(return_value=conv)
     runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.entity.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -237,7 +177,6 @@ async def test_send_builds_history_from_db() -> None:
     runner = ConversationRunner(db)
 
     conv = _make_conversation(state="active", exchange_count=1)
-    config = _make_agent_config()
 
     # Simulate existing messages in DB
     existing_msg = MagicMock()
@@ -276,7 +215,7 @@ async def test_send_builds_history_from_db() -> None:
         }
     )
     runner.entity.add_message = AsyncMock()
-    runner.entity.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -297,12 +236,10 @@ async def test_send_commits_after_completion() -> None:
     runner = ConversationRunner(db)
 
     conv = _make_conversation()
-    config = _make_agent_config()
-
     runner.entity.get_conversation = AsyncMock(return_value=conv)
     runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.entity.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="Reply"))
@@ -322,12 +259,10 @@ async def test_send_handles_error_gracefully() -> None:
     runner = ConversationRunner(db)
 
     conv = _make_conversation(state="active")
-    config = _make_agent_config()
-
     runner.entity.get_conversation = AsyncMock(return_value=conv)
     runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
     runner.entity.add_message = AsyncMock()
-    runner.entity.assembler.assemble = AsyncMock(return_value=config)
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
 
     mock_runner = MockRunner()
     mock_runner.add_response("*", MockResponse(content="", error=RuntimeError("LLM failed")))
