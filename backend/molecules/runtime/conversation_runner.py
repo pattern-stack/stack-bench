@@ -19,7 +19,6 @@ from agentic_patterns.core.systems.streaming import SSEFormatter
 from features.tool_calls.schemas.input import ToolCallCreate, ToolCallUpdate
 from molecules.entities.conversation_entity import ConversationEntity
 
-
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
@@ -70,7 +69,7 @@ class ConversationRunner:
 
         # Store working_directory in conversation metadata if provided
         if working_directory is not None:
-            metadata = conv.metadata_ or {}
+            metadata: dict[str, Any] = conv.metadata_ if isinstance(conv.metadata_, dict) else {}
             metadata["working_directory"] = working_directory
             conv.metadata_ = metadata
             await self.db.flush()
@@ -136,7 +135,7 @@ class ConversationRunner:
 
                 # Persist tool call result
                 elif isinstance(event, ToolCallEndEvent):
-                    tc = pending_tool_calls.get(event.tool_call_id)
+                    tc = pending_tool_calls.get(event.tool_call_id)  # type: ignore[assignment]
                     if tc is not None:
                         new_state = "failed" if event.error else "executed"
                         tc.transition_to(new_state)
