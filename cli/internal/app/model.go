@@ -11,7 +11,7 @@ import (
 	"github.com/dugshub/stack-bench/cli/internal/api"
 	"github.com/dugshub/stack-bench/cli/internal/chat"
 	"github.com/dugshub/stack-bench/cli/internal/command"
-	"github.com/dugshub/stack-bench/cli/internal/runtime"
+	"github.com/dugshub/stack-bench/cli/internal/service"
 	"github.com/dugshub/stack-bench/cli/internal/ui"
 )
 
@@ -40,7 +40,7 @@ type Model struct {
 	width, height int
 	phase         Phase
 	client        api.Client
-	manager       *runtime.Manager
+	manager       *service.ServiceManager
 
 	// Agent selection
 	agents      []api.AgentSummary
@@ -52,11 +52,11 @@ type Model struct {
 	registry *command.Registry
 
 	// Runtime health
-	healthStatuses map[string]runtime.NodeStatus
+	healthStatuses map[string]service.ServiceStatus
 }
 
 // New creates the initial app model.
-func New(client api.Client, mgr *runtime.Manager) Model {
+func New(client api.Client, mgr *service.ServiceManager) Model {
 	reg := command.DefaultRegistry()
 	return Model{
 		width:    80,
@@ -77,7 +77,7 @@ func (m Model) Init() tea.Cmd {
 	}
 
 	if m.manager != nil {
-		return tea.Batch(loadAgents, runtime.HealthTick(m.manager))
+		return tea.Batch(loadAgents, service.ServiceHealthTick(m.manager))
 	}
 	return loadAgents
 }
@@ -117,10 +117,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.phase = PhaseSelectAgent
 		return m, nil
 
-	case runtime.HealthTickMsg:
+	case service.ServiceHealthMsg:
 		m.healthStatuses = msg.Statuses
 		if m.manager != nil {
-			return m, runtime.HealthTick(m.manager)
+			return m, service.ServiceHealthTick(m.manager)
 		}
 		return m, nil
 	}
@@ -265,14 +265,14 @@ func (m Model) renderStatus() string {
 	if m.manager != nil {
 		status, ok := m.healthStatuses["backend"]
 		if !ok {
-			status = runtime.StatusStarting
+			status = service.StatusStarting
 		}
 		switch status {
-		case runtime.StatusHealthy:
+		case service.StatusHealthy:
 			healthIndicator = ui.Green.Render("●") + ui.Dim.Render(" backend")
-		case runtime.StatusUnhealthy:
+		case service.StatusUnhealthy:
 			healthIndicator = ui.Red.Render("●") + ui.Dim.Render(" backend")
-		case runtime.StatusStarting:
+		case service.StatusStarting:
 			healthIndicator = ui.Dim.Render("○ backend")
 		default:
 			healthIndicator = ui.Dim.Render("○ backend")

@@ -13,7 +13,7 @@ import (
 
 	"github.com/dugshub/stack-bench/cli/internal/api"
 	"github.com/dugshub/stack-bench/cli/internal/app"
-	"github.com/dugshub/stack-bench/cli/internal/runtime"
+	"github.com/dugshub/stack-bench/cli/internal/service"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	flag.Parse()
 
 	var client api.Client
-	var mgr *runtime.Manager
+	var mgr *service.ServiceManager
 
 	if baseURL := os.Getenv("SB_BACKEND_URL"); baseURL != "" {
 		// Explicit URL: use it directly, no managed backend
@@ -32,8 +32,8 @@ func main() {
 	} else {
 		// Auto-start backend
 		backendDir := findBackendDir()
-		node := runtime.NewLocalNode(backendDir)
-		mgr = runtime.NewManager(node)
+		node := service.NewLocalService(backendDir)
+		mgr = service.NewServiceManager(node)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

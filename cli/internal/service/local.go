@@ -1,4 +1,4 @@
-package runtime
+package service
 
 import (
 	"bytes"
@@ -13,30 +13,30 @@ import (
 )
 
 const (
-	defaultHost       = "127.0.0.1"
-	defaultPort       = 8000
+	defaultHost        = "127.0.0.1"
+	defaultPort        = 8000
 	healthPollInterval = 200 * time.Millisecond
 	healthTimeout      = 30 * time.Second
 	stopGracePeriod    = 5 * time.Second
 )
 
-// LocalNode manages a local backend process via uvicorn.
-type LocalNode struct {
+// LocalService manages a local backend process via uvicorn.
+type LocalService struct {
 	host       string
 	port       int
 	backendDir string
 
 	mu     sync.Mutex
 	cmd    *exec.Cmd
-	status NodeStatus
+	status ServiceStatus
 	stderr bytes.Buffer
 }
 
-var _ AgentNode = (*LocalNode)(nil)
+var _ ServiceNode = (*LocalService)(nil)
 
-// NewLocalNode creates a node that spawns the backend from the given directory.
-func NewLocalNode(backendDir string) *LocalNode {
-	return &LocalNode{
+// NewLocalService creates a node that spawns the backend from the given directory.
+func NewLocalService(backendDir string) *LocalService {
+	return &LocalService{
 		host:       defaultHost,
 		port:       defaultPort,
 		backendDir: backendDir,
@@ -44,27 +44,27 @@ func NewLocalNode(backendDir string) *LocalNode {
 	}
 }
 
-func (n *LocalNode) Name() string {
+func (n *LocalService) Name() string {
 	return "backend"
 }
 
-func (n *LocalNode) BaseURL() string {
+func (n *LocalService) BaseURL() string {
 	return fmt.Sprintf("http://%s:%d", n.host, n.port)
 }
 
-func (n *LocalNode) Health() NodeStatus {
+func (n *LocalService) Health() ServiceStatus {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	return n.status
 }
 
-func (n *LocalNode) setStatus(s NodeStatus) {
+func (n *LocalService) setStatus(s ServiceStatus) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.status = s
 }
 
-func (n *LocalNode) Start(ctx context.Context) error {
+func (n *LocalService) Start(ctx context.Context) error {
 	n.setStatus(StatusStarting)
 
 	cmd := exec.CommandContext(ctx, "uv", "run", "uvicorn",
@@ -128,7 +128,7 @@ func (n *LocalNode) Start(ctx context.Context) error {
 	return fmt.Errorf("backend did not become healthy within %s", healthTimeout)
 }
 
-func (n *LocalNode) Stop() error {
+func (n *LocalService) Stop() error {
 	n.mu.Lock()
 	cmd := n.cmd
 	n.mu.Unlock()
@@ -174,7 +174,7 @@ func (n *LocalNode) Stop() error {
 }
 
 // CheckHealth performs an active health check and updates the cached status.
-func (n *LocalNode) CheckHealth() NodeStatus {
+func (n *LocalService) CheckHealth() ServiceStatus {
 	n.mu.Lock()
 	if n.status == StatusStopped {
 		n.mu.Unlock()

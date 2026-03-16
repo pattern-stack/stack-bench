@@ -1,18 +1,18 @@
-package runtime
+package service
 
 import "context"
 
-// NodeStatus represents the health state of a managed node.
-type NodeStatus int
+// ServiceStatus represents the health state of a managed service.
+type ServiceStatus int
 
 const (
-	StatusStopped NodeStatus = iota
+	StatusStopped ServiceStatus = iota
 	StatusStarting
 	StatusHealthy
 	StatusUnhealthy
 )
 
-func (s NodeStatus) String() string {
+func (s ServiceStatus) String() string {
 	switch s {
 	case StatusStopped:
 		return "stopped"
@@ -27,8 +27,8 @@ func (s NodeStatus) String() string {
 	}
 }
 
-// AgentNode is a managed backend process that the CLI can start/stop.
-type AgentNode interface {
+// ServiceNode is a managed backend process that the CLI can start/stop.
+type ServiceNode interface {
 	// Name returns a human-readable identifier for this node.
 	Name() string
 
@@ -39,10 +39,10 @@ type AgentNode interface {
 	Stop() error
 
 	// Health returns the cached health status.
-	Health() NodeStatus
+	Health() ServiceStatus
 
 	// CheckHealth performs an active health check and updates the cached status.
-	CheckHealth() NodeStatus
+	CheckHealth() ServiceStatus
 
 	// BaseURL returns the HTTP base URL for this node's API.
 	BaseURL() string
