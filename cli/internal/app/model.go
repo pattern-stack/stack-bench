@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/cli/internal/api"
 	"github.com/dugshub/stack-bench/cli/internal/chat"
@@ -73,10 +73,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.chat.SetSize(m.width, m.height-2) // reserve space for status bar
+		m.chat.SetSize(m.width, m.height-2)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
@@ -110,7 +110,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateAgentSelect(msg tea.Msg) (tea.Model, tea.Cmd) {
-	keyMsg, ok := msg.(tea.KeyMsg)
+	keyMsg, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return m, nil
 	}
@@ -145,8 +145,7 @@ func (m Model) updateAgentSelect(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateChat(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Esc: if input has text, clear it first; if empty, go back to agent select
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		if keyMsg.String() == "esc" {
 			if !m.chat.IsInputEmpty() {
 				m.chat.ClearInput()
@@ -163,21 +162,23 @@ func (m Model) updateChat(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the current view.
-func (m Model) View() string {
-	if m.width < 30 {
-		return "resize terminal"
-	}
-
+func (m Model) View() tea.View {
 	var body string
-	switch m.phase {
-	case PhaseSelectAgent:
-		body = m.viewAgentSelect()
-	case PhaseChat:
-		body = m.chat.View()
+	if m.width < 30 {
+		body = "resize terminal"
+	} else {
+		switch m.phase {
+		case PhaseSelectAgent:
+			body = m.viewAgentSelect()
+		case PhaseChat:
+			body = m.chat.View()
+		}
+		body += "\n" + m.renderStatus()
 	}
 
-	status := m.renderStatus()
-	return body + "\n" + status
+	v := tea.NewView(body)
+	v.AltScreen = true
+	return v
 }
 
 func (m Model) viewAgentSelect() string {
@@ -214,8 +215,7 @@ func (m Model) viewAgentSelect() string {
 		}
 	}
 
-	// Pad to fill available height
-	bodyH := m.height - 2 // status bar
+	bodyH := m.height - 2
 	for len(lines) < bodyH {
 		lines = append(lines, "")
 	}

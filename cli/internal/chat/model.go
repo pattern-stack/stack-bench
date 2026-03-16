@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/dugshub/stack-bench/cli/internal/api"
 )
@@ -77,7 +77,7 @@ func (m *Model) ClearInput() {
 // Update handles key input and streaming response messages.
 func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	case ResponseMsg:
 		return m.handleResponse(msg)
@@ -85,21 +85,22 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return *m, nil
 }
 
-func (m *Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m *Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	if m.streaming {
-		// While streaming, ignore most input
 		return *m, nil
 	}
 
-	switch msg.Type {
-	case tea.KeyBackspace:
+	switch msg.String() {
+	case "backspace":
 		if len(m.input) > 0 {
 			m.input = m.input[:len(m.input)-1]
 		}
-	case tea.KeyEnter:
+	case "enter":
 		return m.submit()
-	case tea.KeyRunes:
-		m.input += string(msg.Runes)
+	default:
+		if msg.Text != "" {
+			m.input += msg.Text
+		}
 	}
 
 	return *m, nil
@@ -115,7 +116,6 @@ func (m *Model) submit() (Model, tea.Cmd) {
 	m.input = ""
 	m.streaming = true
 
-	// Start the stream and store the channel for continuation reads
 	client := m.client
 	convID := m.conversationID
 	ch, err := client.SendMessage(context.Background(), convID, text)
@@ -145,7 +145,6 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	}
 
 	if chunk.Content != "" {
-		// Append to the last assistant message, or create a new one
 		if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == RoleAssistant {
 			m.messages[len(m.messages)-1].Content += chunk.Content
 		} else {
@@ -159,11 +158,9 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 		return *m, nil
 	}
 
-	// Continue reading the next chunk from the stream
 	return *m, readStream(m.streamCh)
 }
 
-// readStream returns a tea.Cmd that reads the next chunk from a stream channel.
 func readStream(ch <-chan api.StreamChunk) tea.Cmd {
 	return func() tea.Msg {
 		chunk, ok := <-ch

@@ -1,14 +1,15 @@
 package ui
 
-import "github.com/charmbracelet/lipgloss"
+import "charm.land/lipgloss/v2"
 
 // Colors used throughout the CLI.
+// Default to dark theme; adaptive light/dark will come with the token system.
 var (
-	ColorAccent = lipgloss.AdaptiveColor{Light: "#7D56F4", Dark: "#BD93F9"}
-	ColorGreen  = lipgloss.AdaptiveColor{Light: "#2E7D32", Dark: "#50FA7B"}
-	ColorRed    = lipgloss.AdaptiveColor{Light: "#C62828", Dark: "#FF5555"}
-	ColorDim    = lipgloss.AdaptiveColor{Light: "#999999", Dark: "#6272A4"}
-	ColorFg     = lipgloss.AdaptiveColor{Light: "#282A36", Dark: "#F8F8F2"}
+	ColorAccent = lipgloss.Color("#BD93F9")
+	ColorGreen  = lipgloss.Color("#50FA7B")
+	ColorRed    = lipgloss.Color("#FF5555")
+	ColorDim    = lipgloss.Color("#6272A4")
+	ColorFg     = lipgloss.Color("#F8F8F2")
 )
 
 // Base text styles.

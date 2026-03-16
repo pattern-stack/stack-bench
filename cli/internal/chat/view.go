@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/cli/internal/ui"
 )
@@ -56,7 +56,6 @@ func (m *Model) renderMessages(maxH int) string {
 		return empty + strings.Repeat("\n", pad)
 	}
 
-	// Render each message as one or more lines
 	var rendered []string
 	for _, msg := range m.messages {
 		rendered = append(rendered, renderMessage(msg))
@@ -66,13 +65,11 @@ func (m *Model) renderMessages(maxH int) string {
 		rendered = append(rendered, ui.Accent.Render("  ..."))
 	}
 
-	// Calculate visual line heights for scroll offset
 	lineHeights := make([]int, len(rendered))
 	for i, r := range rendered {
 		lineHeights[i] = lipgloss.Height(r)
 	}
 
-	// Show the tail that fits by counting visual lines
 	start := len(rendered)
 	remaining := maxH
 	for start > 0 && remaining > 0 {
@@ -84,7 +81,6 @@ func (m *Model) renderMessages(maxH int) string {
 	}
 	visible := rendered[start:]
 
-	// Pad to fill height
 	visibleLines := 0
 	for _, r := range visible {
 		visibleLines += lipgloss.Height(r)
