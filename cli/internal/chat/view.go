@@ -7,6 +7,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/cli/internal/ui"
+	"github.com/dugshub/stack-bench/cli/internal/ui/theme"
 )
 
 // View renders the full chat view to fill the given dimensions.
@@ -20,14 +21,28 @@ func (m *Model) View() string {
 
 	headerH := lipgloss.Height(header)
 	promptH := lipgloss.Height(prompt)
-	bodyH := m.height - headerH - promptH
+
+	// Reserve space for autocomplete overlay if active
+	acView := m.autocomplete.View()
+	acH := 0
+	if acView != "" {
+		acH = lipgloss.Height(acView)
+	}
+
+	bodyH := m.height - headerH - promptH - acH
 	if bodyH < 1 {
 		bodyH = 1
 	}
 
 	body := m.renderMessages(bodyH)
 
-	return header + "\n" + body + "\n" + prompt
+	result := header + "\n" + body + "\n"
+	if acView != "" {
+		result += acView + "\n"
+	}
+	result += prompt
+
+	return result
 }
 
 func (m *Model) renderHeader() string {
@@ -96,11 +111,15 @@ func (m *Model) renderMessages(maxH int) string {
 }
 
 func renderMessage(msg Message) string {
+	t := theme.Active()
 	switch msg.Role {
 	case RoleUser:
 		return fmt.Sprintf(" %s %s", ui.Dim.Render("you:"), ui.Fg.Render(msg.Content))
 	case RoleAssistant:
 		return fmt.Sprintf("  %s %s", ui.Accent.Render("sb:"), ui.Fg.Render(msg.Content))
+	case RoleSystem:
+		sysStyle := lipgloss.NewStyle().Foreground(t.Categories[theme.CatSystem])
+		return fmt.Sprintf("  %s %s", sysStyle.Render("sys:"), sysStyle.Render(msg.Content))
 	}
 	return ""
 }

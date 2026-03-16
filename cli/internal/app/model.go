@@ -10,6 +10,7 @@ import (
 
 	"github.com/dugshub/stack-bench/cli/internal/api"
 	"github.com/dugshub/stack-bench/cli/internal/chat"
+	"github.com/dugshub/stack-bench/cli/internal/command"
 	"github.com/dugshub/stack-bench/cli/internal/ui"
 )
 
@@ -45,16 +46,19 @@ type Model struct {
 	loadErr     error
 
 	// Chat
-	chat chat.Model
+	chat     chat.Model
+	registry *command.Registry
 }
 
 // New creates the initial app model.
 func New(client api.Client) Model {
+	reg := command.DefaultRegistry()
 	return Model{
-		width:  80,
-		height: 24,
-		phase:  PhaseSelectAgent,
-		client: client,
+		width:    80,
+		height:   24,
+		phase:    PhaseSelectAgent,
+		client:   client,
+		registry: reg,
 	}
 }
 
@@ -97,6 +101,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat.SetConversationID(msg.ConversationID)
 		m.phase = PhaseChat
 		return m, nil
+
+	case command.SwitchAgentMsg:
+		m.phase = PhaseSelectAgent
+		return m, nil
 	}
 
 	switch m.phase {
@@ -129,7 +137,7 @@ func (m Model) updateAgentSelect(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if len(m.agents) > 0 {
 			agent := m.agents[m.agentCursor]
-			m.chat = chat.New(m.client, agent.Name)
+			m.chat = chat.New(m.client, agent.Name, m.registry)
 			m.chat.SetSize(m.width, m.height-2)
 
 			client := m.client

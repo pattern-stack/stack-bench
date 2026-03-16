@@ -7,6 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/dugshub/stack-bench/cli/internal/api"
+	"github.com/dugshub/stack-bench/cli/internal/command"
+	"github.com/dugshub/stack-bench/cli/internal/ui/autocomplete"
 )
 
 // Role identifies the sender of a chat message.
@@ -15,6 +17,7 @@ type Role int
 const (
 	RoleUser Role = iota
 	RoleAssistant
+	RoleSystem
 )
 
 // Message is a single chat message.
@@ -36,15 +39,19 @@ type Model struct {
 	conversationID string
 	agentName      string
 	client         api.Client
-	streaming      bool                  // true while receiving a streamed response
-	streamCh       <-chan api.StreamChunk // active stream channel during response
+	streaming      bool
+	streamCh       <-chan api.StreamChunk
+	registry       *command.Registry
+	autocomplete   autocomplete.Model
 }
 
 // New creates a fresh chat model.
-func New(client api.Client, agentName string) Model {
+func New(client api.Client, agentName string, registry *command.Registry) Model {
 	return Model{
-		client:    client,
-		agentName: agentName,
+		client:       client,
+		agentName:    agentName,
+		registry:     registry,
+		autocomplete: autocomplete.New(registry),
 	}
 }
 
@@ -52,6 +59,7 @@ func New(client api.Client, agentName string) Model {
 func (m *Model) SetSize(w, h int) {
 	m.width = w
 	m.height = h
+	m.autocomplete.SetWidth(w)
 }
 
 // SetConversationID sets the conversation identifier.
@@ -72,6 +80,7 @@ func (m *Model) IsInputEmpty() bool {
 // ClearInput resets the user input buffer.
 func (m *Model) ClearInput() {
 	m.input = ""
+	m.autocomplete.Deactivate()
 }
 
 // Update handles key input and streaming response messages.
@@ -81,6 +90,12 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m.handleKey(msg)
 	case ResponseMsg:
 		return m.handleResponse(msg)
+	case command.ClearMsg:
+		m.messages = nil
+		return *m, nil
+	case command.ShowHelpMsg:
+		m.showHelp(msg.Commands)
+		return *m, nil
 	}
 	return *m, nil
 }
@@ -90,16 +105,67 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return *m, nil
 	}
 
+	// Autocomplete is active — delegate navigation
+	if m.autocomplete.IsActive() {
+		switch msg.String() {
+		case "esc":
+			m.autocomplete.Deactivate()
+			return *m, nil
+		case "enter", "tab":
+			if sel := m.autocomplete.Selected(); sel != nil {
+				m.input = "/" + sel.Name + " "
+				m.autocomplete.Deactivate()
+				return *m, nil
+			}
+		case "backspace":
+			m.input = deleteChar(m.input)
+			if m.input == "" || m.input == "/" {
+				m.autocomplete.Deactivate()
+			} else {
+				m.autocomplete.UpdateQuery(strings.TrimPrefix(m.input, "/"))
+			}
+			return *m, nil
+		case "alt+backspace", "ctrl+w":
+			m.input = deleteWord(m.input)
+			if !strings.HasPrefix(m.input, "/") || m.input == "" {
+				m.autocomplete.Deactivate()
+			} else {
+				m.autocomplete.UpdateQuery(strings.TrimPrefix(m.input, "/"))
+			}
+			return *m, nil
+		case "super+backspace", "ctrl+u":
+			m.input = ""
+			m.autocomplete.Deactivate()
+			return *m, nil
+		default:
+			// Typing refines the filter
+			if msg.Text != "" {
+				m.input += msg.Text
+				m.autocomplete.UpdateQuery(strings.TrimPrefix(m.input, "/"))
+				return *m, nil
+			}
+			// Up/down navigation
+			m.autocomplete.Update(msg)
+			return *m, nil
+		}
+	}
+
 	switch msg.String() {
 	case "backspace":
-		if len(m.input) > 0 {
-			m.input = m.input[:len(m.input)-1]
-		}
+		m.input = deleteChar(m.input)
+	case "alt+backspace", "ctrl+w":
+		m.input = deleteWord(m.input)
+	case "super+backspace", "ctrl+u":
+		m.input = deleteLine(m.input)
 	case "enter":
 		return m.submit()
 	default:
 		if msg.Text != "" {
 			m.input += msg.Text
+			// Activate autocomplete when "/" is typed as first char
+			if m.input == "/" {
+				m.autocomplete.Activate("")
+			}
 		}
 	}
 
@@ -112,8 +178,28 @@ func (m *Model) submit() (Model, tea.Cmd) {
 		return *m, nil
 	}
 
-	m.messages = append(m.messages, Message{Role: RoleUser, Content: text})
 	m.input = ""
+	m.autocomplete.Deactivate()
+
+	// Handle slash commands
+	if strings.HasPrefix(text, "/") {
+		result := command.Parse(text)
+		def := m.registry.Lookup(result.Command)
+		if def == nil {
+			m.messages = append(m.messages, Message{
+				Role:    RoleSystem,
+				Content: "Unknown command: " + text + ". Type /help for available commands.",
+			})
+			return *m, nil
+		}
+		if def.Handler != nil {
+			return *m, def.Handler(result)
+		}
+		return *m, nil
+	}
+
+	// Regular message
+	m.messages = append(m.messages, Message{Role: RoleUser, Content: text})
 	m.streaming = true
 
 	client := m.client
@@ -159,6 +245,30 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	}
 
 	return *m, readStream(m.streamCh)
+}
+
+func (m *Model) showHelp(commands []command.Def) {
+	var lines []string
+	lines = append(lines, "Available commands:")
+	for _, cmd := range commands {
+		aliases := ""
+		if len(cmd.Aliases) > 0 {
+			aliases = " (" + strings.Join(prefixAll(cmd.Aliases, "/"), ", ") + ")"
+		}
+		lines = append(lines, "  /"+cmd.Name+aliases+" — "+cmd.Description)
+	}
+	m.messages = append(m.messages, Message{
+		Role:    RoleSystem,
+		Content: strings.Join(lines, "\n"),
+	})
+}
+
+func prefixAll(strs []string, prefix string) []string {
+	result := make([]string, len(strs))
+	for i, s := range strs {
+		result[i] = prefix + s
+	}
+	return result
 }
 
 func readStream(ch <-chan api.StreamChunk) tea.Cmd {
