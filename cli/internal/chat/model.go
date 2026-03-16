@@ -43,6 +43,8 @@ type Model struct {
 	streamCh       <-chan api.StreamChunk
 	registry       *command.Registry
 	autocomplete   autocomplete.Model
+	ExchangeCount  int
+	IsBranch       bool
 }
 
 // New creates a fresh chat model.

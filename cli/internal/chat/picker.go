@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/cli/internal/api"
 	"github.com/dugshub/stack-bench/cli/internal/ui"
@@ -68,13 +68,13 @@ func (m PickerModel) Update(msg tea.Msg) (PickerModel, tea.Cmd) {
 		m.conversations = msg.Conversations
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	}
 	return m, nil
 }
 
-func (m PickerModel) handleKey(msg tea.KeyMsg) (PickerModel, tea.Cmd) {
+func (m PickerModel) handleKey(msg tea.KeyPressMsg) (PickerModel, tea.Cmd) {
 	// Total items: 1 (new) + len(conversations)
 	total := 1 + len(m.conversations)
 
