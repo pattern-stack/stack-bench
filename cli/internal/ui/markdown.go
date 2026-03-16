@@ -3,7 +3,9 @@ package ui
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+
+	"github.com/dugshub/stack-bench/cli/internal/ui/theme"
 )
 
 // MarkdownRenderer renders streaming markdown text progressively.
@@ -45,17 +47,17 @@ func (r *MarkdownRenderer) Render() string {
 	return RenderMarkdown(r.buf.String(), r.width)
 }
 
-// Markdown styles.
+// Markdown styles derived from the active theme.
 var (
-	mdH1         = lipgloss.NewStyle().Bold(true).Foreground(ColorAccent)
-	mdH2         = lipgloss.NewStyle().Bold(true).Foreground(ColorFg)
-	mdH3         = lipgloss.NewStyle().Bold(true).Foreground(ColorDim)
+	mdH1         = lipgloss.NewStyle().Bold(true).Foreground(theme.Active().Categories[theme.CatAgent])
+	mdH2         = lipgloss.NewStyle().Bold(true).Foreground(theme.Active().Foreground)
+	mdH3         = lipgloss.NewStyle().Bold(true).Foreground(theme.Active().DimColor)
 	mdBold       = lipgloss.NewStyle().Bold(true)
 	mdItalic     = lipgloss.NewStyle().Italic(true)
-	mdCode       = lipgloss.NewStyle().Foreground(ColorGreen)
-	mdCodeBlock  = lipgloss.NewStyle().Foreground(ColorGreen)
-	mdLink       = lipgloss.NewStyle().Foreground(ColorAccent).Underline(true)
-	mdListBullet = lipgloss.NewStyle().Foreground(ColorAccent)
+	mdCode       = lipgloss.NewStyle().Foreground(theme.Active().Statuses[theme.Success])
+	mdCodeBlock  = lipgloss.NewStyle().Foreground(theme.Active().Statuses[theme.Success])
+	mdLink       = lipgloss.NewStyle().Foreground(theme.Active().Categories[theme.CatAgent]).Underline(true)
+	mdListBullet = lipgloss.NewStyle().Foreground(theme.Active().Categories[theme.CatAgent])
 )
 
 // RenderMarkdown converts a markdown string to styled terminal output.
