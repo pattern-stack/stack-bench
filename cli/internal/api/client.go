@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// Agent represents an available agent from the backend.
-type Agent struct {
+// AgentSummary is a display DTO from the backend API, not the canonical agentic-patterns Agent.
+type AgentSummary struct {
 	ID   string
 	Name string
 	Role string
@@ -43,7 +43,7 @@ type StreamChunk struct {
 // Client defines the interface for communicating with the stack-bench backend.
 type Client interface {
 	// ListAgents returns all available agents.
-	ListAgents(ctx context.Context) ([]Agent, error)
+	ListAgents(ctx context.Context) ([]AgentSummary, error)
 
 	// SendMessage sends a user message and returns a channel of streamed response chunks.
 	SendMessage(ctx context.Context, conversationID string, content string) (<-chan StreamChunk, error)
@@ -72,7 +72,7 @@ func NewHTTPClient(baseURL string) *HTTPClient {
 	}
 }
 
-func (c *HTTPClient) ListAgents(ctx context.Context) ([]Agent, error) {
+func (c *HTTPClient) ListAgents(ctx context.Context) ([]AgentSummary, error) {
 	// GET /agents/ returns list[str] (agent names)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agents/", nil)
 	if err != nil {
@@ -95,15 +95,15 @@ func (c *HTTPClient) ListAgents(ctx context.Context) ([]Agent, error) {
 	}
 
 	// Fetch details for each agent to get role info
-	agents := make([]Agent, 0, len(names))
+	agents := make([]AgentSummary, 0, len(names))
 	for _, name := range names {
 		detail, err := c.getAgentDetail(ctx, name)
 		if err != nil {
 			// Fall back to name-only if detail fetch fails
-			agents = append(agents, Agent{ID: name, Name: name, Role: ""})
+			agents = append(agents, AgentSummary{ID: name, Name: name, Role: ""})
 			continue
 		}
-		agents = append(agents, Agent{
+		agents = append(agents, AgentSummary{
 			ID:   detail.Name,
 			Name: detail.RoleName,
 			Role: detail.Mission,
@@ -220,8 +220,8 @@ type StubClient struct{}
 
 var _ Client = (*StubClient)(nil)
 
-func (s *StubClient) ListAgents(_ context.Context) ([]Agent, error) {
-	return []Agent{
+func (s *StubClient) ListAgents(_ context.Context) ([]AgentSummary, error) {
+	return []AgentSummary{
 		{ID: "architect", Name: "Architect", Role: "Plans and designs"},
 		{ID: "builder", Name: "Builder", Role: "Implements code"},
 		{ID: "validator", Name: "Validator", Role: "Tests and verifies"},
