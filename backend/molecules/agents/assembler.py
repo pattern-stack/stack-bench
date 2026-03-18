@@ -90,12 +90,7 @@ class AgentAssembler:
             principles=config.persona.get("principles", []),
         )
 
-        role = (
-            RoleBuilder(config.role_name)
-            .with_persona(persona)
-            .with_default_model(config.model)
-            .build()
-        )
+        role = RoleBuilder(config.role_name).with_persona(persona).with_default_model(config.model).build()
 
         background = Background(**config.background) if isinstance(config.background, dict) else Background()
 
