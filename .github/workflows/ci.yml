@@ -14,6 +14,7 @@ env:
   UV_VERSION: "0.8.0"
   PYTHONUNBUFFERED: "1"
   FORCE_COLOR: "1"
+  BACKEND_DIR: "app/backend"
 
 jobs:
   test:
@@ -43,14 +44,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd ${{ env.BACKEND_DIR }}
           uv sync
 
       - name: Run tests with coverage
         run: |
-          cd backend
-          uv run pytest tests/ \
-            --cov=features --cov=molecules --cov=organisms \
+          cd ${{ env.BACKEND_DIR }}
+          PYTHONPATH=src uv run pytest __tests__/ \
+            --cov=src/features --cov=src/molecules --cov=src/organisms \
             --cov-report=xml \
             --cov-report=term \
             --cov-fail-under=80
@@ -61,7 +62,7 @@ jobs:
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          cd backend && uv run coverage report >> $GITHUB_STEP_SUMMARY || true
+          cd ${{ env.BACKEND_DIR }} && PYTHONPATH=src uv run coverage report >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   lint:
@@ -91,14 +92,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd ${{ env.BACKEND_DIR }}
           uv sync
 
       - name: Run ruff linter
-        run: cd backend && uv run ruff check .
+        run: cd ${{ env.BACKEND_DIR }} && uv run ruff check .
 
       - name: Run ruff formatter
-        run: cd backend && uv run ruff format --check .
+        run: cd ${{ env.BACKEND_DIR }} && uv run ruff format --check .
 
   type-check:
     name: Type Check
@@ -127,11 +128,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd ${{ env.BACKEND_DIR }}
           uv sync
 
       - name: Run mypy
-        run: cd backend && uv run mypy features molecules organisms
+        run: cd ${{ env.BACKEND_DIR }} && PYTHONPATH=src uv run mypy src/features src/molecules src/organisms
 
   ci-gate:
     name: CI Gate
