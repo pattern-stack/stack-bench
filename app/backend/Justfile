@@ -1,7 +1,6 @@
 # Stack Bench Backend
-# Most commands handled by pts (pts dev, pts test, pts quality, pts format, pts lint)
 
-export PYTHONPATH := justfile_directory()
+export PYTHONPATH := justfile_directory() / "src"
 
 # Run database migrations
 migrate:
@@ -14,3 +13,11 @@ migration msg:
 # Seed the database with SDLC agents
 seed:
     pts db seed seeds/agents.yaml
+
+# Run tests
+test:
+    uv run pytest
+
+# Quality gates
+quality:
+    uv run ruff format . && uv run ruff check . && uv run mypy . && uv run pytest

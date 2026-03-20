@@ -4,8 +4,8 @@ from pathlib import Path
 from pattern_stack.atoms.config.settings import Settings as BaseSettings
 from pydantic import Field
 
-# Project root is one level up from backend/
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# Project root: config/ -> backend/ -> app/ -> root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 class AppSettings(BaseSettings):

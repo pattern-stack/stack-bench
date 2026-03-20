@@ -1,0 +1,147 @@
+[project]
+name = "stack-bench-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pattern-stack",
+    "agentic-patterns",
+    "fastapi",
+    "uvicorn[standard]",
+    "alembic",
+    "asyncpg",
+    "pyyaml",
+    "httpx",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+pattern-stack = { git = "https://github.com/pattern-stack/backend-patterns.git" }
+agentic-patterns = { git = "https://github.com/pattern-stack/agentic-patterns.git" }
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+    ".pytest_cache",
+    "alembic/versions/",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+]
+
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "TC003", # Pydantic schemas need runtime imports for validation
+    "B008",  # FastAPI Depends() in function signatures is the standard pattern
+    "B904",  # Exception type conversion is intentional
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["features", "molecules", "organisms", "config", "seeds", "pattern_stack", "agentic_patterns"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/"]
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = [
+    "pattern_stack.*",
+    "agentic_patterns.*",
+]
+ignore_missing_imports = true
+follow_imports = "silent"
+disallow_any_unimported = false
+
+[[tool.mypy.overrides]]
+module = ["features.*.models", "features.*.service"]
+disable_error_code = ["assignment", "arg-type", "attr-defined"]
+
+[[tool.mypy.overrides]]
+module = ["__tests__.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["seeds.*"]
+disable_error_code = ["misc", "import-not-found"]
+
+[[tool.mypy.overrides]]
+module = ["organisms.*"]
+disable_error_code = ["import-not-found"]
+
+[tool.pytest.ini_options]
+testpaths = ["__tests__"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src/features",
+    "--cov=src/molecules",
+    "--cov=src/organisms",
+    "--cov-report=term-missing:skip-covered",
+]
+markers = [
+    "unit: Fast unit tests",
+    "integration: Tests with external dependencies",
+    "slow: Tests that take > 1 second",
+]
+
+[tool.coverage.run]
+source = ["src/features", "src/molecules", "src/organisms"]
+omit = [
+    "*/__tests__/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
