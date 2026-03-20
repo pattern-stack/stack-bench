@@ -73,7 +73,7 @@ func (m *Model) renderMessages(maxH int) string {
 
 	var rendered []string
 	for _, msg := range m.messages {
-		rendered = append(rendered, renderMessage(msg))
+		rendered = append(rendered, renderMessage(msg, m.width))
 	}
 
 	if m.streaming {
@@ -110,13 +110,26 @@ func (m *Model) renderMessages(maxH int) string {
 	return strings.Join(lines, "\n")
 }
 
-func renderMessage(msg Message) string {
+func renderMessage(msg Message, width int) string {
 	t := theme.Active()
 	switch msg.Role {
 	case RoleUser:
 		return fmt.Sprintf(" %s %s", ui.Dim.Render("you:"), ui.Fg.Render(msg.Content))
 	case RoleAssistant:
-		return fmt.Sprintf("  %s %s", ui.Accent.Render("sb:"), ui.Fg.Render(msg.Content))
+		prefix := ui.Accent.Render("sb:")
+		contentWidth := width - 4
+		if contentWidth < 20 {
+			contentWidth = 20
+		}
+		rendered := ui.RenderMarkdown(msg.Content, contentWidth)
+		lines := strings.Split(rendered, "\n")
+		if len(lines) > 1 {
+			indent := strings.Repeat(" ", lipgloss.Width("  "+prefix+" "))
+			for i := 1; i < len(lines); i++ {
+				lines[i] = indent + lines[i]
+			}
+		}
+		return fmt.Sprintf("  %s %s", prefix, strings.Join(lines, "\n"))
 	case RoleSystem:
 		sysStyle := lipgloss.NewStyle().Foreground(t.Categories[theme.CatSystem])
 		return fmt.Sprintf("  %s %s", sysStyle.Render("sys:"), sysStyle.Render(msg.Content))

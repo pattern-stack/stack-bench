@@ -24,7 +24,7 @@ const (
 
 // AgentsLoadedMsg is sent when the agent list has been fetched.
 type AgentsLoadedMsg struct {
-	Agents []api.Agent
+	Agents []api.AgentSummary
 	Err    error
 }
 
@@ -41,7 +41,7 @@ type Model struct {
 	client        api.Client
 
 	// Agent selection
-	agents      []api.Agent
+	agents      []api.AgentSummary
 	agentCursor int
 	loadErr     error
 

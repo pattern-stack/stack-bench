@@ -11,7 +11,12 @@ import (
 )
 
 func main() {
-	client := &api.StubClient{}
+	var client api.Client
+	if baseURL := os.Getenv("SB_BACKEND_URL"); baseURL != "" {
+		client = api.NewHTTPClient(baseURL)
+	} else {
+		client = &api.StubClient{}
+	}
 	model := app.New(client)
 
 	p := tea.NewProgram(model)
