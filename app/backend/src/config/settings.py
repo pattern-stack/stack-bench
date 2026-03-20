@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 class AppSettings(BaseSettings):
     APP_NAME: str = Field(default="Stack Bench")
     APP_VERSION: str = Field(default="0.1.0")
-    DATABASE_URL: str = Field(default="postgresql+asyncpg://stack-bench:password@localhost:5932/stack-bench")
+    DATABASE_URL: str = Field(default="")
     WEBHOOK_SECRET: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
 

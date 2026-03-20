@@ -12,9 +12,13 @@ permissions:
 
 env:
   UV_VERSION: "0.8.0"
+  PYTHON_VERSION: "3.12"
   PYTHONUNBUFFERED: "1"
   FORCE_COLOR: "1"
   BACKEND_DIR: "app/backend"
+  SRC_DIR: "src"
+  TEST_DIR: "__tests__"
+  COV_THRESHOLD: "80"
 
 jobs:
   test:
@@ -31,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -50,11 +54,13 @@ jobs:
       - name: Run tests with coverage
         run: |
           cd ${{ env.BACKEND_DIR }}
-          PYTHONPATH=src uv run pytest __tests__/ \
-            --cov=src/features --cov=src/molecules --cov=src/organisms \
+          PYTHONPATH=${{ env.SRC_DIR }} uv run pytest ${{ env.TEST_DIR }}/ \
+            --cov=${{ env.SRC_DIR }}/features \
+            --cov=${{ env.SRC_DIR }}/molecules \
+            --cov=${{ env.SRC_DIR }}/organisms \
             --cov-report=xml \
             --cov-report=term \
-            --cov-fail-under=80
+            --cov-fail-under=${{ env.COV_THRESHOLD }}
 
       - name: Generate coverage summary
         if: always()
@@ -62,7 +68,7 @@ jobs:
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          cd ${{ env.BACKEND_DIR }} && PYTHONPATH=src uv run coverage report >> $GITHUB_STEP_SUMMARY || true
+          cd ${{ env.BACKEND_DIR }} && PYTHONPATH=${{ env.SRC_DIR }} uv run coverage report >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   lint:
@@ -79,7 +85,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -115,7 +121,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -132,7 +138,12 @@ jobs:
           uv sync
 
       - name: Run mypy
-        run: cd ${{ env.BACKEND_DIR }} && PYTHONPATH=src uv run mypy src/features src/molecules src/organisms
+        run: |
+          cd ${{ env.BACKEND_DIR }}
+          PYTHONPATH=${{ env.SRC_DIR }} uv run mypy \
+            ${{ env.SRC_DIR }}/features \
+            ${{ env.SRC_DIR }}/molecules \
+            ${{ env.SRC_DIR }}/organisms
 
   ci-gate:
     name: CI Gate
