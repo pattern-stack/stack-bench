@@ -43,6 +43,8 @@ type Model struct {
 	streamCh       <-chan api.StreamChunk
 	registry       *command.Registry
 	autocomplete   autocomplete.Model
+	ExchangeCount  int
+	IsBranch       bool
 }
 
 // New creates a fresh chat model.
@@ -81,6 +83,11 @@ func (m *Model) IsInputEmpty() bool {
 func (m *Model) ClearInput() {
 	m.input = ""
 	m.autocomplete.Deactivate()
+}
+
+// AppendMessage adds a message to the chat history.
+func (m *Model) AppendMessage(msg Message) {
+	m.messages = append(m.messages, msg)
 }
 
 // Update handles key input and streaming response messages.

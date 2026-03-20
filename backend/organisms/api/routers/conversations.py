@@ -1,12 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 from features.conversations.schemas.output import ConversationResponse
 from molecules.apis.conversation_api import ConversationDetailResponse
-from organisms.api.dependencies import ConversationAPIDep, ConversationRunnerDep
+from organisms.api.dependencies import ConversationAPIDep
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -18,7 +17,10 @@ class CreateConversationRequest(BaseModel):
 
 class SendMessageRequest(BaseModel):
     message: str = Field(..., min_length=1)
-    working_directory: str | None = None
+
+
+class BranchConversationRequest(BaseModel):
+    at_sequence: int = Field(..., ge=1)
 
 
 @router.post("/", response_model=ConversationResponse, status_code=201)
@@ -32,8 +34,17 @@ async def create_conversation(
 @router.get("/", response_model=list[ConversationResponse])
 async def list_conversations(
     api: ConversationAPIDep,
+    agent_name: str | None = Query(None),
+    state: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
 ) -> list[ConversationResponse]:
-    return await api.list()
+    return await api.list(
+        agent_name=agent_name,
+        state=state,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{conversation_id}", response_model=ConversationDetailResponse)
@@ -48,25 +59,33 @@ async def get_conversation(
 async def send_message(
     conversation_id: UUID,
     data: SendMessageRequest,
-    runner: ConversationRunnerDep,
-) -> StreamingResponse:
-    """Send a message and stream the response as Server-Sent Events.
+    api: ConversationAPIDep,
+) -> dict[str, str]:
+    """Send message — placeholder until Claude integration in SB-007."""
+    await api.get(conversation_id)
+    return {
+        "status": "received",
+        "conversation_id": str(conversation_id),
+        "message": data.message,
+    }
 
-    Returns a text/event-stream with agent response events:
-    - agent.message.start: Stream begins
-    - agent.message.chunk: Text delta
-    - agent.message.complete: Final content with token counts
-    - error: If something goes wrong
+
+@router.post(
+    "/{conversation_id}/branch",
+    response_model=ConversationResponse,
+    status_code=201,
+)
+async def branch_conversation(
+    conversation_id: UUID,
+    data: BranchConversationRequest,
+    api: ConversationAPIDep,
+) -> ConversationResponse:
+    """Branch a conversation at a given message sequence.
+
+    Creates a new conversation linked to the original, copying all
+    messages up to and including at_sequence.
     """
-    return StreamingResponse(
-        runner.send(conversation_id, data.message, working_directory=data.working_directory),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+    return await api.branch(conversation_id, data.at_sequence)
 
 
 @router.delete("/{conversation_id}", status_code=204)

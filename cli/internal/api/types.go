@@ -47,6 +47,53 @@ func (e *APIError) Error() string {
 	return e.Type + ": " + e.Msg
 }
 
+// Conversation is a summary of a past conversation for the picker.
+type Conversation struct {
+	ID                string    `json:"id"`
+	AgentName         string    `json:"agent_name"`
+	State             string    `json:"state"`
+	ExchangeCount     int       `json:"exchange_count"`
+	TotalInputTokens  int       `json:"total_input_tokens"`
+	TotalOutputTokens int       `json:"total_output_tokens"`
+	BranchedFromID     *string   `json:"branched_from_id,omitempty"`
+	BranchedAtSequence *int     `json:"branched_at_sequence,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+// ConversationDetailResponse is the full conversation with messages.
+type ConversationDetailResponse struct {
+	ID                 string                 `json:"id"`
+	AgentName          string                 `json:"agent_name"`
+	Model              string                 `json:"model"`
+	State              string                 `json:"state"`
+	ExchangeCount      int                    `json:"exchange_count"`
+	Messages           []ConversationMessage  `json:"messages"`
+	BranchedFromID     *string                `json:"branched_from_id,omitempty"`
+	BranchedAtSequence *int                   `json:"branched_at_sequence,omitempty"`
+	CreatedAt          time.Time              `json:"created_at"`
+	UpdatedAt          time.Time              `json:"updated_at"`
+}
+
+// ConversationMessage is a message within a conversation detail response.
+type ConversationMessage struct {
+	ID       string            `json:"id"`
+	Kind     string            `json:"kind"`
+	Sequence int               `json:"sequence"`
+	Parts    []MessagePart     `json:"parts"`
+}
+
+// MessagePart is a part of a message (text, tool_call, etc).
+type MessagePart struct {
+	Type    string  `json:"type"`
+	Content *string `json:"content,omitempty"`
+}
+
+// BranchConversationRequest is the POST body for branching.
+type BranchConversationRequest struct {
+	AtSequence int `json:"at_sequence"`
+}
+
 // SSEEvent is a parsed Server-Sent Event.
 type SSEEvent struct {
 	Event string

@@ -24,6 +24,8 @@ class ConversationDetailResponse(BaseModel):
     exchange_count: int
     total_input_tokens: int
     total_output_tokens: int
+    branched_from_id: UUID | None = None
+    branched_at_sequence: int | None = None
     messages: list[dict[str, Any]]
     tool_calls: list[dict[str, Any]]
     created_at: datetime
@@ -94,21 +96,45 @@ class ConversationAPI:
             exchange_count=conv.exchange_count,
             total_input_tokens=conv.total_input_tokens,
             total_output_tokens=conv.total_output_tokens,
+            branched_from_id=conv.branched_from_id,
+            branched_at_sequence=conv.branched_at_sequence,
             messages=messages,
             tool_calls=tool_calls_data,
             created_at=conv.created_at,
             updated_at=conv.updated_at,
         )
 
-    async def list(self) -> list[ConversationResponse]:
-        """List all conversations."""
-        convs = await self.entity.list_conversations()
+    async def list(
+        self,
+        *,
+        agent_name: str | None = None,
+        state: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[ConversationResponse]:
+        """List conversations with optional filters."""
+        convs, _count = await self.entity.list_filtered(
+            agent_name=agent_name,
+            state=state,
+            limit=limit,
+            offset=offset,
+        )
         return [ConversationResponse.model_validate(c) for c in convs]
 
     async def delete(self, conversation_id: UUID) -> None:
         """Soft-delete a conversation."""
         await self.entity.delete_conversation(conversation_id)
         await self.db.commit()
+
+    async def branch(
+        self,
+        conversation_id: UUID,
+        at_sequence: int,
+    ) -> ConversationResponse:
+        """Branch a conversation at a given message sequence."""
+        conv = await self.entity.branch_conversation(conversation_id, at_sequence)
+        await self.db.commit()
+        return ConversationResponse.model_validate(conv)
 
     async def list_agents(self) -> list[str]:  # type: ignore[valid-type]
         """List available agent names."""

@@ -51,7 +51,18 @@ func (m *Model) renderHeader() string {
 		agent = "no agent"
 	}
 	left := " " + ui.Bold.Render("CHAT")
-	right := ui.Dim.Render("agent: ") + ui.Accent.Render(agent)
+
+	// Build right-side metadata
+	var meta []string
+	meta = append(meta, ui.Dim.Render("agent: ")+ui.Accent.Render(agent))
+	if m.ExchangeCount > 0 {
+		meta = append(meta, ui.Dim.Render(fmt.Sprintf("%d exchanges", m.ExchangeCount)))
+	}
+	if m.IsBranch {
+		meta = append(meta, ui.Accent.Render("[branch]"))
+	}
+	right := strings.Join(meta, ui.Dim.Render("  "))
+
 	fill := m.width - lipgloss.Width(left) - lipgloss.Width(right)
 	if fill < 0 {
 		fill = 0

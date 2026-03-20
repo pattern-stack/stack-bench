@@ -50,6 +50,15 @@ type Client interface {
 
 	// CreateConversation starts a new conversation with the given agent.
 	CreateConversation(ctx context.Context, agentID string) (string, error)
+
+	// ListConversations returns past conversations, optionally filtered by agent name.
+	ListConversations(ctx context.Context, agentName string) ([]Conversation, error)
+
+	// GetConversation returns full conversation details with messages.
+	GetConversation(ctx context.Context, id string) (*ConversationDetailResponse, error)
+
+	// BranchConversation creates a new conversation branched from an existing one at a given sequence.
+	BranchConversation(ctx context.Context, conversationID string, atSequence int) (*Conversation, error)
 }
 
 // HTTPClient communicates with the stack-bench backend over HTTP.
@@ -213,6 +222,92 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 	return ch, nil
 }
 
+func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([]Conversation, error) {
+	url := c.BaseURL + "/conversations/"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Server-side filtering via query parameters
+	q := req.URL.Query()
+	if agentName != "" {
+		q.Set("agent_name", agentName)
+	}
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("list conversations: HTTP %d", resp.StatusCode)
+	}
+
+	var conversations []Conversation
+	if err := json.NewDecoder(resp.Body).Decode(&conversations); err != nil {
+		return nil, err
+	}
+	return conversations, nil
+}
+
+func (c *HTTPClient) GetConversation(ctx context.Context, id string) (*ConversationDetailResponse, error) {
+	url := fmt.Sprintf("%s/conversations/%s", c.BaseURL, id)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("get conversation: HTTP %d", resp.StatusCode)
+	}
+
+	var detail ConversationDetailResponse
+	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+		return nil, err
+	}
+	return &detail, nil
+}
+
+func (c *HTTPClient) BranchConversation(ctx context.Context, conversationID string, atSequence int) (*Conversation, error) {
+	body, err := json.Marshal(BranchConversationRequest{AtSequence: atSequence})
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("%s/conversations/%s/branch", c.BaseURL, conversationID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("branch conversation: HTTP %d", resp.StatusCode)
+	}
+
+	var conv Conversation
+	if err := json.NewDecoder(resp.Body).Decode(&conv); err != nil {
+		return nil, err
+	}
+	return &conv, nil
+}
+
 // StubClient is a no-op client that returns empty results.
 // It satisfies the Client interface so the CLI compiles and runs
 // before the backend is wired in.
@@ -237,4 +332,16 @@ func (s *StubClient) SendMessage(_ context.Context, _ string, _ string) (<-chan 
 
 func (s *StubClient) CreateConversation(_ context.Context, _ string) (string, error) {
 	return "stub-conversation-id", nil
+}
+
+func (s *StubClient) ListConversations(_ context.Context, _ string) ([]Conversation, error) {
+	return nil, nil
+}
+
+func (s *StubClient) GetConversation(_ context.Context, _ string) (*ConversationDetailResponse, error) {
+	return &ConversationDetailResponse{}, nil
+}
+
+func (s *StubClient) BranchConversation(_ context.Context, _ string, _ int) (*Conversation, error) {
+	return &Conversation{ID: "stub-branch-id"}, nil
 }
