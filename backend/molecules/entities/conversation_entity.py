@@ -52,7 +52,7 @@ class ConversationEntity:
                 },
             ),
         )
-        return conv  # type: ignore[no-any-return]
+        return conv
 
     async def get_conversation(self, conversation_id: UUID) -> Conversation:
         """Get a conversation by ID or raise.
@@ -139,7 +139,7 @@ class ConversationEntity:
                 ),
             )
 
-        return msg  # type: ignore[no-any-return]
+        return msg
 
     async def list_conversations(self) -> list[Conversation]:
         """List all conversations."""

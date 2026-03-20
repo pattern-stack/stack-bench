@@ -4,5 +4,5 @@ from .models import AgentRun
 from .schemas.input import AgentRunCreate, AgentRunUpdate
 
 
-class AgentRunService(BaseService[AgentRun, AgentRunCreate, AgentRunUpdate]):  # type: ignore[misc]
+class AgentRunService(BaseService[AgentRun, AgentRunCreate, AgentRunUpdate]):
     model = AgentRun

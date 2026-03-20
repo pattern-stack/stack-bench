@@ -3,7 +3,7 @@ from uuid import UUID
 from pattern_stack.atoms.patterns import BasePattern, Field
 
 
-class AgentDefinition(BasePattern):  # type: ignore[misc]
+class AgentDefinition(BasePattern):
     __tablename__ = "agent_definitions"
 
     class Pattern:

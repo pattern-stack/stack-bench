@@ -4,7 +4,7 @@ from pattern_stack.atoms.patterns import BasePattern, Field
 from sqlalchemy import UniqueConstraint
 
 
-class MessagePart(BasePattern):  # type: ignore[misc]
+class MessagePart(BasePattern):
     __tablename__ = "message_parts"
 
     __table_args__ = (UniqueConstraint("message_id", "position", name="uq_message_part_position"),)

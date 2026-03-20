@@ -8,7 +8,7 @@ from .models import MessagePart
 from .schemas.input import MessagePartCreate, MessagePartUpdate
 
 
-class MessagePartService(BaseService[MessagePart, MessagePartCreate, MessagePartUpdate]):  # type: ignore[misc]
+class MessagePartService(BaseService[MessagePart, MessagePartCreate, MessagePartUpdate]):
     model = MessagePart
 
     async def get_by_message(self, db: AsyncSession, message_id: UUID) -> list[MessagePart]:

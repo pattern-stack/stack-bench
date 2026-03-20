@@ -8,7 +8,7 @@ from .models import ToolCall
 from .schemas.input import ToolCallCreate, ToolCallUpdate
 
 
-class ToolCallService(BaseService[ToolCall, ToolCallCreate, ToolCallUpdate]):  # type: ignore[misc]
+class ToolCallService(BaseService[ToolCall, ToolCallCreate, ToolCallUpdate]):
     model = ToolCall
 
     async def get_by_conversation(self, db: AsyncSession, conversation_id: UUID) -> list[ToolCall]:
