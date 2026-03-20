@@ -218,7 +218,7 @@ class ConversationEntity:
                 output_tokens=msg.output_tokens,
             )
 
-        return branch  # type: ignore[no-any-return]
+        return branch
 
     async def delete_conversation(self, conversation_id: UUID) -> None:
         """Soft-delete a conversation."""

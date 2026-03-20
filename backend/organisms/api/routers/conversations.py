@@ -1,13 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter
-from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 from features.conversations.schemas.output import ConversationResponse
 from molecules.apis.conversation_api import ConversationDetailResponse
-from organisms.api.dependencies import ConversationAPIDep, ConversationRunnerDep
+from organisms.api.dependencies import ConversationAPIDep
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
