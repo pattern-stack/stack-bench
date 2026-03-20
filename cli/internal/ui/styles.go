@@ -16,3 +16,11 @@ var (
 	Red    = theme.Resolve(theme.Style{Status: theme.Error})
 	Accent = theme.Resolve(theme.Style{Category: theme.CatAgent})
 )
+
+// MaxI returns the larger of two integers.
+func MaxI(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
