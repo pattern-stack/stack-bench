@@ -11,9 +11,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/dugshub/stack-bench/cli/internal/api"
-	"github.com/dugshub/stack-bench/cli/internal/app"
-	"github.com/dugshub/stack-bench/cli/internal/service"
+	"github.com/dugshub/stack-bench/app/cli/internal/api"
+	"github.com/dugshub/stack-bench/app/cli/internal/app"
+	"github.com/dugshub/stack-bench/app/cli/internal/service"
 )
 
 func main() {

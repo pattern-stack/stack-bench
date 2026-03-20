@@ -13,12 +13,20 @@ See `docs/adrs/` for key architecture decisions:
 ## Repository Layout
 
 ```
-backend/          # Python backend (pattern-stack + agentic-patterns)
-  features/       # Single-model data services (atoms → features layer)
-  molecules/      # Multi-feature business logic
-  organisms/      # REST API, CLI (thin interface layer)
-  config/         # Settings
-  tests/          # pytest suite
+app/
+  backend/              # Python backend (self-contained service)
+    src/                # Source code (PYTHONPATH root)
+      features/         # Single-model data services (atoms → features layer)
+      molecules/        # Multi-feature business logic
+      organisms/        # REST API, CLI (thin interface layer)
+      config/           # Settings
+      seeds/            # Database seeding specifications
+    __tests__/          # pytest suite
+    alembic/            # Database migrations
+    pyproject.toml      # Python project config
+    Justfile            # Backend-specific commands
+  frontend/             # React frontend (planned)
+  cli/                  # Go CLI (Bubble Tea TUI)
 docs/
   adrs/           # Architecture Decision Records (append-only, numbered)
   specs/          # Implementation specs (frontmatter status tracking)

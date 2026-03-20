@@ -7,8 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/dugshub/stack-bench/cli/internal/api"
-	"github.com/dugshub/stack-bench/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/api"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui"
 )
 
 // PickerAction describes what the user chose to do with a conversation.

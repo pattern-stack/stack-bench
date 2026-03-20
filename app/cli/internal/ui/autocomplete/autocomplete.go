@@ -7,8 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/dugshub/stack-bench/cli/internal/command"
-	"github.com/dugshub/stack-bench/cli/internal/ui/theme"
+	"github.com/dugshub/stack-bench/app/cli/internal/command"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 const maxVisible = 6

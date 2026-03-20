@@ -6,9 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/dugshub/stack-bench/cli/internal/api"
-	"github.com/dugshub/stack-bench/cli/internal/command"
-	"github.com/dugshub/stack-bench/cli/internal/ui/autocomplete"
+	"github.com/dugshub/stack-bench/app/cli/internal/api"
+	"github.com/dugshub/stack-bench/app/cli/internal/command"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/autocomplete"
 )
 
 // Role identifies the sender of a chat message.
