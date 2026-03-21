@@ -5,6 +5,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from molecules.apis.conversation_api import ConversationAPI
+from molecules.apis.stack_api import StackAPI
 from molecules.runtime.conversation_runner import ConversationRunner
 
 
@@ -30,3 +31,10 @@ def get_conversation_runner(db: DatabaseSession) -> ConversationRunner:
 
 
 ConversationRunnerDep = Annotated[ConversationRunner, Depends(get_conversation_runner)]
+
+
+def get_stack_api(db: DatabaseSession) -> StackAPI:
+    return StackAPI(db)
+
+
+StackAPIDep = Annotated[StackAPI, Depends(get_stack_api)]
