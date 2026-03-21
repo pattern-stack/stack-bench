@@ -82,7 +82,7 @@ def test_workspace_create_rejects_invalid_provider() -> None:
             project_id=uuid4(),
             name="backend",
             repo_url="https://github.com/org/repo",
-            provider="svn",  # type: ignore[arg-type]
+            provider="svn",
         )
 
 

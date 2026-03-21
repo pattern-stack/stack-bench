@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from features.branches.schemas.output import BranchResponse
 from features.pull_requests.schemas.output import PullRequestResponse
+
+from features.branches.schemas.output import BranchResponse
 from features.stacks.schemas.output import StackResponse
 from molecules.entities.stack_entity import StackEntity
 
@@ -46,9 +47,7 @@ class StackAPI:
             # Validate DAG before creating -- use a temporary stack_id
             # For new stacks, there can't be a cycle since the stack doesn't exist yet
             pass
-        stack = await self.entity.create_stack(
-            project_id, name, trunk=trunk, base_branch_id=base_branch_id
-        )
+        stack = await self.entity.create_stack(project_id, name, trunk=trunk, base_branch_id=base_branch_id)
         await self.db.commit()
         return StackResponse.model_validate(stack)
 
@@ -57,18 +56,14 @@ class StackAPI:
         stack = await self.entity.get_stack(stack_id)
         return StackResponse.model_validate(stack)
 
-    async def get_stack_detail(self, stack_id: UUID) -> dict:
+    async def get_stack_detail(self, stack_id: UUID) -> dict[str, object]:
         """Get a stack with all branches and PRs."""
         data = await self.entity.get_stack_with_branches(stack_id)
         stack = data["stack"]
         branches = []
         for bd in data["branches"]:
             branch_resp = BranchResponse.model_validate(bd["branch"])
-            pr_resp = (
-                PullRequestResponse.model_validate(bd["pull_request"])
-                if bd["pull_request"]
-                else None
-            )
+            pr_resp = PullRequestResponse.model_validate(bd["pull_request"]) if bd["pull_request"] else None
             branches.append(
                 {
                     "branch": branch_resp.model_dump(),
@@ -100,9 +95,7 @@ class StackAPI:
         head_sha: str | None = None,
     ) -> BranchResponse:
         """Add a branch to a stack."""
-        branch = await self.entity.add_branch(
-            stack_id, workspace_id, name, position=position, head_sha=head_sha
-        )
+        branch = await self.entity.add_branch(stack_id, workspace_id, name, position=position, head_sha=head_sha)
         await self.db.commit()
         return BranchResponse.model_validate(branch)
 
@@ -115,18 +108,12 @@ class StackAPI:
         review_notes: str | None = None,
     ) -> PullRequestResponse:
         """Create a pull request for a branch."""
-        pr = await self.entity.create_pull_request(
-            branch_id, title, description=description, review_notes=review_notes
-        )
+        pr = await self.entity.create_pull_request(branch_id, title, description=description, review_notes=review_notes)
         await self.db.commit()
         return PullRequestResponse.model_validate(pr)
 
-    async def link_external_pr(
-        self, pull_request_id: UUID, external_id: int, external_url: str
-    ) -> PullRequestResponse:
+    async def link_external_pr(self, pull_request_id: UUID, external_id: int, external_url: str) -> PullRequestResponse:
         """Link a PR to a GitHub PR after submission."""
-        pr = await self.entity.link_external_pr(
-            pull_request_id, external_id, external_url
-        )
+        pr = await self.entity.link_external_pr(pull_request_id, external_id, external_url)
         await self.db.commit()
         return PullRequestResponse.model_validate(pr)
