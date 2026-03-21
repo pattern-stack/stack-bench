@@ -13,18 +13,27 @@ See `docs/adrs/` for key architecture decisions:
 ## Repository Layout
 
 ```
-backend/          # Python backend (pattern-stack + agentic-patterns)
-  features/       # Single-model data services (atoms → features layer)
-  molecules/      # Multi-feature business logic
-  organisms/      # REST API, CLI (thin interface layer)
-  config/         # Settings
-  tests/          # pytest suite
+app/
+  backend/              # Python backend (self-contained service)
+    src/                # Source code (PYTHONPATH root)
+      features/         # Single-model data services (atoms → features layer)
+      molecules/        # Multi-feature business logic
+      organisms/        # REST API, CLI (thin interface layer)
+      config/           # Settings
+      seeds/            # Database seeding specifications
+    __tests__/          # pytest suite
+    alembic/            # Database migrations
+    pyproject.toml      # Python project config
+    Justfile            # Backend-specific commands
+  cli/                  # Go CLI (Bubble Tea TUI)
+    Justfile            # CLI-specific commands
+  frontend/             # React frontend (planned)
 docs/
-  adrs/           # Architecture Decision Records (append-only, numbered)
-  specs/          # Implementation specs (frontmatter status tracking)
-    archive/      # Completed/abandoned specs
-  epics/          # Groups of related issues (EP-NNN)
-  issues/         # Individual work units, 1:1 with branches/PRs (SB-NNN)
+  adrs/                 # Architecture Decision Records (append-only, numbered)
+  specs/                # Implementation specs (frontmatter status tracking)
+    archive/            # Completed/abandoned specs
+  epics/                # Groups of related issues (EP-NNN)
+  issues/               # Individual work units, 1:1 with branches/PRs (SB-NNN)
 ```
 
 ## Stack CLI
@@ -55,13 +64,19 @@ pts dev           # Start backend + frontend + Postgres
 pts services up   # Start Postgres only
 pts test          # Run pytest
 pts quality       # Format + lint + typecheck + test
-pts format        # Format code
-pts lint          # Lint code
 
-# just commands (from backend/)
-cd backend
+# just commands (from app/backend/)
+cd app/backend
+just test         # Run tests
+just quality      # Format + lint + typecheck + test
 just migrate      # Run alembic migrations
-just seed         # Seed database with SDLC agents (pts db seed)
+just seed         # Seed database with SDLC agents
+
+# Root Justfile (from project root)
+just test         # Run all tests (backend + CLI)
+just quality      # Run all quality gates
+just migrate      # Run backend migrations
+just seed         # Seed database
 ```
 
 ## AI Workflow Config
