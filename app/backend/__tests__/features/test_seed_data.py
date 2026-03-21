@@ -7,7 +7,7 @@ import yaml
 @pytest.mark.unit
 def test_seed_yaml_loadable() -> None:
     """Verify seed YAML loads with expected structure."""
-    seed_path = Path(__file__).parent.parent.parent / "seeds" / "agents.yaml"
+    seed_path = Path(__file__).parent.parent.parent / "src" / "seeds" / "agents.yaml"
     with open(seed_path) as f:
         data = yaml.safe_load(f)
     assert len(data["role_templates"]) == 5
@@ -19,7 +19,7 @@ def test_seed_yaml_loadable() -> None:
 @pytest.mark.unit
 def test_seed_agent_definitions_reference_valid_roles() -> None:
     """Verify each agent definition references an existing role template."""
-    seed_path = Path(__file__).parent.parent.parent / "seeds" / "agents.yaml"
+    seed_path = Path(__file__).parent.parent.parent / "src" / "seeds" / "agents.yaml"
     with open(seed_path) as f:
         data = yaml.safe_load(f)
     role_names = {rt["name"] for rt in data["role_templates"]}
@@ -32,7 +32,7 @@ def test_seed_agent_definitions_reference_valid_roles() -> None:
 @pytest.mark.unit
 def test_seed_role_templates_have_required_fields() -> None:
     """Verify each role template has required fields."""
-    seed_path = Path(__file__).parent.parent.parent / "seeds" / "agents.yaml"
+    seed_path = Path(__file__).parent.parent.parent / "src" / "seeds" / "agents.yaml"
     with open(seed_path) as f:
         data = yaml.safe_load(f)
     for rt in data["role_templates"]:
@@ -45,7 +45,7 @@ def test_seed_role_templates_have_required_fields() -> None:
 @pytest.mark.unit
 def test_seed_agent_definitions_have_required_fields() -> None:
     """Verify each agent definition has required fields."""
-    seed_path = Path(__file__).parent.parent.parent / "seeds" / "agents.yaml"
+    seed_path = Path(__file__).parent.parent.parent / "src" / "seeds" / "agents.yaml"
     with open(seed_path) as f:
         data = yaml.safe_load(f)
     for ad in data["agent_definitions"]:
