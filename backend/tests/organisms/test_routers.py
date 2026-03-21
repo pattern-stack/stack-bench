@@ -23,3 +23,17 @@ async def test_agents_router_registered() -> None:
     """Verify agent routes are registered."""
     routes = [getattr(r, "path", str(r)) for r in app.routes]
     assert any("/agents" in r for r in routes)
+
+
+@pytest.mark.unit
+async def test_projects_router_registered() -> None:
+    """Verify project routes are registered."""
+    routes = [getattr(r, "path", str(r)) for r in app.routes]
+    assert any("/projects" in r for r in routes)
+
+
+@pytest.mark.unit
+async def test_stacks_router_registered() -> None:
+    """Verify stack routes are registered."""
+    routes = [getattr(r, "path", str(r)) for r in app.routes]
+    assert any("/stacks" in r for r in routes)
