@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
-from uuid import uuid4
 
 from features.conversations.models import Conversation
 from features.conversations.schemas.input import ConversationCreate, ConversationUpdate
