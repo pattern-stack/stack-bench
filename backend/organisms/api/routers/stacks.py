@@ -1,10 +1,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query
+from features.pull_requests.schemas.output import PullRequestResponse
 from pydantic import BaseModel, Field
 
 from features.branches.schemas.output import BranchResponse
-from features.pull_requests.schemas.output import PullRequestResponse
 from features.stacks.schemas.output import StackResponse
 from organisms.api.dependencies import StackAPIDep
 
@@ -43,9 +43,7 @@ class LinkExternalPRRequest(BaseModel):
 
 
 @router.post("/", response_model=StackResponse, status_code=201)
-async def create_stack(
-    data: CreateStackRequest, api: StackAPIDep
-) -> StackResponse:
+async def create_stack(data: CreateStackRequest, api: StackAPIDep) -> StackResponse:
     return await api.create_stack(
         data.project_id,
         data.name,
@@ -57,7 +55,7 @@ async def create_stack(
 @router.get("/", response_model=list[StackResponse])
 async def list_stacks(
     api: StackAPIDep,
-    project_id: UUID = Query(...),
+    project_id: UUID = Query(...),  # noqa: B008
 ) -> list[StackResponse]:
     return await api.list_stacks(project_id)
 
@@ -81,12 +79,8 @@ async def delete_stack(stack_id: UUID, api: StackAPIDep) -> None:
 # --- Branch endpoints (nested under stack) ---
 
 
-@router.post(
-    "/{stack_id}/branches", response_model=BranchResponse, status_code=201
-)
-async def add_branch(
-    stack_id: UUID, data: AddBranchRequest, api: StackAPIDep
-) -> BranchResponse:
+@router.post("/{stack_id}/branches", response_model=BranchResponse, status_code=201)
+async def add_branch(stack_id: UUID, data: AddBranchRequest, api: StackAPIDep) -> BranchResponse:
     return await api.add_branch(
         stack_id,
         data.workspace_id,
@@ -127,6 +121,4 @@ async def link_external_pr(
     data: LinkExternalPRRequest,
     api: StackAPIDep,
 ) -> PullRequestResponse:
-    return await api.link_external_pr(
-        pull_request_id, data.external_id, data.external_url
-    )
+    return await api.link_external_pr(pull_request_id, data.external_id, data.external_url)
