@@ -66,7 +66,7 @@ async def get_stack(stack_id: UUID, api: StackAPIDep) -> StackResponse:
 
 
 @router.get("/{stack_id}/detail")
-async def get_stack_detail(stack_id: UUID, api: StackAPIDep) -> dict:
+async def get_stack_detail(stack_id: UUID, api: StackAPIDep) -> dict[str, object]:
     """Get stack with all branches and pull requests."""
     return await api.get_stack_detail(stack_id)
 
