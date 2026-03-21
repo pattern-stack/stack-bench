@@ -6,4 +6,6 @@ from features.jobs.models import Job  # noqa: F401
 from features.message_parts.models import MessagePart  # noqa: F401
 from features.messages.models import Message  # noqa: F401
 from features.role_templates.models import RoleTemplate  # noqa: F401
+from features.projects.models import Project  # noqa: F401
 from features.tool_calls.models import ToolCall  # noqa: F401
+from features.workspaces.models import Workspace  # noqa: F401
