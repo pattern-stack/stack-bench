@@ -39,8 +39,6 @@ class PullRequestNotFoundError(MoleculeError):
 
 class StackCycleError(MoleculeError):
     def __init__(self, stack_id: UUID, base_branch_id: UUID) -> None:
-        super().__init__(
-            f"Setting base_branch_id={base_branch_id} on stack {stack_id} would create a cycle"
-        )
+        super().__init__(f"Setting base_branch_id={base_branch_id} on stack {stack_id} would create a cycle")
         self.stack_id = stack_id
         self.base_branch_id = base_branch_id

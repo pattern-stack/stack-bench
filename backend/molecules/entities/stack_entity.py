@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from features.branches.schemas.input import BranchCreate, BranchUpdate
-from features.branches.service import BranchService
 from features.pull_requests.schemas.input import PullRequestCreate, PullRequestUpdate
 from features.pull_requests.service import PullRequestService
-from features.stacks.schemas.input import StackCreate, StackUpdate
+
+from features.branches.schemas.input import BranchCreate, BranchUpdate
+from features.branches.service import BranchService
+from features.stacks.schemas.input import StackCreate
 from features.stacks.service import StackService
 from molecules.exceptions import (
     BranchNotFoundError,
@@ -18,10 +19,10 @@ from molecules.exceptions import (
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from features.pull_requests.models import PullRequest
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from features.branches.models import Branch
-    from features.pull_requests.models import PullRequest
     from features.stacks.models import Stack
 
 
@@ -132,9 +133,7 @@ class StackEntity:
     async def update_branch_sha(self, branch_id: UUID, head_sha: str) -> Branch:
         """Update a branch's head SHA."""
         branch = await self.get_branch(branch_id)
-        updated = await self.branch_service.update(
-            self.db, branch.id, BranchUpdate(head_sha=head_sha)
-        )
+        updated = await self.branch_service.update(self.db, branch.id, BranchUpdate(head_sha=head_sha))
         return updated
 
     # --- PullRequest operations ---
@@ -168,9 +167,7 @@ class StackEntity:
             raise PullRequestNotFoundError(pull_request_id)
         return pr
 
-    async def link_external_pr(
-        self, pull_request_id: UUID, external_id: int, external_url: str
-    ) -> PullRequest:
+    async def link_external_pr(self, pull_request_id: UUID, external_id: int, external_url: str) -> PullRequest:
         """Link a pull request to a GitHub PR after submission."""
         pr = await self.get_pull_request(pull_request_id)
         updated = await self.pr_service.update(
