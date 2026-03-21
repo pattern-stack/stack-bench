@@ -11,9 +11,7 @@ from .schemas.input import WorkspaceCreate, WorkspaceUpdate
 class WorkspaceService(BaseService[Workspace, WorkspaceCreate, WorkspaceUpdate]):
     model = Workspace
 
-    async def list_by_project(
-        self, db: AsyncSession, project_id: UUID, active_only: bool = True
-    ) -> list[Workspace]:
+    async def list_by_project(self, db: AsyncSession, project_id: UUID, active_only: bool = True) -> list[Workspace]:
         query = select(Workspace).where(Workspace.project_id == project_id)
         if active_only:
             query = query.where(Workspace.is_active == True)  # noqa: E712
