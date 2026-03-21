@@ -32,9 +32,7 @@ class StackCLIAdapter:
         bun_path = os.path.expanduser("~/.bun/bin/stack")
         if os.path.isfile(bun_path):
             return bun_path
-        raise FileNotFoundError(
-            "stack CLI binary not found. Install via: bun install -g @pattern-stack/stack"
-        )
+        raise FileNotFoundError("stack CLI binary not found. Install via: bun install -g @pattern-stack/stack")
 
     async def _run(self, *args: str) -> tuple[str, str, int]:
         """Run a stack CLI command and return (stdout, stderr, returncode)."""
@@ -51,9 +49,7 @@ class StackCLIAdapter:
             proc.returncode or 0,
         )
 
-    async def create_stack(
-        self, name: str, *, trunk: str = "main"
-    ) -> StackResult:
+    async def create_stack(self, name: str, *, trunk: str = "main") -> StackResult:
         """Create a new stack via CLI."""
         stdout, stderr, code = await self._run("create", name)
         return StackResult(
@@ -76,9 +72,7 @@ class StackCLIAdapter:
         branches: list[BranchInfo] = []
         return StackInfo(name=stack_name, trunk="main", branches=branches)
 
-    async def push(
-        self, stack_name: str, *, branch_positions: list[int] | None = None
-    ) -> StackResult:
+    async def push(self, stack_name: str, *, branch_positions: list[int] | None = None) -> StackResult:
         """Push via CLI. Maps to `stack submit` (which pushes + creates PRs)."""
         args = ["submit"]
         if branch_positions:

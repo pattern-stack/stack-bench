@@ -19,9 +19,9 @@ def test_stack_cli_adapter_find_binary_not_found() -> None:
     with (
         patch("shutil.which", return_value=None),
         patch("os.path.isfile", return_value=False),
+        pytest.raises(FileNotFoundError),
     ):
-        with pytest.raises(FileNotFoundError):
-            StackCLIAdapter()
+        StackCLIAdapter()
 
 
 @pytest.mark.unit

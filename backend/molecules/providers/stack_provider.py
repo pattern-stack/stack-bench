@@ -40,9 +40,7 @@ class StackProvider(Protocol):
     to perform git operations and report results back to the domain layer.
     """
 
-    async def create_stack(
-        self, name: str, *, trunk: str = "main"
-    ) -> StackResult:
+    async def create_stack(self, name: str, *, trunk: str = "main") -> StackResult:
         """Create a new stack in the git tool."""
         ...
 
@@ -50,9 +48,7 @@ class StackProvider(Protocol):
         """Get current status of a stack from the git tool."""
         ...
 
-    async def push(
-        self, stack_name: str, *, branch_positions: list[int] | None = None
-    ) -> StackResult:
+    async def push(self, stack_name: str, *, branch_positions: list[int] | None = None) -> StackResult:
         """Push branches to remote. If branch_positions is None, push all."""
         ...
 
