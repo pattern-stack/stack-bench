@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from features.pull_requests.schemas.output import PullRequestResponse
-
 from features.branches.schemas.output import BranchResponse
+from features.pull_requests.schemas.output import PullRequestResponse
 from features.stacks.schemas.output import StackResponse
 from molecules.entities.stack_entity import StackEntity
 

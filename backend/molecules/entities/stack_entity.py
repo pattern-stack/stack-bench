@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from features.pull_requests.schemas.input import PullRequestCreate, PullRequestUpdate
-from features.pull_requests.service import PullRequestService
-
 from features.branches.schemas.input import BranchCreate, BranchUpdate
 from features.branches.service import BranchService
+from features.pull_requests.schemas.input import PullRequestCreate, PullRequestUpdate
+from features.pull_requests.service import PullRequestService
 from features.stacks.schemas.input import StackCreate
 from features.stacks.service import StackService
 from molecules.exceptions import (
@@ -19,10 +18,10 @@ from molecules.exceptions import (
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from features.pull_requests.models import PullRequest
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from features.branches.models import Branch
+    from features.pull_requests.models import PullRequest
     from features.stacks.models import Stack
 
 

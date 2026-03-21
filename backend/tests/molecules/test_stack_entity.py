@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from features.pull_requests.service import PullRequestService
 
 from features.branches.service import BranchService
+from features.pull_requests.service import PullRequestService
 from features.stacks.service import StackService
 from molecules.entities.stack_entity import StackEntity
 from molecules.exceptions import (
