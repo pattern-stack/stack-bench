@@ -168,6 +168,7 @@ async def test_conversation_api_branch_facade() -> None:
     mock_conv.exchange_count = 0
     mock_conv.total_input_tokens = 0
     mock_conv.total_output_tokens = 0
+    mock_conv.project_id = uuid4()
     mock_conv.branched_from_id = conv_id
     mock_conv.branched_at_sequence = 3
     mock_conv.created_at = MagicMock()
