@@ -17,6 +17,9 @@ build/
 # Claude Code worktrees
 .claude/worktrees/
 
+# Cloned reference repos
+dealbrain/
+
 # IDE / OS
 .DS_Store
 *.swp
