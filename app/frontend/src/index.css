@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/*
+ * Stack Bench — Dark Design System Tokens
+ *
+ * All colors, fonts, and semantic values are defined here as CSS custom
+ * properties. Components reference these via var(--token-name). Never
+ * hardcode color values in component code.
+ */
+
+:root {
+  /* ── Backgrounds ─────────────────────────────────────────── */
+  --bg-canvas: #0d1117;          /* Page background */
+  --bg-surface: #161b22;         /* Cards, panels, headers */
+  --bg-surface-hover: #1c2128;   /* Surface hover state */
+  --bg-inset: #010409;           /* Inputs, recessed areas */
+
+  /* ── Borders ─────────────────────────────────────────────── */
+  --border: #30363d;             /* Default border */
+  --border-muted: #21262d;       /* Subtle border */
+
+  /* ── Foreground / Text ───────────────────────────────────── */
+  --fg-default: #e6edf3;         /* Primary text */
+  --fg-muted: #7d8590;           /* Secondary text */
+  --fg-subtle: #484f58;          /* Tertiary text, placeholders */
+
+  /* ── Semantic Colors ─────────────────────────────────────── */
+  --accent: #58a6ff;             /* Links, primary actions */
+  --green: #3fb950;              /* Success, additions */
+  --red: #f85149;                /* Error, deletions */
+  --purple: #bc8cff;             /* Reviews, special items */
+  --yellow: #d29922;             /* Warnings, pending */
+
+  /* ── Semantic Backgrounds ────────────────────────────────── */
+  --green-bg: #12261e;           /* Diff addition background */
+  --red-bg: #28171a;             /* Diff deletion background */
+  --accent-muted: #1f6feb33;     /* Selected/active background */
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* ── Spacing (for reference, Tailwind handles most) ──────── */
+  --sidebar-width: 320px;
+}
+
+/* ── Global Reset ──────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-canvas);
+  color: var(--fg-default);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar Styling ─────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-subtle);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg-canvas);
+}
+
+/* ── Selection ─────────────────────────────────────────────── */
+
+::selection {
+  background-color: var(--accent-muted);
+  color: var(--fg-default);
+}
