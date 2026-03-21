@@ -9,3 +9,6 @@ from features.projects.models import Project  # noqa: F401
 from features.role_templates.models import RoleTemplate  # noqa: F401
 from features.tool_calls.models import ToolCall  # noqa: F401
 from features.workspaces.models import Workspace  # noqa: F401
+from features.stacks.models import Stack  # noqa: F401
+from features.branches.models import Branch  # noqa: F401
+from features.pull_requests.models import PullRequest  # noqa: F401
