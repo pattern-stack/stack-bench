@@ -22,6 +22,13 @@ dependencies = [
 pattern-stack = { git = "https://github.com/pattern-stack/backend-patterns.git" }
 agentic-patterns = { git = "https://github.com/pattern-stack/agentic-patterns.git" }
 
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 120
@@ -46,7 +53,7 @@ follow_imports = "silent"
 disallow_any_unimported = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["__tests__"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
@@ -56,7 +63,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["features", "molecules", "organisms"]
+source = ["src/features", "src/molecules", "src/organisms"]
 
 [tool.coverage.report]
 fail_under = 80

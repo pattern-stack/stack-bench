@@ -1,0 +1,23 @@
+# Stack Bench Backend
+
+export PYTHONPATH := justfile_directory() / "src"
+
+# Run database migrations
+migrate:
+    uv run alembic upgrade head
+
+# Generate a new migration
+migration msg:
+    uv run alembic revision --autogenerate -m "{{msg}}"
+
+# Seed the database with SDLC agents
+seed:
+    pts db seed src/seeds/agents.yaml
+
+# Run tests
+test:
+    uv run pytest
+
+# Quality gates
+quality:
+    uv run ruff format src/ __tests__/ && uv run ruff check src/ __tests__/ && uv run mypy src/ && uv run pytest

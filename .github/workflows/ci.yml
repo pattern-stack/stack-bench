@@ -43,14 +43,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd app/backend
           uv sync
 
       - name: Run tests with coverage
         run: |
-          cd backend
-          uv run pytest tests/ \
-            --cov=features --cov=molecules --cov=organisms \
+          cd app/backend
+          PYTHONPATH=src uv run pytest __tests__/ \
+            --cov=src/features --cov=src/molecules --cov=src/organisms \
             --cov-report=xml \
             --cov-report=term \
             --cov-fail-under=80
@@ -61,7 +61,7 @@ jobs:
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          cd backend && uv run coverage report >> $GITHUB_STEP_SUMMARY || true
+          cd app/backend && PYTHONPATH=src uv run coverage report >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   lint:
@@ -91,14 +91,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd app/backend
           uv sync
 
       - name: Run ruff linter
-        run: cd backend && uv run ruff check .
+        run: cd app/backend && uv run ruff check src/ __tests__/
 
       - name: Run ruff formatter
-        run: cd backend && uv run ruff format --check .
+        run: cd app/backend && uv run ruff format --check src/ __tests__/
 
   type-check:
     name: Type Check
@@ -127,11 +127,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd app/backend
           uv sync
 
       - name: Run mypy
-        run: cd backend && uv run mypy features molecules organisms
+        run: cd app/backend && PYTHONPATH=src uv run mypy src/
 
   ci-gate:
     name: CI Gate
