@@ -6,8 +6,8 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"github.com/dugshub/stack-bench/cli/internal/ui"
-	"github.com/dugshub/stack-bench/cli/internal/ui/theme"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 // View renders the full chat view to fill the given dimensions.

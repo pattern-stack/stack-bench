@@ -8,11 +8,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/dugshub/stack-bench/cli/internal/api"
-	"github.com/dugshub/stack-bench/cli/internal/chat"
-	"github.com/dugshub/stack-bench/cli/internal/command"
-	"github.com/dugshub/stack-bench/cli/internal/service"
-	"github.com/dugshub/stack-bench/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/api"
+	"github.com/dugshub/stack-bench/app/cli/internal/chat"
+	"github.com/dugshub/stack-bench/app/cli/internal/command"
+	"github.com/dugshub/stack-bench/app/cli/internal/service"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui"
 )
 
 // Phase represents the current phase of the app lifecycle.
