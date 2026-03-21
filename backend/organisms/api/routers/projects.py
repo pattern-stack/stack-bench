@@ -38,9 +38,7 @@ async def get_project(project_id: UUID, db: DatabaseSession) -> ProjectResponse:
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
-async def update_project(
-    project_id: UUID, data: ProjectUpdate, db: DatabaseSession
-) -> ProjectResponse:
+async def update_project(project_id: UUID, data: ProjectUpdate, db: DatabaseSession) -> ProjectResponse:
     project = await project_service.update(db, project_id, data)
     await db.commit()
     return ProjectResponse.model_validate(project)
@@ -76,9 +74,7 @@ async def delete_project(project_id: UUID, db: DatabaseSession) -> None:
 
 
 @router.post("/{project_id}/workspaces", response_model=WorkspaceResponse, status_code=201)
-async def create_workspace(
-    project_id: UUID, data: WorkspaceCreate, db: DatabaseSession
-) -> WorkspaceResponse:
+async def create_workspace(project_id: UUID, data: WorkspaceCreate, db: DatabaseSession) -> WorkspaceResponse:
     # Override project_id from URL path
     create_data = data.model_copy(update={"project_id": project_id})
     workspace = await workspace_service.create(db, create_data)
@@ -100,9 +96,7 @@ async def list_workspaces(
     "/{project_id}/workspaces/{workspace_id}",
     response_model=WorkspaceResponse,
 )
-async def get_workspace(
-    project_id: UUID, workspace_id: UUID, db: DatabaseSession
-) -> WorkspaceResponse:
+async def get_workspace(project_id: UUID, workspace_id: UUID, db: DatabaseSession) -> WorkspaceResponse:
     workspace = await workspace_service.get(db, workspace_id)
     if not workspace or workspace.project_id != project_id:
         raise HTTPException(status_code=404, detail="Workspace not found")
@@ -128,9 +122,7 @@ async def update_workspace(
 
 
 @router.delete("/{project_id}/workspaces/{workspace_id}", status_code=204)
-async def delete_workspace(
-    project_id: UUID, workspace_id: UUID, db: DatabaseSession
-) -> None:
+async def delete_workspace(project_id: UUID, workspace_id: UUID, db: DatabaseSession) -> None:
     workspace = await workspace_service.get(db, workspace_id)
     if not workspace or workspace.project_id != project_id:
         raise HTTPException(status_code=404, detail="Workspace not found")
