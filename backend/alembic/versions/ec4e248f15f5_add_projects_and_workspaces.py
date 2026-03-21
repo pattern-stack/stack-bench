@@ -5,16 +5,17 @@ Revises: 94f4eb416247
 Create Date: 2026-03-20 09:11:20.908759
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+
+import sqlalchemy as sa
 
 from alembic import op
-import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'ec4e248f15f5'
-down_revision: Union[str, None] = '94f4eb416247'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '94f4eb416247'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -24,7 +25,10 @@ def upgrade() -> None:
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('metadata_', sa.JSON(), nullable=True),
     sa.Column('state', sa.String(length=50), nullable=False, comment='Current state in the state machine'),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True, comment='Timestamp when the record was soft deleted'),
+    sa.Column(
+        'deleted_at', sa.DateTime(timezone=True), nullable=True,
+        comment='Timestamp when the record was soft deleted',
+    ),
     sa.Column('reference_number', sa.String(length=50), nullable=True, comment='Unique reference number'),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
