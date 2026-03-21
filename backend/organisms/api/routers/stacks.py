@@ -1,10 +1,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query
-from features.pull_requests.schemas.output import PullRequestResponse
 from pydantic import BaseModel, Field
 
 from features.branches.schemas.output import BranchResponse
+from features.pull_requests.schemas.output import PullRequestResponse
 from features.stacks.schemas.output import StackResponse
 from organisms.api.dependencies import StackAPIDep
 
