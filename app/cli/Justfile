@@ -1,0 +1,17 @@
+# Stack Bench CLI
+
+# Build the CLI binary
+build:
+    go build -o bin/stack-bench .
+
+# Run tests
+test:
+    go test ./...
+
+# Quality gates
+quality:
+    go vet ./... && go test ./...
+
+# Run the CLI
+run *args:
+    go run . {{args}}

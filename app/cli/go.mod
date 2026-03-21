@@ -1,4 +1,4 @@
-module github.com/dugshub/stack-bench/cli
+module github.com/dugshub/stack-bench/app/cli
 
 go 1.25.0
 

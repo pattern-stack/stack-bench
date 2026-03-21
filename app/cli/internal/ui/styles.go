@@ -3,7 +3,7 @@ package ui
 import (
 	"charm.land/lipgloss/v2"
 
-	"github.com/dugshub/stack-bench/cli/internal/ui/theme"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 // Convenience styles resolved from the active theme.
