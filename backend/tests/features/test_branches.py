@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
-from uuid import uuid4
 
 from features.branches.models import Branch
 from features.branches.schemas.input import BranchCreate, BranchUpdate

@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
-from uuid import uuid4
 
 from features.stacks.models import Stack
 from features.stacks.schemas.input import StackCreate, StackUpdate

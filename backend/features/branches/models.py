@@ -7,9 +7,7 @@ from sqlalchemy import UniqueConstraint
 class Branch(EventPattern):
     __tablename__ = "branches"
 
-    __table_args__ = (
-        UniqueConstraint("stack_id", "position", name="uq_branch_stack_position"),
-    )
+    __table_args__ = (UniqueConstraint("stack_id", "position", name="uq_branch_stack_position"),)
 
     class Pattern:
         entity = "branch"
