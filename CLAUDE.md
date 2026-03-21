@@ -83,6 +83,49 @@ just seed         # Seed database
 
 See `.claude/sdlc.yml` for SDLC primitive configuration (language, framework, quality gates, task management).
 
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/prime` | Load project context for the session |
+| `/plan` | Create an implementation spec |
+| `/develop` | Full SDLC loop for one issue (architect → builder → validator as teammates) |
+| `/build` | Execute an implementation from a spec |
+| `/orchestrate` | Coordinate large bodies of work across multiple epics/stacks |
+| `/plan_w_team` | Create a plan using the architect+builder+validator team |
+
+### Skills (auto-invoked)
+
+| Skill | Triggers on |
+|-------|-------------|
+| `pattern-stack` | Backend patterns, services, models |
+| `atomic-frontend-developer` | Component architecture, layer placement |
+| `browser-pilot` | Browser verification, console errors, screenshots, audits |
+| `run-and-monitor` | Starting dev environment, checking logs |
+| `skill-authoring` | Creating new skills, commands, agents |
+| `project-documentation` | ADRs, specs, architecture docs |
+
+### Team Agents
+
+Agents live in `.claude/agents/team/` and are spawned as named teammates:
+
+| Agent | Role | Capability |
+|-------|------|------------|
+| `architect` | Understand, plan, spec | Read-only — explores and plans |
+| `builder` | Implement | Read-write — writes code, runs tests |
+| `validator` | Validate | Runs quality gates, browser checks, reports |
+| `coordinator` | Epic orchestration | Manages one epic, runs /develop loops per issue |
+
+### Orchestration Model
+
+```
+/orchestrate (you — lead coordinator, 1M context)
+ └── coordinator teammates (one per epic)
+      └── /develop loops (one per issue)
+           └── architect → builder → validator (as teammates)
+                └── validator uses browser-pilot for visual verification
+```
+
 ## Related Repositories
 
 - **agentic-patterns** — Agent framework + backend app (`app/backend/`)
