@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
-from uuid import uuid4
 
 from features.pull_requests.models import PullRequest
 from features.pull_requests.schemas.input import PullRequestCreate, PullRequestUpdate
