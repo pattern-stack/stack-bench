@@ -33,5 +33,6 @@ class Conversation(EventPattern):
     exchange_count = Field(int, default=0, min=0)
     total_input_tokens = Field(int, default=0, min=0)
     total_output_tokens = Field(int, default=0, min=0)
+    project_id = Field(UUID, foreign_key="projects.id", nullable=True, index=True)
     branched_from_id = Field(UUID, foreign_key="conversations.id", nullable=True, index=True)
     branched_at_sequence = Field(int, nullable=True)
