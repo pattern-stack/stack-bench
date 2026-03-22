@@ -20,6 +20,10 @@ run *args:
 demo *args:
     go run . --demo {{args}}
 
+# Show component gallery (all atoms and molecules, scrollable)
+gallery:
+    go run . --demo-gallery
+
 # Run CLI in a tmux session for AI-driven testing
 # Usage: just demo-tmux
 #   Then from another terminal:

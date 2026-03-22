@@ -144,6 +144,11 @@ func (m *Model) RenderHeader() string {
 }
 
 func renderMessage(msg Message, width int) string {
+	// Raw messages are pre-rendered — display as-is.
+	if msg.Raw {
+		return msg.Content
+	}
+
 	ctx := atoms.DefaultContext(width)
 
 	switch msg.Role {

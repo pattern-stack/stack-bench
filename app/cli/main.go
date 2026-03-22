@@ -25,7 +25,13 @@ func main() {
 	noBackend := flag.Bool("no-backend", false, "skip auto-starting the backend server")
 	demoMode := flag.Bool("demo", false, "run in demo mode with scripted conversation replay")
 	demoScript := flag.String("demo-script", "", "path to demo script JSON (default: built-in fixture)")
+	galleryMode := flag.Bool("demo-gallery", false, "show component gallery with all atoms and molecules")
 	flag.Parse()
+
+	if *galleryMode {
+		runGallery()
+		return
+	}
 
 	if *demoMode {
 		runDemo(*demoScript)
@@ -103,6 +109,15 @@ func runDemo(scriptPath string) {
 	}
 
 	model := app.NewDemo(script)
+	p := tea.NewProgram(model)
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runGallery() {
+	model := app.NewGallery(80)
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

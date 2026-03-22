@@ -29,6 +29,7 @@ const (
 type Message struct {
 	Role    Role
 	Content string
+	Raw     bool // when true, Content is pre-rendered — bypass markdown
 }
 
 // ResponseMsg is sent by the backend streaming response tea.Cmd.

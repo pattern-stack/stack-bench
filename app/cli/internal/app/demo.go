@@ -71,6 +71,9 @@ func (m Model) handleDemoAgentsLoaded() (tea.Model, tea.Cmd) {
 
 // prefillNextInput sets the chat input to the next scripted user message.
 func (m *Model) prefillNextInput() {
+	if m.demoRunner == nil {
+		return
+	}
 	if text, ok := m.demoRunner.NextUserMessage(); ok {
 		m.chat.SetInput(text)
 	}

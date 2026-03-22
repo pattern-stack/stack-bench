@@ -56,6 +56,10 @@ quality-cli:
 demo-cli *args:
     cd app/cli && just demo {{args}}
 
+# Show CLI component gallery
+gallery:
+    cd app/cli && just gallery
+
 # Run CLI in tmux for AI-driven testing
 demo-tmux *args:
     cd app/cli && just demo-tmux {{args}}
