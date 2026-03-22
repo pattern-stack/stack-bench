@@ -1,6 +1,8 @@
 import { ActivityLogEntry } from "@/components/molecules/ActivityLogEntry";
 import type { ActivityLogEntry as ActivityLogEntryType } from "@/types/activity";
 
+const MAX_VISIBLE_ENTRIES = 3;
+
 interface ActivityLogProps {
   entries: ActivityLogEntryType[];
   onClear?: () => void;
@@ -25,14 +27,14 @@ function ActivityLog({ entries, onClear }: ActivityLogProps) {
         )}
       </div>
 
-      {/* Log entries */}
-      <div className="overflow-y-auto max-h-36">
+      {/* Log entries — show latest 3 */}
+      <div className="overflow-y-auto">
         {entries.length === 0 ? (
           <p className="text-xs text-[var(--fg-subtle)] px-3 py-2">
             No recent activity
           </p>
         ) : (
-          entries.map((entry) => (
+          entries.slice(0, MAX_VISIBLE_ENTRIES).map((entry) => (
             <ActivityLogEntry key={entry.id} entry={entry} />
           ))
         )}
