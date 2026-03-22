@@ -1,14 +1,17 @@
 import { cn } from "@/lib/utils";
-import { StackDot } from "@/components/atoms";
+import { StackDot, DiffStat, CIDot, PRNumber, RestackBadge } from "@/components/atoms";
 import type { StackDotColor } from "@/components/atoms";
-import { DiffStat } from "@/components/atoms";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
+import type { CIStatus } from "@/types/activity";
 
 interface StackItemProps {
   title: string;
   status: string;
   additions?: number;
   deletions?: number;
+  prNumber?: number | null;
+  ciStatus?: CIStatus;
+  needsRestack?: boolean;
   isActive?: boolean;
   isFirst?: boolean;
   isLast?: boolean;
@@ -26,6 +29,9 @@ function StackItem({
   status,
   additions = 0,
   deletions = 0,
+  prNumber,
+  ciStatus,
+  needsRestack,
   isActive = false,
   isFirst = false,
   isLast = false,
@@ -56,8 +62,13 @@ function StackItem({
         </span>
         <div className="flex items-center gap-1.5">
           <StatusBadge status={status} />
+          {prNumber != null && prNumber > 0 && <PRNumber number={prNumber} />}
+          <CIDot status={ciStatus ?? "none"} />
+          {needsRestack && <RestackBadge />}
           {(additions > 0 || deletions > 0) && (
-            <DiffStat additions={additions} deletions={deletions} />
+            <span className="ml-auto">
+              <DiffStat additions={additions} deletions={deletions} />
+            </span>
           )}
         </div>
       </div>

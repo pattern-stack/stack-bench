@@ -1,4 +1,5 @@
 import { StackItem } from "@/components/molecules/StackItem";
+import type { CIStatus } from "@/types/activity";
 
 interface StackConnectorItem {
   id: string;
@@ -6,6 +7,9 @@ interface StackConnectorItem {
   status: string;
   additions?: number;
   deletions?: number;
+  prNumber?: number | null;
+  ciStatus?: CIStatus;
+  needsRestack?: boolean;
 }
 
 interface StackConnectorProps {
@@ -24,6 +28,9 @@ function StackConnector({ items, activeIndex, onSelect }: StackConnectorProps) {
           status={item.status}
           additions={item.additions}
           deletions={item.deletions}
+          prNumber={item.prNumber}
+          ciStatus={item.ciStatus}
+          needsRestack={item.needsRestack}
           isActive={index === activeIndex}
           isFirst={index === 0}
           isLast={index === items.length - 1}

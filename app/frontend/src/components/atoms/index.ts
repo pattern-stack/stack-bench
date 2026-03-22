@@ -41,3 +41,12 @@ export type { ViewedToggleProps } from "./ViewedToggle";
 
 export { SidebarModeToggle } from "./SidebarModeToggle";
 export type { SidebarModeToggleProps } from "./SidebarModeToggle";
+
+export { CIDot } from "./CIDot";
+export type { CIDotProps } from "./CIDot";
+
+export { PRNumber } from "./PRNumber";
+export type { PRNumberProps } from "./PRNumber";
+
+export { RestackBadge } from "./RestackBadge";
+export type { RestackBadgeProps } from "./RestackBadge";
