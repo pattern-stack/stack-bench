@@ -121,6 +121,23 @@ Name files with a zero-padded sequence number and kebab-case description:
 
 Pattern: `{NN}-{what-is-shown}.png`
 
+### Attaching Screenshots to PRs
+
+To upload a screenshot to a GitHub PR comment, run:
+
+```bash
+./scripts/gh-attach-image.sh <pr-number> <image-path>
+```
+
+This uploads the image to GitHub's native CDN (`user-attachments/assets/...`) and posts a comment with the embedded image. No release artifacts, no repo pollution.
+
+Optional third argument for custom body text (use `<!-- gh-attach:IMAGE -->` as placeholder):
+```bash
+./scripts/gh-attach-image.sh 74 screenshots/img.png "QA result: <!-- gh-attach:IMAGE -->"
+```
+
+Requires a saved GitHub session at `~/.config/gh-attach/session.json`. If missing, the script will tell you how to create one.
+
 ## Constraints
 
 - PREFER `browser_snapshot` over screenshots for page understanding (more token-efficient)

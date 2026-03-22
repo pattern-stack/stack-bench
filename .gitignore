@@ -20,6 +20,9 @@ build/
 # MCP server caches
 .playwright-mcp/
 
+# Browser-pilot screenshots (uploaded to GitHub CDN, not committed)
+screenshots/
+
 # Cloned reference repos
 dealbrain/
 

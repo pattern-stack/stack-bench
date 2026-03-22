@@ -87,7 +87,7 @@ For delegated browser work (e.g., during `/develop` loops), spawn the browser-pi
 Agent tool with subagent_type="browser-pilot", name="browser-pilot"
 ```
 
-The agent (`.claude/agents/browser-pilot.md`) runs on Haiku with its own MCP server connections and uses this skill as its knowledge base.
+The agent (`.claude/agents/browser-pilot.md`) runs on Sonnet with its own MCP server connections and uses this skill as its knowledge base.
 
 ## CDP Connection Check
 
