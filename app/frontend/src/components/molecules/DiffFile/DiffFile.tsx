@@ -1,9 +1,4 @@
 import { useState } from "react";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/atoms/Collapsible";
 import { DiffFileHeader } from "@/components/molecules/DiffFileHeader";
 import { DiffHunkMolecule } from "@/components/molecules/DiffHunk";
 import { useHighlightedDiff } from "@/hooks/useHighlightedDiff";
@@ -11,29 +6,31 @@ import type { DiffFile as DiffFileType } from "@/types/diff";
 
 interface DiffFileMoleculeProps {
   file: DiffFileType;
+  viewed?: boolean;
+  onViewedChange?: (viewed: boolean) => void;
 }
 
-function DiffFileMolecule({ file }: DiffFileMoleculeProps) {
+function DiffFileMolecule({ file, viewed = false, onViewedChange }: DiffFileMoleculeProps) {
   const [expanded, setExpanded] = useState(true);
   const { highlightedHunks } = useHighlightedDiff(file, expanded);
 
   return (
-    <Collapsible open={expanded} onOpenChange={setExpanded}>
-      <CollapsibleTrigger asChild>
-        <DiffFileHeader
-          file={file}
-          expanded={expanded}
-          onToggle={() => setExpanded(!expanded)}
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
+    <div>
+      <DiffFileHeader
+        file={file}
+        expanded={expanded}
+        viewed={viewed}
+        onToggle={() => setExpanded(!expanded)}
+        onViewedChange={onViewedChange}
+      />
+      {expanded && (
         <div className="border-x border-b border-[var(--border)] rounded-b overflow-hidden">
           {highlightedHunks.map((hunk, i) => (
             <DiffHunkMolecule key={i} hunk={hunk} />
           ))}
         </div>
-      </CollapsibleContent>
-    </Collapsible>
+      )}
+    </div>
   );
 }
 
