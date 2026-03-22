@@ -3,6 +3,7 @@ import { SidebarModeToggle } from "@/components/atoms/SidebarModeToggle";
 import { StackConnector } from "@/components/molecules/StackConnector";
 import { DiffFileList } from "@/components/molecules/DiffFileList";
 import { FileTree } from "@/components/organisms/FileTree";
+import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { SidebarMode } from "@/types/sidebar";
@@ -25,6 +26,7 @@ interface StackSidebarProps {
   onSelectFile: (path: string) => void;
   diffFileCount?: number;
   onRefresh?: () => void;
+  changedFiles?: Map<string, ChangedFileInfo>;
 }
 
 function StackSidebar({
@@ -43,6 +45,7 @@ function StackSidebar({
   onSelectFile,
   diffFileCount,
   onRefresh,
+  changedFiles,
 }: StackSidebarProps) {
   return (
     <aside
@@ -99,6 +102,7 @@ function StackSidebar({
               selectedPath={selectedPath}
               onSelectFile={onSelectFile}
               onRefresh={onRefresh}
+              changedFiles={changedFiles}
             />
           )
         )}

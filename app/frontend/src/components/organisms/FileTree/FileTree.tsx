@@ -4,11 +4,20 @@ import { ExplorerToolbar } from "@/components/molecules/ExplorerToolbar";
 import { SearchInput } from "@/components/atoms/SearchInput";
 import type { FileTreeNode } from "@/types/file-tree";
 
+import type { ChangeType } from "@/components/molecules/FileTreeItem";
+
+interface ChangedFileInfo {
+  changeType: ChangeType;
+  additions: number;
+  deletions: number;
+}
+
 interface FileTreeProps {
   tree: FileTreeNode;
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
   onRefresh?: () => void;
+  changedFiles?: Map<string, ChangedFileInfo>;
 }
 
 function sortChildren(children: FileTreeNode[]): FileTreeNode[] {
@@ -58,7 +67,17 @@ function collectMatchingPaths(
   return matched;
 }
 
-function FileTree({ tree, selectedPath, onSelectFile, onRefresh }: FileTreeProps) {
+/** Check if a directory path has any changed files underneath it */
+function hasDirtyDescendants(dirPath: string, changedFiles?: Map<string, ChangedFileInfo>): boolean {
+  if (!changedFiles) return false;
+  const prefix = dirPath ? dirPath + "/" : "";
+  for (const path of changedFiles.keys()) {
+    if (path.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
+function FileTree({ tree, selectedPath, onSelectFile, onRefresh, changedFiles }: FileTreeProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const initial = new Set<string>();
     if (tree.children) {
@@ -139,19 +158,26 @@ function FileTree({ tree, selectedPath, onSelectFile, onRefresh }: FileTreeProps
 
     return (
       <div key={node.path || node.name}>
-        {node.path !== "" && (
-          <FileTreeItem
-            name={node.name}
-            type={node.type}
-            depth={depth}
-            isOpen={isOpen}
-            isActive={selectedPath === node.path}
-            highlight={filterText || undefined}
-            onClick={() =>
-              isDir ? toggleDir(node.path) : onSelectFile(node.path)
-            }
-          />
-        )}
+        {node.path !== "" && (() => {
+          const change = changedFiles?.get(node.path);
+          return (
+            <FileTreeItem
+              name={node.name}
+              type={node.type}
+              depth={depth}
+              isOpen={isOpen}
+              isActive={selectedPath === node.path}
+              highlight={filterText || undefined}
+              changeType={change?.changeType}
+              additions={change?.additions}
+              deletions={change?.deletions}
+              hasDirtyChildren={isDir && hasDirtyDescendants(node.path, changedFiles)}
+              onClick={() =>
+                isDir ? toggleDir(node.path) : onSelectFile(node.path)
+              }
+            />
+          );
+        })()}
         {isDir && (isOpen || node.path === "") && node.children && (
           <div>
             {sortChildren(node.children).map((child) =>
@@ -188,4 +214,4 @@ function FileTree({ tree, selectedPath, onSelectFile, onRefresh }: FileTreeProps
 FileTree.displayName = "FileTree";
 
 export { FileTree };
-export type { FileTreeProps };
+export type { FileTreeProps, ChangedFileInfo };
