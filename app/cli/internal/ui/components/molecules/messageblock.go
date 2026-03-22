@@ -53,7 +53,7 @@ func roleBadge(ctx atoms.RenderContext, role atoms.Role) string {
 	case atoms.RoleUser:
 		return atoms.Badge(ctx, atoms.BadgeData{
 			Label:   label,
-			Style:   theme.Style{Category: theme.CatUser, Emphasis: theme.Subtle},
+			Style:   theme.Style{Category: theme.CatUser},
 			Variant: atoms.BadgeOutline,
 		})
 	case atoms.RoleAssistant:
