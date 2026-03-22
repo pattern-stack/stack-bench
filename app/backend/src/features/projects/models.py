@@ -24,3 +24,5 @@ class Project(EventPattern):
     name = Field(str, required=True, max_length=200, unique=True, index=True)
     description = Field(str, nullable=True)
     metadata_ = Field(dict, default=dict)
+    local_path = Field(str, required=True, max_length=500)
+    github_repo = Field(str, required=True, max_length=500, index=True)
