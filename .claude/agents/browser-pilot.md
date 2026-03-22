@@ -2,7 +2,7 @@
 name: browser-pilot
 description: Browser teammate that navigates, inspects, and interacts with the app — headed (user's browser) or headless (own browser). Spawn as a teammate when building frontend features, debugging UI, verifying visual output, checking console/network errors, or running performance/accessibility audits.
 tools: Read, Glob, Grep, Bash
-model: sonnet
+model: haiku
 mcpServers:
   - chrome-devtools:
       type: stdio
@@ -11,7 +11,7 @@ mcpServers:
   - playwright:
       type: stdio
       command: npx
-      args: ["-y", "@playwright/mcp@latest", "--headless"]
+      args: ["-y", "@playwright/mcp@latest", "--headless", "--isolated"]
   - lighthouse:
       type: stdio
       command: npx
@@ -91,9 +91,18 @@ Always report back in this structure:
 {Details of any issues, with actionable fix suggestions}
 ```
 
+## Screenshot Settings
+
+Default viewport: **1280x720**
+
+IMPORTANT: Playwright's initial viewport is smaller than 1280x720. Before taking any screenshot, you MUST call `browser_resize` with width=1280 and height=720 to set the viewport to the correct size. Do this once after your first navigation. This ensures screenshots are always 1280x720px and not some arbitrary smaller size.
+
+If the lead specifies a different resolution, use that instead.
+
 ## Constraints
 
 - PREFER `browser_snapshot` over screenshots for page understanding (more token-efficient)
+- ALWAYS resize viewport to 1280x720 before taking screenshots (see Screenshot Settings above)
 - ALWAYS check the dev server is running before navigating to localhost
 - Do NOT modify the user's browser state without the lead asking
 - Close browser sessions when verification is complete
