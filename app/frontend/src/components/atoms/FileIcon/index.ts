@@ -1,2 +1,2 @@
-export { FileIcon } from "./FileIcon";
+export { FileIcon, extensionColors, getExtensionColor } from "./FileIcon";
 export type { FileIconProps } from "./FileIcon";
