@@ -9,15 +9,17 @@ import (
 	"github.com/dugshub/stack-bench/app/cli/internal/api"
 	"github.com/dugshub/stack-bench/app/cli/internal/command"
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/autocomplete"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
 )
 
-// Role identifies the sender of a chat message.
-type Role int
+// Role is an alias for atoms.Role, the canonical role type in the component system.
+type Role = atoms.Role
 
+// Role constants re-exported from atoms for backward compatibility within the chat package.
 const (
-	RoleUser Role = iota
-	RoleAssistant
-	RoleSystem
+	RoleUser      = atoms.RoleUser
+	RoleAssistant = atoms.RoleAssistant
+	RoleSystem    = atoms.RoleSystem
 )
 
 // Message is a single chat message.
