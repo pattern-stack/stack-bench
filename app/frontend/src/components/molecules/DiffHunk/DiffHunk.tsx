@@ -20,7 +20,7 @@ function DiffHunkMolecule({ hunk }: DiffHunkMoleculeProps) {
 
       {/* Hunk lines */}
       {hunk.lines.map((line, i) => (
-        <DiffLineAtom key={i} line={line} />
+        <DiffLineAtom key={i} line={line} highlightedHtml={line.highlightedHtml} />
       ))}
     </div>
   );
