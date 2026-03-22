@@ -93,6 +93,8 @@ See `.claude/sdlc.yml` for SDLC primitive configuration (language, framework, qu
 | `/build` | Execute an implementation from a spec |
 | `/orchestrate` | Coordinate large bodies of work across multiple epics/stacks |
 | `/plan_w_team` | Create a plan using the architect+builder+validator team |
+| `/verify` | Run visual QA on a URL (screenshot, console, network, perf) |
+| `/browse` | Open-ended browser interaction — navigate, click, type, inspect |
 
 ### Skills (auto-invoked)
 
@@ -100,7 +102,7 @@ See `.claude/sdlc.yml` for SDLC primitive configuration (language, framework, qu
 |-------|-------------|
 | `pattern-stack` | Backend patterns, services, models |
 | `atomic-frontend-developer` | Component architecture, layer placement |
-| `browser-pilot` | Browser verification, console errors, screenshots, audits |
+| `browser` | Browser verification, console errors, screenshots, audits, visual QA |
 | `run-and-monitor` | Starting dev environment, checking logs |
 | `skill-authoring` | Creating new skills, commands, agents |
 | `project-documentation` | ADRs, specs, architecture docs |
