@@ -8,6 +8,7 @@ import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { BranchWithPR } from "@/types/stack";
 import type { SidebarMode } from "@/types/sidebar";
 import type { FileTreeNode } from "@/types/file-tree";
+import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 
 interface AppShellProps {
   stackName: string;
@@ -30,6 +31,7 @@ interface AppShellProps {
   onSelectFile: (path: string) => void;
   diffFileCount?: number;
   onRefresh?: () => void;
+  changedFiles?: Map<string, ChangedFileInfo>;
 }
 
 /** Extract short branch name from full ref: "dug/frontend-mvp/3-stack-nav" → "3-stack-nav" */
@@ -57,6 +59,7 @@ function AppShell({
   onSelectFile,
   diffFileCount,
   onRefresh,
+  changedFiles,
 }: AppShellProps) {
   // Derive PRHeader props from the active branch
   const pr = activeBranch?.pull_request;
@@ -91,6 +94,7 @@ function AppShell({
         onSelectFile={onSelectFile}
         diffFileCount={diffFileCount}
         onRefresh={onRefresh}
+        changedFiles={changedFiles}
       />
       <main className="flex-1 flex flex-col min-w-0">
         <PRHeader

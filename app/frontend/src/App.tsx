@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
 import { FileContent } from "@/components/molecules/FileContent";
@@ -9,6 +9,7 @@ import { useFileTree } from "@/hooks/useFileTree";
 import { useFileContent } from "@/hooks/useFileContent";
 import type { StackConnectorItem } from "@/components/molecules";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
+import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 import type { SidebarMode } from "@/types/sidebar";
 
 function branchTitle(name: string): string {
@@ -91,6 +92,20 @@ export function App() {
 
   const fileCount = diffData?.files.length ?? 0;
 
+  // Build changed files map for dirty state in file explorer
+  const changedFiles = useMemo(() => {
+    if (!diffData) return undefined;
+    const map = new Map<string, ChangedFileInfo>();
+    for (const f of diffData.files) {
+      map.set(f.path, {
+        changeType: f.change_type,
+        additions: f.additions,
+        deletions: f.deletions,
+      });
+    }
+    return map;
+  }, [diffData]);
+
   return (
     <AppShell
       stackName={data.stack.name}
@@ -109,6 +124,7 @@ export function App() {
       selectedPath={selectedPath}
       onSelectFile={setSelectedPath}
       diffFileCount={fileCount}
+      changedFiles={changedFiles}
     >
       {sidebarMode === "diffs" && (
         diffData ? (
