@@ -112,7 +112,7 @@ const (
 	chatChrome       = statusLineHeight + minInputHeight + 2 // +2 newlines between sections
 )
 
-// SetSize updates the viewport dimensions.
+// SetSize updates the viewport dimensions and re-renders content at the new width.
 func (m *Model) SetSize(w, h int) {
 	m.width = w
 	m.height = h
@@ -123,6 +123,7 @@ func (m *Model) SetSize(w, h int) {
 		vpHeight = 1
 	}
 	m.viewport.SetHeight(vpHeight)
+	m.rebuildViewportContent()
 }
 
 // SetConversationID sets the conversation identifier.
@@ -233,6 +234,11 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	if m.streaming {
+		// Enter skips streaming — drain remaining chunks immediately
+		if k == "enter" {
+			m.skipStreaming()
+			return *m, nil
+		}
 		return *m, nil
 	}
 
@@ -384,6 +390,28 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	}
 
 	return *m, readStream(m.streamCh)
+}
+
+// skipStreaming drains the stream channel and completes the response immediately.
+func (m *Model) skipStreaming() {
+	if m.streamCh == nil {
+		return
+	}
+	for chunk := range m.streamCh {
+		if chunk.Content != "" {
+			if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == RoleAssistant {
+				m.messages[len(m.messages)-1].Content += chunk.Content
+			} else {
+				m.messages = append(m.messages, Message{Role: RoleAssistant, Content: chunk.Content})
+			}
+		}
+		if chunk.Done {
+			break
+		}
+	}
+	m.streaming = false
+	m.streamCh = nil
+	m.rebuildViewportContent()
 }
 
 func (m *Model) showHelp(commands []command.Def) {
