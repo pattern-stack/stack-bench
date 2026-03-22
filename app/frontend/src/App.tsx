@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { AppShell } from "@/components/templates";
+import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
 import { useStackDetail } from "@/hooks/useStackDetail";
+import { useBranchDiff } from "@/hooks/useBranchDiff";
 import type { StackConnectorItem } from "@/components/molecules";
 import type { TabItem } from "@/components/molecules/TabBar";
 
@@ -20,6 +22,9 @@ export function App() {
   const { data, loading, error } = useStackDetail();
   const [activeIndex, setActiveIndex] = useState(2);
   const [activeTab, setActiveTab] = useState("files");
+
+  const activeBranchId = data?.branches[activeIndex]?.branch.id;
+  const { data: diffData } = useBranchDiff(activeBranchId);
 
   if (loading) {
     return (
@@ -52,10 +57,8 @@ export function App() {
 
   const activeBranch = data.branches[activeIndex] ?? null;
 
-  const activeStats = mockDiffStats[activeBranch?.branch.id ?? ""];
-  const fileCount = activeStats && (activeStats.additions > 0 || activeStats.deletions > 0)
-    ? Math.ceil((activeStats.additions + activeStats.deletions) / 20)
-    : 0;
+  // File count from actual diff data
+  const fileCount = diffData?.files.length ?? 0;
 
   const tabs: TabItem[] = [
     { id: "files", label: "Files changed", count: fileCount || undefined },
@@ -73,16 +76,13 @@ export function App() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
     >
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-3">
-          <p className="text-[var(--fg-muted)] text-sm">
-            Diff review panel will render here (SB-039).
-          </p>
-          <p className="font-[family-name:var(--font-mono)] text-xs text-[var(--fg-subtle)]">
-            v0.0.1 &middot; Stack Bench
-          </p>
+      {diffData ? (
+        <FilesChangedPanel diffData={diffData} />
+      ) : (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>
         </div>
-      </div>
+      )}
     </AppShell>
   );
 }

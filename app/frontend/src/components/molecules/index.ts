@@ -15,3 +15,15 @@ export type { TabBarProps, TabItem } from "./TabBar";
 
 export { ActionBar } from "./ActionBar";
 export type { ActionBarProps } from "./ActionBar";
+
+export { FileListSummary } from "./FileListSummary";
+export type { FileListSummaryProps } from "./FileListSummary";
+
+export { DiffHunkMolecule } from "./DiffHunk";
+export type { DiffHunkMoleculeProps } from "./DiffHunk";
+
+export { DiffFileHeader } from "./DiffFileHeader";
+export type { DiffFileHeaderProps } from "./DiffFileHeader";
+
+export { DiffFileMolecule } from "./DiffFile";
+export type { DiffFileMoleculeProps } from "./DiffFile";

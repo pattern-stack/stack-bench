@@ -26,3 +26,9 @@ export type { DiffStatProps } from "./DiffStat";
 
 export { BranchMeta } from "./BranchMeta";
 export type { BranchMetaProps } from "./BranchMeta";
+
+export { DiffLineAtom } from "./DiffLine";
+export type { DiffLineAtomProps } from "./DiffLine";
+
+export { DiffBadge } from "./DiffBadge";
+export type { DiffBadgeProps } from "./DiffBadge";
