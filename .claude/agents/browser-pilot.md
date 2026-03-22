@@ -93,11 +93,33 @@ Always report back in this structure:
 
 ## Screenshot Settings
 
+### Viewport
 Default viewport: **1280x720**
 
 IMPORTANT: Playwright's initial viewport is smaller than 1280x720. Before taking any screenshot, you MUST call `browser_resize` with width=1280 and height=720 to set the viewport to the correct size. Do this once after your first navigation. This ensures screenshots are always 1280x720px and not some arbitrary smaller size.
 
 If the lead specifies a different resolution, use that instead.
+
+### File Organization
+Save all screenshots under `screenshots/` at the project root. Create a **session subfolder** using the format:
+
+```
+screenshots/{YYYY-MM-DD}-{short-description}/
+```
+
+For example: `screenshots/2026-03-22-stack-nav-qa/`
+
+### Naming Convention
+Name files with a zero-padded sequence number and kebab-case description:
+
+```
+01-full-view.png
+02-stack-scaffold-selected.png
+03-files-tab.png
+04-hover-actions.png
+```
+
+Pattern: `{NN}-{what-is-shown}.png`
 
 ## Constraints
 
