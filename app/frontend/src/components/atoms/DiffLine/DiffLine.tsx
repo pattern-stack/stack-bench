@@ -3,6 +3,7 @@ import type { DiffLine as DiffLineType } from "@/types/diff";
 
 interface DiffLineAtomProps {
   line: DiffLineType;
+  highlightedHtml?: string;
 }
 
 const bgMap: Record<DiffLineType["type"], string> = {
@@ -19,7 +20,7 @@ const prefixMap: Record<DiffLineType["type"], string> = {
   hunk: "",
 };
 
-function DiffLineAtom({ line }: DiffLineAtomProps) {
+function DiffLineAtom({ line, highlightedHtml }: DiffLineAtomProps) {
   const isHunk = line.type === "hunk";
 
   return (
@@ -52,7 +53,18 @@ function DiffLineAtom({ line }: DiffLineAtomProps) {
           isHunk ? "text-[var(--fg-muted)] italic" : "text-[var(--fg-default)]"
         )}
       >
-        {isHunk ? line.content : `${prefixMap[line.type]}${line.content}`}
+        {isHunk ? (
+          line.content
+        ) : (
+          <>
+            {prefixMap[line.type]}
+            {highlightedHtml ? (
+              <span dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
+            ) : (
+              line.content
+            )}
+          </>
+        )}
       </span>
     </div>
   );
