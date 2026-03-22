@@ -117,7 +117,7 @@ func runDemo(scriptPath string) {
 }
 
 func runGallery() {
-	model := app.NewGallery(80)
+	model := app.NewGallery()
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

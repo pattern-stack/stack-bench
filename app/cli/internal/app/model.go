@@ -59,6 +59,10 @@ type Model struct {
 	// Demo mode
 	demo       bool
 	demoRunner *DemoRunner
+
+	// Gallery mode
+	gallery       bool
+	galleryLoaded bool
 }
 
 // New creates the initial app model.
@@ -95,6 +99,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.chat.SetSize(m.width, m.height-5)
+		if m.gallery {
+			pos := m.chat.SaveScrollPosition()
+			firstLoad := pos == 0 && !m.galleryLoaded
+			m.galleryLoaded = true
+			m.chat.ClearMessages()
+			for _, gm := range buildGalleryMessages(m.width) {
+				m.chat.AppendMessage(gm)
+			}
+			if firstLoad {
+				m.chat.GotoBottom()
+			} else {
+				m.chat.RestoreScrollPosition(pos)
+			}
+		}
 		return m, nil
 
 	case tea.KeyPressMsg:

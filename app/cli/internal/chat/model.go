@@ -148,6 +148,34 @@ func (m *Model) ClearInput() {
 	m.autocomplete.Deactivate()
 }
 
+// SaveScrollPosition returns the current YOffset for later restoration.
+func (m *Model) SaveScrollPosition() int {
+	return m.viewport.YOffset()
+}
+
+// GotoBottom scrolls to the bottom of the viewport.
+func (m *Model) GotoBottom() {
+	m.viewport.GotoBottom()
+}
+
+// RestoreScrollPosition sets the YOffset, clamping to valid range.
+func (m *Model) RestoreScrollPosition(offset int) {
+	max := m.viewport.TotalLineCount() - m.viewport.VisibleLineCount()
+	if max < 0 {
+		max = 0
+	}
+	if offset > max {
+		offset = max
+	}
+	m.viewport.SetYOffset(offset)
+}
+
+// ClearMessages removes all messages from the chat history.
+func (m *Model) ClearMessages() {
+	m.messages = nil
+	m.rebuildViewportContent()
+}
+
 // AppendMessage adds a message to the chat history.
 func (m *Model) AppendMessage(msg Message) {
 	m.messages = append(m.messages, msg)
