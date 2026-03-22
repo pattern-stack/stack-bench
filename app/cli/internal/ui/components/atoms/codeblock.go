@@ -38,6 +38,13 @@ func CodeBlock(ctx RenderContext, data CodeBlockData) string {
 		lineNumWidth = len(fmt.Sprintf("%d", len(lines)))
 	}
 
+	// Syntax-highlight the code if a language is set; otherwise use flat style.
+	var highlightedLines []string
+	if data.Language != "" {
+		highlighted := HighlightCode(ctx, data.Code, data.Language)
+		highlightedLines = strings.Split(highlighted, "\n")
+	}
+
 	for i, line := range lines {
 		var row strings.Builder
 		row.WriteString(gutterChar)
@@ -47,7 +54,11 @@ func CodeBlock(ctx RenderContext, data CodeBlockData) string {
 			row.WriteString(lineNumStyle.Render(num))
 		}
 
-		row.WriteString(codeStyle.Render(line))
+		if highlightedLines != nil && i < len(highlightedLines) {
+			row.WriteString(highlightedLines[i])
+		} else {
+			row.WriteString(codeStyle.Render(line))
+		}
 		parts = append(parts, row.String())
 	}
 
