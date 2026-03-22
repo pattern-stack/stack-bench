@@ -23,3 +23,6 @@ export type { StackDotProps, StackDotColor } from "./StackDot";
 
 export { DiffStat } from "./DiffStat";
 export type { DiffStatProps } from "./DiffStat";
+
+export { BranchMeta } from "./BranchMeta";
+export type { BranchMetaProps } from "./BranchMeta";
