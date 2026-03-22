@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DiffFileHeader } from "@/components/molecules/DiffFileHeader";
 import { DiffHunkMolecule } from "@/components/molecules/DiffHunk";
 import { useHighlightedDiff } from "@/hooks/useHighlightedDiff";
@@ -12,6 +12,7 @@ interface DiffFileMoleculeProps {
   onLineSelect?: (lineKey: string) => void;
   onAskAgent?: (lineKey: string) => void;
   onAddComment?: (lineKey: string) => void;
+  forceExpanded?: boolean | null;
 }
 
 function DiffFileMolecule({
@@ -22,8 +23,13 @@ function DiffFileMolecule({
   onLineSelect,
   onAskAgent,
   onAddComment,
+  forceExpanded = null,
 }: DiffFileMoleculeProps) {
   const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => {
+    if (forceExpanded !== null) setExpanded(forceExpanded);
+  }, [forceExpanded]);
   const { highlightedHunks } = useHighlightedDiff(file, expanded);
 
   return (

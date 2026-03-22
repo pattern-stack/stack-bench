@@ -36,3 +36,12 @@ export type { FileContentProps } from "./FileContent";
 
 export { DiffFileList } from "./DiffFileList";
 export type { DiffFileListProps, DiffFileListItem } from "./DiffFileList";
+
+export { StackHeader } from "./StackHeader";
+export type { StackHeaderProps } from "./StackHeader";
+
+export { ActivityLogEntry } from "./ActivityLogEntry";
+export type { ActivityLogEntryProps } from "./ActivityLogEntry";
+
+export { ActivityLog } from "./ActivityLog";
+export type { ActivityLogProps } from "./ActivityLog";

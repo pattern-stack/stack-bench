@@ -1,6 +1,7 @@
-import { Button, Icon } from "@/components/atoms";
 import { SidebarModeToggle } from "@/components/atoms/SidebarModeToggle";
 import { StackConnector } from "@/components/molecules/StackConnector";
+import { StackHeader } from "@/components/molecules/StackHeader";
+import { ActivityLog } from "@/components/molecules/ActivityLog";
 import { DiffFileList } from "@/components/molecules/DiffFileList";
 import { FileTree } from "@/components/organisms/FileTree";
 import type { ChangedFileInfo } from "@/components/organisms/FileTree";
@@ -8,6 +9,7 @@ import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { SidebarMode } from "@/types/sidebar";
 import type { FileTreeNode } from "@/types/file-tree";
+import type { StackSummary, ActivityLogEntry } from "@/types/activity";
 
 interface StackSidebarProps {
   stackName: string;
@@ -15,8 +17,12 @@ interface StackSidebarProps {
   items: StackConnectorItem[];
   activeIndex: number;
   onSelect: (index: number) => void;
+  summary: StackSummary;
+  activityEntries: ActivityLogEntry[];
+  onSync?: () => void;
   onRestackAll?: () => void;
-  onPushStack?: () => void;
+  onMerge?: () => void;
+  onClearActivity?: () => void;
 
   sidebarMode: SidebarMode;
   onSidebarModeChange: (mode: SidebarMode) => void;
@@ -35,8 +41,12 @@ function StackSidebar({
   items,
   activeIndex,
   onSelect,
+  summary,
+  activityEntries,
+  onSync,
   onRestackAll,
-  onPushStack,
+  onMerge,
+  onClearActivity,
   sidebarMode,
   onSidebarModeChange,
   diffFiles,
@@ -52,19 +62,17 @@ function StackSidebar({
       className="flex flex-col h-full w-[var(--sidebar-width)] border-r border-[var(--border)] bg-[var(--bg-surface)]"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-muted)]">
-        <Icon name="git-branch" size="sm" className="text-[var(--fg-muted)]" />
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-semibold text-[var(--fg-default)] truncate">
-            {stackName}
-          </span>
-          <span className="text-xs text-[var(--fg-subtle)]">
-            {trunk}
-          </span>
-        </div>
-      </div>
+      <StackHeader
+        stackName={stackName}
+        trunk={trunk}
+        branchCount={items.length}
+        summary={summary}
+        onSync={onSync}
+        onRestackAll={onRestackAll}
+        onMerge={onMerge}
+      />
 
-      {/* Branch list — shrinks to content */}
+      {/* Branch list */}
       <div className="shrink-0 overflow-y-auto px-1 py-1.5">
         <div className="px-3 pb-1">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
@@ -108,29 +116,10 @@ function StackSidebar({
         )}
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border-muted)]">
-        <Button
-          variant="subtle"
-          size="sm"
-          className="flex-1"
-          onClick={onRestackAll}
-          disabled={!onRestackAll}
-        >
-          <Icon name="refresh-cw" size="xs" />
-          Restack all
-        </Button>
-        <Button
-          variant="subtle"
-          size="sm"
-          className="flex-1"
-          onClick={onPushStack}
-          disabled={!onPushStack}
-        >
-          <Icon name="upload" size="xs" />
-          Push stack
-        </Button>
-      </div>
+      {/* Activity log — hidden in files mode to make room for the explorer */}
+      {sidebarMode === "diffs" && (
+        <ActivityLog entries={activityEntries} onClear={onClearActivity} />
+      )}
     </aside>
   );
 }

@@ -7,22 +7,56 @@ import { useStackDetail } from "@/hooks/useStackDetail";
 import { useBranchDiff } from "@/hooks/useBranchDiff";
 import { useFileTree } from "@/hooks/useFileTree";
 import { useFileContent } from "@/hooks/useFileContent";
+import { mockActivityEntries } from "@/lib/mock-activity-data";
 import type { StackConnectorItem } from "@/components/molecules";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 import type { SidebarMode } from "@/types/sidebar";
+import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
 
 function branchTitle(name: string): string {
   const parts = name.split("/");
   return parts[parts.length - 1] ?? name;
 }
 
-const mockDiffStats: Record<string, { additions: number; deletions: number }> = {
-  "b-001": { additions: 48, deletions: 12 },
-  "b-002": { additions: 156, deletions: 23 },
-  "b-003": { additions: 89, deletions: 34 },
-  "b-004": { additions: 0, deletions: 0 },
+const mockBranchMeta: Record<
+  string,
+  {
+    additions: number;
+    deletions: number;
+    prNumber: number | null;
+    ciStatus: CIStatus;
+    needsRestack: boolean;
+  }
+> = {
+  "b-001": { additions: 48, deletions: 12, prNumber: 64, ciStatus: "pass", needsRestack: false },
+  "b-002": { additions: 142, deletions: 18, prNumber: 65, ciStatus: "pass", needsRestack: false },
+  "b-003": { additions: 89, deletions: 34, prNumber: 66, ciStatus: "pending", needsRestack: false },
+  "b-004": { additions: 67, deletions: 4, prNumber: 67, ciStatus: "pending", needsRestack: true },
+  "b-005": { additions: 112, deletions: 45, prNumber: 68, ciStatus: "fail", needsRestack: true },
+  "b-006": { additions: 0, deletions: 0, prNumber: null, ciStatus: "none", needsRestack: true },
 };
+
+/** Status values that count as "draft" (no PR or local-only) */
+const DRAFT_STATUSES = new Set(["draft", "created", "local"]);
+/** Status values that count as "open" (has a PR, under review) */
+const OPEN_STATUSES = new Set(["open", "reviewing", "review", "approved", "ready"]);
+
+function computeSummary(items: StackConnectorItem[]): StackSummary {
+  let merged = 0;
+  let open = 0;
+  let draft = 0;
+  let needsRestack = 0;
+
+  for (const item of items) {
+    if (item.status === "merged") merged++;
+    else if (OPEN_STATUSES.has(item.status)) open++;
+    else if (DRAFT_STATUSES.has(item.status)) draft++;
+    if (item.needsRestack) needsRestack++;
+  }
+
+  return { branchCount: items.length, merged, open, draft, needsRestack };
+}
 
 export function App() {
   const { data, loading, error } = useStackDetail();
@@ -30,6 +64,8 @@ export function App() {
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("diffs");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [activityEntries, setActivityEntries] = useState<ActivityLogEntry[]>(mockActivityEntries);
+  const [forceExpanded, setForceExpanded] = useState<boolean | null>(null);
 
   // TODO: Lift selectedLineCount from FilesChangedPanel in a future PR
   const selectedLineCount = 0;
@@ -43,6 +79,7 @@ export function App() {
   useEffect(() => {
     setSidebarMode("diffs");
     setSelectedPath(null);
+    setForceExpanded(null);
   }, [activeIndex]);
 
   if (loading) {
@@ -63,17 +100,27 @@ export function App() {
 
   const items: StackConnectorItem[] = data.branches.map((b) => {
     const displayStatus = b.pull_request?.state ?? b.branch.state;
-    const stats = mockDiffStats[b.branch.id] ?? { additions: 0, deletions: 0 };
+    const meta = mockBranchMeta[b.branch.id] ?? {
+      additions: 0,
+      deletions: 0,
+      prNumber: null,
+      ciStatus: "none" as CIStatus,
+      needsRestack: false,
+    };
 
     return {
       id: b.branch.id,
       title: branchTitle(b.branch.name),
       status: displayStatus,
-      additions: stats.additions,
-      deletions: stats.deletions,
+      additions: meta.additions,
+      deletions: meta.deletions,
+      prNumber: meta.prNumber,
+      ciStatus: meta.ciStatus,
+      needsRestack: meta.needsRestack,
     };
   });
 
+  const summary = computeSummary(items);
   const activeBranch = data.branches[activeIndex] ?? null;
 
   // Derive DiffFileListItem[] from diff data
@@ -125,10 +172,20 @@ export function App() {
       onSelectFile={setSelectedPath}
       diffFileCount={fileCount}
       changedFiles={changedFiles}
+      summary={summary}
+      activityEntries={activityEntries}
+      onSync={() => console.log("sync trunk")}
+      onMerge={() => console.log("merge stack")}
+      onClearActivity={() => setActivityEntries([])}
+      fileCount={diffData?.files.length}
+      additions={diffData?.total_additions}
+      deletions={diffData?.total_deletions}
+      onCollapseAll={() => setForceExpanded(false)}
+      onExpandAll={() => setForceExpanded(true)}
     >
       {sidebarMode === "diffs" && (
         diffData ? (
-          <FilesChangedPanel diffData={diffData} />
+          <FilesChangedPanel diffData={diffData} forceExpanded={forceExpanded} />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>
