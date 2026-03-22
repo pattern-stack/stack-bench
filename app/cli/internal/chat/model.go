@@ -180,20 +180,9 @@ func (m *Model) rebuildViewportContent() {
 	}
 }
 
-// SetStreaming sets the streaming state and channel (used by demo mode).
-func (m *Model) SetStreaming(streaming bool, ch <-chan api.StreamChunk) {
-	m.streaming = streaming
-	m.streamCh = ch
-}
-
-// IsStreaming reports whether the model is currently streaming a response.
-func (m *Model) IsStreaming() bool {
-	return m.streaming
-}
-
-// Messages returns the current message history.
-func (m *Model) Messages() []Message {
-	return m.messages
+// SetInput pre-fills the input buffer (used by demo mode).
+func (m *Model) SetInput(text string) {
+	m.input = text
 }
 
 // Update handles key input and streaming response messages.

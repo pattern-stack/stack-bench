@@ -55,3 +55,7 @@ quality-cli:
 # Run CLI in demo mode (hands-free replay)
 demo-cli *args:
     cd app/cli && just demo {{args}}
+
+# Run CLI in tmux for AI-driven testing
+demo-tmux *args:
+    cd app/cli && just demo-tmux {{args}}

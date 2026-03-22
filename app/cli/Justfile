@@ -16,6 +16,24 @@ quality:
 run *args:
     go run . {{args}}
 
-# Run in demo mode (hands-free replay)
+# Run in demo mode (prefilled prompts, press enter to advance)
 demo *args:
     go run . --demo {{args}}
+
+# Run CLI in a tmux session for AI-driven testing
+# Usage: just demo-tmux
+#   Then from another terminal:
+#     tmux send-keys -t sb:cli Enter       # press enter
+#     tmux capture-pane -t sb:cli -p       # read screen
+demo-tmux *args:
+    #!/usr/bin/env bash
+    tmux kill-session -t sb 2>/dev/null || true
+    tmux new-session -d -s sb -n cli "cd {{justfile_directory()}} && go run . --demo {{args}}"
+    echo "CLI running in tmux session 'sb', pane 'sb:cli'"
+    echo ""
+    echo "Commands:"
+    echo "  tmux attach -t sb                    # watch live"
+    echo "  tmux send-keys -t sb:cli Enter       # press enter"
+    echo "  tmux send-keys -t sb:cli 'hello'     # type text"
+    echo "  tmux capture-pane -t sb:cli -p       # read screen"
+    echo "  tmux kill-session -t sb              # stop"

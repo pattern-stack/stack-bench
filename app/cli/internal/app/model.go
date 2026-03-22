@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -122,27 +121,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat.SetConversationID(msg.ConversationID)
 		m.phase = PhaseChat
 		if m.demo {
-			return m, demoTickCmd(500 * time.Millisecond)
+			m.prefillNextInput()
 		}
 		return m, nil
 
-	case DemoTickMsg:
-		return m.handleDemoTick()
-
 	case chat.ResponseMsg:
-		// In demo mode, intercept ResponseMsg to schedule next tick after streaming ends.
 		newChat, cmd := m.chat.Update(msg)
 		m.chat = newChat
+		// In demo mode, prefill next input after streaming completes
 		if m.demo && msg.Chunk.Done {
-			// Get the last assistant message content for delay calculation
-			delay := 1 * time.Second
-			if msgs := m.chat.Messages(); len(msgs) > 0 {
-				last := msgs[len(msgs)-1]
-				if last.Role == chat.RoleAssistant {
-					delay = readingDelay(last.Content)
-				}
-			}
-			return m, tea.Batch(cmd, demoTickCmd(delay))
+			m.prefillNextInput()
 		}
 		return m, cmd
 
