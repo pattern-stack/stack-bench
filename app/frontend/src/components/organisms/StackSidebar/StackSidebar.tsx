@@ -49,7 +49,7 @@ function StackSidebar({
       className="flex flex-col h-full w-[var(--sidebar-width)] border-r border-[var(--border)] bg-[var(--bg-surface)]"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-muted)]">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-muted)]">
         <Icon name="git-branch" size="sm" className="text-[var(--fg-muted)]" />
         <div className="flex flex-col min-w-0">
           <span className="text-sm font-semibold text-[var(--fg-default)] truncate">
@@ -61,9 +61,9 @@ function StackSidebar({
         </div>
       </div>
 
-      {/* Branch list */}
-      <div className="overflow-y-auto px-1 py-2">
-        <div className="px-3 pb-2">
+      {/* Branch list — shrinks to content */}
+      <div className="shrink-0 overflow-y-auto px-1 py-1.5">
+        <div className="px-3 pb-1">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
             Stack
           </span>
@@ -76,7 +76,7 @@ function StackSidebar({
       </div>
 
       {/* Mode toggle */}
-      <div className="px-3 py-2 border-t border-[var(--border-muted)]">
+      <div className="px-3 py-1.5 border-t border-[var(--border-muted)]">
         <SidebarModeToggle
           mode={sidebarMode}
           onModeChange={onSidebarModeChange}
@@ -105,7 +105,7 @@ function StackSidebar({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border-muted)]">
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border-muted)]">
         <Button
           variant="subtle"
           size="sm"
