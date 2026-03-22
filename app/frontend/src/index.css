@@ -39,6 +39,8 @@
   --green-bg: #12261e;           /* Diff addition background */
   --red-bg: #28171a;             /* Diff deletion background */
   --accent-muted: #1f6feb33;     /* Selected/active background */
+  --accent-emerald: #6ee7b7;     /* Emerald accent text */
+  --accent-emerald-dim: #065f46; /* Emerald accent background */
 
   /* ── Indent Guides ─────────────────────────────────────── */
   --indent-guide: #21262d;       /* Indent guide line color */
