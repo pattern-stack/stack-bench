@@ -8,9 +8,21 @@ interface DiffFileMoleculeProps {
   file: DiffFileType;
   viewed?: boolean;
   onViewedChange?: (viewed: boolean) => void;
+  selectedLines?: Set<string>;
+  onLineSelect?: (lineKey: string) => void;
+  onAskAgent?: (lineKey: string) => void;
+  onAddComment?: (lineKey: string) => void;
 }
 
-function DiffFileMolecule({ file, viewed = false, onViewedChange }: DiffFileMoleculeProps) {
+function DiffFileMolecule({
+  file,
+  viewed = false,
+  onViewedChange,
+  selectedLines,
+  onLineSelect,
+  onAskAgent,
+  onAddComment,
+}: DiffFileMoleculeProps) {
   const [expanded, setExpanded] = useState(true);
   const { highlightedHunks } = useHighlightedDiff(file, expanded);
 
@@ -26,7 +38,15 @@ function DiffFileMolecule({ file, viewed = false, onViewedChange }: DiffFileMole
       {expanded && (
         <div className="border-x border-b border-[var(--border)] rounded-b overflow-hidden">
           {highlightedHunks.map((hunk, i) => (
-            <DiffHunkMolecule key={i} hunk={hunk} />
+            <DiffHunkMolecule
+              key={i}
+              hunk={hunk}
+              filePath={file.path}
+              selectedLines={selectedLines}
+              onLineSelect={onLineSelect}
+              onAskAgent={onAskAgent}
+              onAddComment={onAddComment}
+            />
           ))}
         </div>
       )}
