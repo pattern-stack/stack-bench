@@ -38,3 +38,6 @@ export type { FileIconProps } from "./FileIcon";
 
 export { ViewedToggle } from "./ViewedToggle";
 export type { ViewedToggleProps } from "./ViewedToggle";
+
+export { SidebarModeToggle } from "./SidebarModeToggle";
+export type { SidebarModeToggleProps } from "./SidebarModeToggle";

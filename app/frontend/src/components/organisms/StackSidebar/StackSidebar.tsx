@@ -1,6 +1,12 @@
 import { Button, Icon } from "@/components/atoms";
+import { SidebarModeToggle } from "@/components/atoms/SidebarModeToggle";
 import { StackConnector } from "@/components/molecules/StackConnector";
+import { DiffFileList } from "@/components/molecules/DiffFileList";
+import { FileTree } from "@/components/organisms/FileTree";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
+import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
+import type { SidebarMode } from "@/types/sidebar";
+import type { FileTreeNode } from "@/types/file-tree";
 
 interface StackSidebarProps {
   stackName: string;
@@ -10,6 +16,15 @@ interface StackSidebarProps {
   onSelect: (index: number) => void;
   onRestackAll?: () => void;
   onPushStack?: () => void;
+
+  sidebarMode: SidebarMode;
+  onSidebarModeChange: (mode: SidebarMode) => void;
+  diffFiles: DiffFileListItem[];
+  fileTree: FileTreeNode | null;
+  selectedPath: string | null;
+  onSelectFile: (path: string) => void;
+  diffFileCount?: number;
+  onRefresh?: () => void;
 }
 
 function StackSidebar({
@@ -20,6 +35,14 @@ function StackSidebar({
   onSelect,
   onRestackAll,
   onPushStack,
+  sidebarMode,
+  onSidebarModeChange,
+  diffFiles,
+  fileTree,
+  selectedPath,
+  onSelectFile,
+  diffFileCount,
+  onRefresh,
 }: StackSidebarProps) {
   return (
     <aside
@@ -39,7 +62,7 @@ function StackSidebar({
       </div>
 
       {/* Branch list */}
-      <div className="flex-1 overflow-y-auto px-1 py-2">
+      <div className="overflow-y-auto px-1 py-2">
         <div className="px-3 pb-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
             Stack
@@ -50,6 +73,35 @@ function StackSidebar({
           activeIndex={activeIndex}
           onSelect={onSelect}
         />
+      </div>
+
+      {/* Mode toggle */}
+      <div className="px-3 py-2 border-t border-[var(--border-muted)]">
+        <SidebarModeToggle
+          mode={sidebarMode}
+          onModeChange={onSidebarModeChange}
+          diffFileCount={diffFileCount}
+        />
+      </div>
+
+      {/* Tree area */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {sidebarMode === "diffs" ? (
+          <DiffFileList
+            files={diffFiles}
+            selectedPath={selectedPath}
+            onSelectFile={onSelectFile}
+          />
+        ) : (
+          fileTree && (
+            <FileTree
+              tree={fileTree}
+              selectedPath={selectedPath}
+              onSelectFile={onSelectFile}
+              onRefresh={onRefresh}
+            />
+          )
+        )}
       </div>
 
       {/* Footer */}
