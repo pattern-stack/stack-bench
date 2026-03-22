@@ -4,14 +4,15 @@ package theme
 type Category int
 
 const (
-	CatAgent  Category = iota // Agent-related UI (accent, agent names)
-	CatSystem                 // System chrome (borders, separators)
-	CatTool                   // Tool calls, operations
-	CatUser                   // User input, user-attributed content
-	Cat5                      // Reserved
-	Cat6                      // Reserved
-	Cat7                      // Reserved
-	Cat8                      // Reserved
+	CatDefault Category = iota // Default/unset — uses theme Foreground color
+	CatAgent                   // Agent-related UI (accent, agent names)
+	CatSystem                  // System chrome (borders, separators)
+	CatTool                    // Tool calls, operations
+	CatUser                    // User input, user-attributed content
+	Cat5                       // Reserved
+	Cat6                       // Reserved
+	Cat7                       // Reserved
+	Cat8                       // Reserved
 )
 
 // Hierarchy represents visual importance level.

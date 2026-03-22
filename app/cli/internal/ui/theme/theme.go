@@ -9,7 +9,7 @@ import (
 // Theme maps design tokens to lipgloss styles.
 type Theme struct {
 	Name        string
-	Categories  [8]color.Color
+	Categories  [9]color.Color
 	Statuses    [7]color.Color // indexed by Status (0=NoStatus is unused)
 	Foreground  color.Color
 	Background  color.Color
@@ -23,6 +23,8 @@ func (t *Theme) Resolve(s Style) lipgloss.Style {
 	// Status overrides category for foreground color
 	if s.Status != NoStatus {
 		st = st.Foreground(t.Statuses[s.Status])
+	} else if s.Category == CatDefault {
+		st = st.Foreground(t.Foreground)
 	} else {
 		st = st.Foreground(t.Categories[s.Category])
 	}

@@ -15,15 +15,16 @@ func c(hex string) color.Color {
 func DarkTheme() *Theme {
 	return &Theme{
 		Name: "dark",
-		Categories: [8]color.Color{
-			CatAgent:  c("#BD93F9"), // purple
-			CatSystem: c("#8BE9FD"), // cyan
-			CatTool:   c("#FFB86C"), // orange
-			CatUser:   c("#F8F8F2"), // foreground
-			Cat5:      c("#FF79C6"), // pink
-			Cat6:      c("#F1FA8C"), // yellow
-			Cat7:      c("#50FA7B"), // green
-			Cat8:      c("#6272A4"), // comment
+		Categories: [9]color.Color{
+			CatDefault: c("#F8F8F2"), // foreground (unused by Resolve, but fills the slot)
+			CatAgent:   c("#BD93F9"), // purple
+			CatSystem:  c("#8BE9FD"), // cyan
+			CatTool:    c("#FFB86C"), // orange
+			CatUser:    c("#F8F8F2"), // foreground
+			Cat5:       c("#FF79C6"), // pink
+			Cat6:       c("#F1FA8C"), // yellow
+			Cat7:       c("#50FA7B"), // green
+			Cat8:       c("#6272A4"), // comment
 		},
 		Statuses: [7]color.Color{
 			NoStatus: c("#F8F8F2"),
@@ -44,15 +45,16 @@ func DarkTheme() *Theme {
 func LightTheme() *Theme {
 	return &Theme{
 		Name: "light",
-		Categories: [8]color.Color{
-			CatAgent:  c("#7D56F4"), // purple
-			CatSystem: c("#0077B6"), // blue
-			CatTool:   c("#E85D04"), // orange
-			CatUser:   c("#282A36"), // dark text
-			Cat5:      c("#C62828"), // red
-			Cat6:      c("#827717"), // olive
-			Cat7:      c("#2E7D32"), // green
-			Cat8:      c("#999999"), // gray
+		Categories: [9]color.Color{
+			CatDefault: c("#282A36"), // foreground (unused by Resolve, but fills the slot)
+			CatAgent:   c("#7D56F4"), // purple
+			CatSystem:  c("#0077B6"), // blue
+			CatTool:    c("#E85D04"), // orange
+			CatUser:    c("#282A36"), // dark text
+			Cat5:       c("#C62828"), // red
+			Cat6:       c("#827717"), // olive
+			Cat7:       c("#2E7D32"), // green
+			Cat8:       c("#999999"), // gray
 		},
 		Statuses: [7]color.Color{
 			NoStatus: c("#282A36"),
