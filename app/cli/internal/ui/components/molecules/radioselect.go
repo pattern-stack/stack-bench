@@ -42,7 +42,7 @@ func RadioSelect(ctx atoms.RenderContext, data RadioSelectData) string {
 
 		if i == data.Selected {
 			icon = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent})
-			labelStyle = theme.Style{Category: theme.CatAgent, Emphasis: theme.Strong}
+			labelStyle = theme.Style{Category: theme.CatAgent}
 			descStyle = theme.Style{Hierarchy: theme.Secondary}
 		} else {
 			icon = atoms.Icon(inlineCtx, atoms.IconCircle, theme.Style{Hierarchy: theme.Tertiary})

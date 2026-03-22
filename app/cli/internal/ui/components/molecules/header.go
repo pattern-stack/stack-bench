@@ -21,7 +21,7 @@ func Header(ctx atoms.RenderContext, data HeaderData) string {
 	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
 	title := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 		Text:  data.Title,
-		Style: theme.Style{Hierarchy: theme.Primary, Emphasis: theme.Strong},
+		Style: theme.Style{Hierarchy: theme.Primary},
 	})
 	parts = append(parts, title)
 

@@ -271,7 +271,7 @@ func (m Model) viewAgentSelect() string {
 			if i == m.agentCursor {
 				name = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 					Text:  agent.Name,
-					Style: theme.Style{Emphasis: theme.Strong},
+					Style: theme.Style{Category: theme.CatAgent},
 				})
 			}
 

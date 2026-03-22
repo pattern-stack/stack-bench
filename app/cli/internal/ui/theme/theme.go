@@ -32,7 +32,7 @@ func (t *Theme) Resolve(s Style) lipgloss.Style {
 	// Hierarchy affects opacity/dimness
 	switch s.Hierarchy {
 	case Primary:
-		st = st.Bold(true)
+		// Primary is just normal weight — use Strong emphasis for bold
 	case Tertiary:
 		st = st.Foreground(t.DimColor)
 	case Quaternary:

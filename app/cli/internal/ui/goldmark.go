@@ -320,13 +320,13 @@ func (r *terminalRenderer) renderHeading(w util.BufWriter, source []byte, node a
 		var s theme.Style
 		switch n.Level {
 		case 1:
-			s = theme.Style{Category: theme.CatAgent, Hierarchy: theme.Primary, Emphasis: theme.Strong}
+			s = theme.Style{Category: theme.CatAgent, Hierarchy: theme.Primary}
 		case 2:
-			s = theme.Style{Category: theme.CatSystem, Hierarchy: theme.Primary, Emphasis: theme.Strong}
+			s = theme.Style{Category: theme.CatSystem, Hierarchy: theme.Primary}
 		case 3:
-			s = theme.Style{Hierarchy: theme.Primary, Emphasis: theme.Strong}
+			s = theme.Style{Hierarchy: theme.Primary}
 		default:
-			s = theme.Style{Hierarchy: theme.Secondary, Emphasis: theme.Strong}
+			s = theme.Style{Hierarchy: theme.Secondary}
 		}
 		resolved := r.ctx.Theme.Resolve(s)
 		if r.width > 0 {

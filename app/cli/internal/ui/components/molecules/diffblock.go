@@ -26,7 +26,7 @@ func DiffBlock(ctx atoms.RenderContext, data DiffBlockData) string {
 	if data.FilePath != "" {
 		path := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 			Text:  data.FilePath,
-			Style: theme.Style{Category: theme.CatTool, Emphasis: theme.Strong},
+			Style: theme.Style{Category: theme.CatTool},
 		})
 		parts = append(parts, path)
 	}

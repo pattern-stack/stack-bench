@@ -163,7 +163,7 @@ func (m PickerModel) View() string {
 			newCursor = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent}) + " "
 			newLabel = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 				Text:  "+ New conversation",
-				Style: theme.Style{Emphasis: theme.Strong},
+				Style: theme.Style{Category: theme.CatAgent},
 			})
 		}
 		lines = append(lines, fmt.Sprintf("  %s%s", newCursor, newLabel))
@@ -190,7 +190,7 @@ func (m PickerModel) View() string {
 				if m.cursor == idx {
 					label = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 						Text:  conv.AgentName,
-						Style: theme.Style{Emphasis: theme.Strong},
+						Style: theme.Style{Category: theme.CatAgent},
 					})
 				}
 
