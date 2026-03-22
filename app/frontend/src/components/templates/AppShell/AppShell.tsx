@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { StackSidebar } from "@/components/organisms/StackSidebar";
+import { AgentPanel } from "@/components/organisms/AgentPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
 import { TabBar } from "@/components/molecules/TabBar";
 import type { TabItem } from "@/components/molecules/TabBar";
@@ -17,6 +18,9 @@ interface AppShellProps {
   tabs: TabItem[];
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  agentOpen: boolean;
+  onAgentToggle: () => void;
+  selectedLineCount: number;
   children?: ReactNode;
 }
 
@@ -36,6 +40,9 @@ function AppShell({
   tabs,
   activeTab,
   onTabChange,
+  agentOpen,
+  onAgentToggle,
+  selectedLineCount,
   children,
 }: AppShellProps) {
   // Derive PRHeader props from the active branch
@@ -81,6 +88,12 @@ function AppShell({
         </div>
         <ActionBar status={displayStatus} />
       </main>
+      <AgentPanel
+        isOpen={agentOpen}
+        onToggle={onAgentToggle}
+        selectedLineCount={selectedLineCount}
+        branchName={headBranch}
+      />
     </div>
   );
 }
