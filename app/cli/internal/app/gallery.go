@@ -13,24 +13,19 @@ import (
 
 // NewGallery creates a Model pre-loaded with a component gallery.
 // All messages are pre-rendered so the user can scroll through immediately.
-func NewGallery(width int) Model {
+func NewGallery() Model {
 	client := &api.StubClient{}
 	m := Model{
-		width:    width,
+		width:    80,
 		height:   24,
 		phase:    PhaseChat,
 		client:   client,
 		registry: command.DefaultRegistry(),
-		demo:     false,
+		gallery:  true,
 	}
 	m.chat = chat.New(client, "Component Gallery", m.registry)
-	m.chat.SetSize(width, m.height-5)
+	m.chat.SetSize(m.width, m.height-5)
 	m.chat.SetConversationID("gallery")
-
-	for _, msg := range buildGalleryMessages(width) {
-		m.chat.AppendMessage(msg)
-	}
-
 	return m
 }
 
@@ -39,6 +34,10 @@ func buildGalleryMessages(width int) []chat.Message {
 	ctx := atoms.DefaultContext(width)
 	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
 	var msgs []chat.Message
+
+	raw := func(content string) {
+		msgs = append(msgs, chat.Message{Raw: true, Content: content + "\n"})
+	}
 
 	section := func(title, description string) string {
 		header := molecules.Header(ctx, molecules.HeaderData{
@@ -83,7 +82,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			Text:  "Subtle emphasis",
 			Style: theme.Style{Emphasis: theme.Subtle},
 		}))
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// Badge
@@ -131,7 +130,7 @@ func buildGalleryMessages(width int) []chat.Message {
 		}
 		parts = append(parts, "  Outline: "+strings.Join(outlineRow, "  "))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// Icon
@@ -165,7 +164,7 @@ func buildGalleryMessages(width int) []chat.Message {
 		}
 		parts = append(parts, "  "+strings.Join(iconRow, "   "))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// Separator
@@ -174,7 +173,7 @@ func buildGalleryMessages(width int) []chat.Message {
 		parts = append(parts, section("Separator", "Full-width horizontal rule."))
 		parts = append(parts, "")
 		parts = append(parts, atoms.Separator(ctx))
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// InlineCode
@@ -184,7 +183,7 @@ func buildGalleryMessages(width int) []chat.Message {
 		parts = append(parts, "")
 		text := "  Use " + atoms.InlineCode(inlineCtx, "theme.Resolve()") + " to resolve tokens, not " + atoms.InlineCode(inlineCtx, "lipgloss.NewStyle()") + " directly."
 		parts = append(parts, text)
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// CodeBlock
@@ -194,6 +193,7 @@ func buildGalleryMessages(width int) []chat.Message {
 
 		parts = append(parts, atoms.CodeBlock(ctx, atoms.CodeBlockData{
 			Language:    "go",
+			FilePath:    "internal/ui/components/atoms/textblock.go",
 			LineNumbers: true,
 			Code: `func TextBlock(ctx RenderContext, data TextBlockData) string {
 	style := ctx.Theme.Resolve(data.Style)
@@ -206,6 +206,7 @@ func buildGalleryMessages(width int) []chat.Message {
 
 		parts = append(parts, atoms.CodeBlock(ctx, atoms.CodeBlockData{
 			Language: "python",
+			FilePath: "src/features/agent_service.py",
 			Code: `class AgentService(BaseService[Agent]):
     """Manages agent lifecycle and configuration."""
 
@@ -213,7 +214,7 @@ func buildGalleryMessages(width int) []chat.Message {
         return await self.repo.create(Agent(name=name, role=role))`,
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// Table
@@ -236,7 +237,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			},
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// ── Molecules ──────────────────────────────────────────────
@@ -261,7 +262,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			Content: "Conversation branched from exchange #3.",
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// Header
@@ -278,7 +279,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			},
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// ErrorBlock
@@ -296,7 +297,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			},
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// StatusBar
@@ -327,7 +328,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			parts = append(parts, bar)
 		}
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// StatusBlock (with static spinner frame)
@@ -361,7 +362,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			Verb:    "Thinking",
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// ToolCallBlock
@@ -399,7 +400,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			State:    molecules.ToolCallPending,
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// DiffBlock
@@ -428,7 +429,7 @@ func buildGalleryMessages(width int) []chat.Message {
 +		})`,
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// ConfirmPrompt
@@ -447,7 +448,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			Selected: false,
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	// RadioSelect
@@ -467,7 +468,7 @@ func buildGalleryMessages(width int) []chat.Message {
 			Selected: 1,
 		}))
 
-		msgs = append(msgs, chat.Message{Raw: true, Content: strings.Join(parts, "\n")})
+		raw(strings.Join(parts, "\n"))
 	}
 
 	return msgs
