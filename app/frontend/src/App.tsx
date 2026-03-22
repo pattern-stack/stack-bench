@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
-import { FileViewerPanel } from "@/components/organisms/FileViewerPanel";
+import { FileContent } from "@/components/molecules/FileContent";
+import { PathBar } from "@/components/molecules/PathBar";
 import { useStackDetail } from "@/hooks/useStackDetail";
 import { useBranchDiff } from "@/hooks/useBranchDiff";
+import { useFileTree } from "@/hooks/useFileTree";
+import { useFileContent } from "@/hooks/useFileContent";
 import type { StackConnectorItem } from "@/components/molecules";
-import type { TabItem } from "@/components/molecules/TabBar";
+import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
+import type { SidebarMode } from "@/types/sidebar";
 
 function branchTitle(name: string): string {
   const parts = name.split("/");
@@ -22,7 +26,8 @@ const mockDiffStats: Record<string, { additions: number; deletions: number }> = 
 export function App() {
   const { data, loading, error } = useStackDetail();
   const [activeIndex, setActiveIndex] = useState(2);
-  const [activeTab, setActiveTab] = useState("files");
+  const [sidebarMode, setSidebarMode] = useState<SidebarMode>("diffs");
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
 
   // TODO: Lift selectedLineCount from FilesChangedPanel in a future PR
@@ -30,6 +35,14 @@ export function App() {
 
   const activeBranchId = data?.branches[activeIndex]?.branch.id;
   const { data: diffData } = useBranchDiff(activeBranchId);
+  const { data: fileTree } = useFileTree(activeBranchId);
+  const { data: fileContent } = useFileContent(activeBranchId, sidebarMode === "files" ? selectedPath : null);
+
+  // Reset sidebar mode and selection when branch changes
+  useEffect(() => {
+    setSidebarMode("diffs");
+    setSelectedPath(null);
+  }, [activeIndex]);
 
   if (loading) {
     return (
@@ -62,13 +75,21 @@ export function App() {
 
   const activeBranch = data.branches[activeIndex] ?? null;
 
-  // File count from actual diff data
-  const fileCount = diffData?.files.length ?? 0;
+  // Derive DiffFileListItem[] from diff data
+  const diffFiles: DiffFileListItem[] = (diffData?.files ?? []).map((f) => {
+    const fileName = f.path.includes("/")
+      ? f.path.slice(f.path.lastIndexOf("/") + 1)
+      : f.path;
+    return {
+      path: f.path,
+      fileName,
+      changeType: f.change_type,
+      additions: f.additions,
+      deletions: f.deletions,
+    };
+  });
 
-  const tabs: TabItem[] = [
-    { id: "files", label: "Files changed", count: fileCount || undefined },
-    { id: "source", label: "Source" },
-  ];
+  const fileCount = diffData?.files.length ?? 0;
 
   return (
     <AppShell
@@ -78,14 +99,18 @@ export function App() {
       activeIndex={activeIndex}
       onSelect={setActiveIndex}
       activeBranch={activeBranch}
-      tabs={tabs}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
       agentOpen={agentOpen}
       onAgentToggle={() => setAgentOpen((prev) => !prev)}
       selectedLineCount={selectedLineCount}
+      sidebarMode={sidebarMode}
+      onSidebarModeChange={setSidebarMode}
+      diffFiles={diffFiles}
+      fileTree={fileTree}
+      selectedPath={selectedPath}
+      onSelectFile={setSelectedPath}
+      diffFileCount={fileCount}
     >
-      {activeTab === "files" && (
+      {sidebarMode === "diffs" && (
         diffData ? (
           <FilesChangedPanel diffData={diffData} />
         ) : (
@@ -94,8 +119,21 @@ export function App() {
           </div>
         )
       )}
-      {activeTab === "source" && (
-        <FileViewerPanel branchId={activeBranchId} />
+      {sidebarMode === "files" && (
+        fileContent ? (
+          <>
+            <PathBar path={fileContent.path} />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <FileContent file={fileContent} />
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[var(--fg-muted)] text-sm">
+              {selectedPath ? "File not available" : "Select a file to view its contents"}
+            </p>
+          </div>
+        )
       )}
     </AppShell>
   );
