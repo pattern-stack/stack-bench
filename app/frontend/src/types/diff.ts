@@ -3,6 +3,7 @@ export interface DiffLine {
   old_num: number | null;
   new_num: number | null;
   content: string;
+  highlightedHtml?: string;
 }
 
 export interface DiffHunk {
