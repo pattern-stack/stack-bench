@@ -294,7 +294,7 @@ func (r *terminalRenderer) processMarkersImpl(text string, blockStyle *lipgloss.
 func (r *terminalRenderer) getMarkerStyle(tag string) lipgloss.Style {
 	switch tag {
 	case "BOLD_START":
-		return r.ctx.Theme.Resolve(theme.Style{Emphasis: theme.Strong})
+		return lipgloss.NewStyle().Bold(true)
 	case "ITALIC_START":
 		return lipgloss.NewStyle().Italic(true)
 	case "LINK_START":

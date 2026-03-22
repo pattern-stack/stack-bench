@@ -42,7 +42,7 @@ func (t *Theme) Resolve(s Style) lipgloss.Style {
 	// Emphasis modifies weight
 	switch s.Emphasis {
 	case Strong:
-		st = st.Bold(true)
+		// Bold reserved for titles — callers should not use Strong casually
 	case Subtle:
 		if s.Status == NoStatus && s.Category == CatDefault && s.Hierarchy < Tertiary {
 			st = st.Foreground(t.DimColor)

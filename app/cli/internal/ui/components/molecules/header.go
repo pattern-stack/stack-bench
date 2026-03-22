@@ -18,11 +18,8 @@ func Header(ctx atoms.RenderContext, data HeaderData) string {
 	var parts []string
 
 	// Title renders inline (no width padding) so badges sit beside it
-	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
-	title := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
-		Text:  data.Title,
-		Style: theme.Style{Hierarchy: theme.Primary},
-	})
+	titleStyle := ctx.Theme.Resolve(theme.Style{Hierarchy: theme.Primary}).Bold(true)
+	title := titleStyle.Render(data.Title)
 	parts = append(parts, title)
 
 	if len(data.Badges) > 0 {
