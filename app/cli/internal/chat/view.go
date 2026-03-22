@@ -22,22 +22,49 @@ func (m *Model) View() string {
 	ctx := atoms.DefaultContext(m.width)
 	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
 
-	// Adjust viewport height for autocomplete overlay if active
+	// Calculate dynamic chrome heights before rendering the viewport.
+	// Autocomplete and multiline input both consume vertical space.
 	acView := m.autocomplete.View()
 	acH := 0
 	if acView != "" {
 		acH = lipgloss.Height(acView)
 	}
-	if acH > 0 {
+
+	// Input: build wrapped lines to know how tall the input area is.
+	sep := atoms.Separator(ctx)
+	label := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+		Text:  "you:",
+		Style: theme.Style{Hierarchy: theme.Tertiary},
+	})
+	prefix := " " + label + " "
+	prefixW := lipgloss.Width(prefix)
+	availW := m.width - prefixW
+	if availW < 10 {
+		availW = 10
+	}
+	inputLines := strings.Split(m.input+"_", "\n")
+	var wrappedLines []string
+	for _, line := range inputLines {
+		wrappedLines = append(wrappedLines, wrapLine(line, availW)...)
+	}
+	extraInputLines := len(wrappedLines) - 1
+
+	// Temporarily shrink viewport for autocomplete + extra input lines.
+	chromeExtra := acH + extraInputLines
+	if chromeExtra > 0 {
 		origH := m.viewport.Height()
-		m.viewport.SetHeight(origH - acH)
+		adjusted := origH - chromeExtra
+		if adjusted < 1 {
+			adjusted = 1
+		}
+		m.viewport.SetHeight(adjusted)
 		defer m.viewport.SetHeight(origH)
 	}
 
 	// Viewport
 	body := m.viewport.View()
 
-	// Status line (fixed, no separators)
+	// Status line
 	var statusContent string
 	if m.streaming {
 		statusContent = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
@@ -57,23 +84,24 @@ func (m *Model) View() string {
 		statusContent += strings.Repeat(" ", pad) + scrollInd
 	}
 
-	// Input
-	sep := atoms.Separator(ctx)
-	label := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
-		Text:  "you:",
-		Style: theme.Style{Hierarchy: theme.Tertiary},
-	})
-	input := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
-		Text:  m.input + "_",
-	})
-	inputLine := sep + "\n" + " " + label + " " + input
-
-	result := body + "\n" + statusContent + "\n" + inputLine
-	if acView != "" {
-		result = body + "\n" + acView + "\n" + statusContent + "\n" + inputLine
+	// Render input lines: first gets the label, rest get padding.
+	linePad := strings.Repeat(" ", prefixW)
+	var inputRendered []string
+	for i, line := range wrappedLines {
+		rendered := atoms.TextBlock(inlineCtx, atoms.TextBlockData{Text: line})
+		if i == 0 {
+			inputRendered = append(inputRendered, prefix+rendered)
+		} else {
+			inputRendered = append(inputRendered, linePad+rendered)
+		}
 	}
+	inputLine := sep + "\n" + strings.Join(inputRendered, "\n")
 
-	return result
+	// Compose final output.
+	if acView != "" {
+		return body + "\n" + acView + "\n" + statusContent + "\n" + inputLine
+	}
+	return body + "\n" + statusContent + "\n" + inputLine
 }
 
 // RenderHeader returns the chat header for the app to compose.

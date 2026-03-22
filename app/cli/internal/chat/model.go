@@ -105,11 +105,11 @@ func New(client api.Client, agentName string, registry *command.Registry) Model 
 	}
 }
 
-// Chat chrome heights (status line = 1 line, input = sep + text).
+// Chat chrome heights (status line = 1 line, input = sep + at least one line).
 const (
 	statusLineHeight = 1 // streaming/scroll indicator (no separator)
-	inputHeight      = 2 // separator + "you: _"
-	chatChrome       = statusLineHeight + inputHeight + 2 // +2 newlines between sections
+	minInputHeight   = 2 // separator + at least one line of "you: _"
+	chatChrome       = statusLineHeight + minInputHeight + 2 // +2 newlines between sections
 )
 
 // SetSize updates the viewport dimensions.
@@ -288,6 +288,8 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		m.input = deleteWord(m.input)
 	case "super+backspace", "ctrl+u":
 		m.input = deleteLine(m.input)
+	case "shift+enter", "alt+enter", "ctrl+j":
+		m.input += "\n"
 	case "enter":
 		return m.submit()
 	default:
