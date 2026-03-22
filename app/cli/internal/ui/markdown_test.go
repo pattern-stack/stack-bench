@@ -351,6 +351,39 @@ func TestRenderMarkdown_Table(t *testing.T) {
 	}
 }
 
+func TestRenderMarkdown_TableHasRoundedBorder(t *testing.T) {
+	input := "| A | B |\n|---|---|\n| 1 | 2 |"
+	result := RenderMarkdown(input, 60)
+	plain := stripANSI(result)
+	// Should use lipgloss rounded border characters.
+	if !strings.Contains(plain, "\u256d") {
+		t.Errorf("table should have rounded top-left corner, got plain=%q", plain)
+	}
+}
+
+func TestRenderMarkdown_TableWithAlignment(t *testing.T) {
+	input := "| Left | Center | Right |\n|:-----|:------:|------:|\n| a | b | c |"
+	result := RenderMarkdown(input, 80)
+	plain := stripANSI(result)
+	for _, expected := range []string{"Left", "Center", "Right", "a", "b", "c"} {
+		if !strings.Contains(plain, expected) {
+			t.Errorf("table should contain %q, got plain=%q", expected, plain)
+		}
+	}
+}
+
+func TestRenderMarkdown_TableSingleColumn(t *testing.T) {
+	input := "| Item |\n|------|\n| Apple |\n| Banana |"
+	result := RenderMarkdown(input, 60)
+	plain := stripANSI(result)
+	if !strings.Contains(plain, "Apple") {
+		t.Errorf("single-column table should contain 'Apple', got plain=%q", plain)
+	}
+	if !strings.Contains(plain, "Banana") {
+		t.Errorf("single-column table should contain 'Banana', got plain=%q", plain)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Heading levels
 // ---------------------------------------------------------------------------
