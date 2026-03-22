@@ -68,7 +68,13 @@ func (d *DemoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan 
 				ch <- StreamChunk{Content: "\n", Type: ChunkText}
 				time.Sleep(15 * time.Millisecond)
 			}
-			words := strings.Fields(line)
+			// Preserve leading whitespace (indentation), then stream words
+			trimmed := strings.TrimLeft(line, " \t")
+			indent := line[:len(line)-len(trimmed)]
+			if indent != "" {
+				ch <- StreamChunk{Content: indent, Type: ChunkText}
+			}
+			words := strings.Fields(trimmed)
 			for wi, word := range words {
 				token := word
 				if wi < len(words)-1 {
