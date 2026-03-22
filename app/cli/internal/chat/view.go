@@ -12,13 +12,15 @@ import (
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
-// View renders the full chat view to fill the given dimensions.
+// View renders the chat content area: viewport + status line + input.
+// The app owns header (above) and legend (below).
 func (m *Model) View() string {
 	if m.width < 20 || m.height < 4 {
 		return ""
 	}
 
-	header := m.renderHeader()
+	ctx := atoms.DefaultContext(m.width)
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
 
 	// Adjust viewport height for autocomplete overlay if active
 	acView := m.autocomplete.View()
@@ -26,42 +28,56 @@ func (m *Model) View() string {
 	if acView != "" {
 		acH = lipgloss.Height(acView)
 	}
-
-	// Temporarily adjust viewport height if autocomplete is visible
 	if acH > 0 {
 		origH := m.viewport.Height()
 		m.viewport.SetHeight(origH - acH)
 		defer m.viewport.SetHeight(origH)
 	}
 
+	// Viewport
 	body := m.viewport.View()
 
-	// Show a scroll indicator when the user has scrolled up
+	// Status line (fixed, no separators)
+	var statusContent string
+	if m.streaming {
+		statusContent = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text:  "  ...",
+			Style: theme.Style{Category: theme.CatAgent, Status: theme.Running},
+		})
+	}
 	if !m.viewport.AtBottom() && len(m.messages) > 0 {
 		pct := int(m.viewport.ScrollPercent() * 100)
-		indicator := fmt.Sprintf(" ↑ %d%% ", pct)
-		// Right-align the indicator on the last line of the body
-		pad := m.width - lipgloss.Width(indicator)
+		scrollInd := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render(fmt.Sprintf("↑ %d%%", pct))
+		pad := m.width - lipgloss.Width(statusContent) - lipgloss.Width(scrollInd) - 2
 		if pad < 0 {
 			pad = 0
 		}
-		body += "\n" + strings.Repeat(" ", pad) + lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render(indicator)
+		statusContent += strings.Repeat(" ", pad) + scrollInd
 	}
 
-	prompt := m.renderPrompt()
+	// Input
+	sep := atoms.Separator(ctx)
+	label := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+		Text:  "you:",
+		Style: theme.Style{Hierarchy: theme.Tertiary},
+	})
+	input := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+		Text:  m.input + "_",
+	})
+	inputLine := sep + "\n" + " " + label + " " + input
 
-	result := header + "\n" + body + "\n"
+	result := body + "\n" + statusContent + "\n" + inputLine
 	if acView != "" {
-		result += acView + "\n"
+		result = body + "\n" + acView + "\n" + statusContent + "\n" + inputLine
 	}
-	result += prompt
 
 	return result
 }
 
-func (m *Model) renderHeader() string {
+// RenderHeader returns the chat header for the app to compose.
+func (m *Model) RenderHeader() string {
 	ctx := atoms.DefaultContext(m.width)
 
 	agent := m.agentName
@@ -110,8 +126,6 @@ func renderMessage(msg Message, width int) string {
 		})
 
 	case RoleAssistant:
-		// Assistant messages use markdown rendering which MessageBlock doesn't cover yet.
-		// Use the role badge pattern from atoms, then render markdown content with indentation.
 		badge := atoms.Badge(ctx, atoms.BadgeData{
 			Label:   "assistant",
 			Style:   theme.Style{Category: theme.CatAgent},
@@ -133,22 +147,4 @@ func renderMessage(msg Message, width int) string {
 		})
 	}
 	return ""
-}
-
-func (m *Model) renderPrompt() string {
-	ctx := atoms.DefaultContext(m.width)
-
-	sep := atoms.Separator(ctx)
-	cursor := m.input + "_"
-
-	label := atoms.TextBlock(atoms.RenderContext{Width: 0, Theme: ctx.Theme}, atoms.TextBlockData{
-		Text:  "you:",
-		Style: theme.Style{Hierarchy: theme.Tertiary},
-	})
-	input := atoms.TextBlock(atoms.RenderContext{Width: 0, Theme: ctx.Theme}, atoms.TextBlockData{
-		Text:  cursor,
-		Style: theme.Style{},
-	})
-
-	return sep + "\n" + " " + label + " " + input
 }

@@ -95,7 +95,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.chat.SetSize(m.width, m.height-2)
+		m.chat.SetSize(m.width, m.height-5)
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -189,7 +189,7 @@ func (m Model) updateAgentSelect(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.agents) > 0 {
 			agent := m.agents[m.agentCursor]
 			m.chat = chat.New(m.client, agent.Name, m.registry)
-			m.chat.SetSize(m.width, m.height-2)
+			m.chat.SetSize(m.width, m.height-5)
 
 			client := m.client
 			agentID := agent.ID
@@ -230,13 +230,14 @@ func (m Model) View() tea.View {
 		case PhaseSelectAgent:
 			body = m.viewAgentSelect()
 		case PhaseChat:
-			body = m.chat.View()
+			body = m.chat.RenderHeader() + "\n" + m.chat.View()
 		}
-		body += "\n" + m.renderStatus()
+		body += "\n" + m.renderLegend()
 	}
 
 	v := tea.NewView(body)
 	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
 	return v
 }
 
@@ -304,7 +305,7 @@ func (m Model) viewAgentSelect() string {
 	)
 }
 
-func (m Model) renderStatus() string {
+func (m Model) renderLegend() string {
 	ctx := atoms.DefaultContext(m.width)
 
 	var hint string

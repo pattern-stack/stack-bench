@@ -105,11 +105,12 @@ func New(client api.Client, agentName string, registry *command.Registry) Model 
 	}
 }
 
-// headerHeight is the number of lines the header occupies.
-const headerHeight = 1
-
-// promptHeight is the number of lines the prompt occupies (separator + input).
-const promptHeight = 2
+// Chat chrome heights (status line = 1 line, input = sep + text).
+const (
+	statusLineHeight = 1 // streaming/scroll indicator (no separator)
+	inputHeight      = 2 // separator + "you: _"
+	chatChrome       = statusLineHeight + inputHeight + 2 // +2 newlines between sections
+)
 
 // SetSize updates the viewport dimensions.
 func (m *Model) SetSize(w, h int) {
@@ -117,8 +118,7 @@ func (m *Model) SetSize(w, h int) {
 	m.height = h
 	m.autocomplete.SetWidth(w)
 	m.viewport.SetWidth(w)
-	// Reserve space for header, prompt, and the newlines between sections.
-	vpHeight := h - headerHeight - promptHeight - 2 // 2 newlines between header/body and body/prompt
+	vpHeight := h - chatChrome
 	if vpHeight < 1 {
 		vpHeight = 1
 	}
@@ -171,14 +171,6 @@ func (m *Model) rebuildViewportContent() {
 	var rendered []string
 	for _, msg := range m.messages {
 		rendered = append(rendered, renderMessage(msg, m.width))
-	}
-
-	if m.streaming {
-		ctx := atoms.DefaultContext(m.width)
-		rendered = append(rendered, atoms.TextBlock(ctx, atoms.TextBlockData{
-			Text:  "  ...",
-			Style: theme.Style{Category: theme.CatAgent, Status: theme.Running},
-		}))
 	}
 
 	m.viewport.SetContent(strings.Join(rendered, "\n"))
