@@ -1,5 +1,11 @@
 # Stack Bench — cross-language orchestration
 
+# List available recipes
+default:
+    @just --list
+
+# ── All ──────────────────────────────────────────
+
 # Start all services
 dev:
     pts dev
@@ -10,25 +16,42 @@ test: test-backend test-cli
 # Run all quality gates
 quality: quality-backend quality-cli
 
-# Backend
+# ── Backend ──────────────────────────────────────
+
+# Run backend tests
 test-backend:
     cd app/backend && just test
 
+# Run backend quality gates
 quality-backend:
     cd app/backend && just quality
 
+# Run database migrations
 migrate:
     cd app/backend && just migrate
 
+# Seed database
 seed:
     cd app/backend && just seed
 
-# CLI
+# ── CLI ──────────────────────────────────────────
+
+# Build CLI binary
+build-cli:
+    cd app/cli && just build
+
+# Run CLI
+run-cli *args:
+    cd app/cli && just run {{args}}
+
+# Run CLI tests
 test-cli:
     cd app/cli && just test
 
+# Run CLI quality gates
 quality-cli:
     cd app/cli && just quality
 
-build-cli:
-    cd app/cli && just build
+# Run CLI in demo mode (hands-free replay)
+demo-cli *args:
+    cd app/cli && just demo {{args}}

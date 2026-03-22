@@ -15,3 +15,7 @@ quality:
 # Run the CLI
 run *args:
     go run . {{args}}
+
+# Run in demo mode (hands-free replay)
+demo *args:
+    go run . --demo {{args}}
