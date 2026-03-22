@@ -8,6 +8,18 @@ const iconPaths: Record<string, React.ReactNode> = {
   "chevron-down": (
     <polyline points="6 9 12 15 18 9" />
   ),
+  "chevrons-down": (
+    <>
+      <polyline points="7 13 12 18 17 13" />
+      <polyline points="7 6 12 11 17 6" />
+    </>
+  ),
+  "chevrons-up": (
+    <>
+      <polyline points="17 11 12 6 7 11" />
+      <polyline points="17 18 12 13 7 18" />
+    </>
+  ),
   check: (
     <polyline points="20 6 9 17 4 12" />
   ),
@@ -108,6 +120,39 @@ const iconPaths: Record<string, React.ReactNode> = {
     <>
       <line x1="22" y1="2" x2="11" y2="13" />
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </>
+  ),
+  activity: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </>
+  ),
+  "git-merge": (
+    <>
+      <circle cx="18" cy="18" r="3" />
+      <circle cx="6" cy="6" r="3" />
+      <path d="M6 21V9a9 9 0 0 0 9 9" />
+    </>
+  ),
+  "download-cloud": (
+    <>
+      <polyline points="8 17 12 21 16 17" />
+      <line x1="12" y1="12" x2="12" y2="21" />
+      <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29" />
+    </>
+  ),
+  "check-circle": (
+    <>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </>
+  ),
+  "alert-triangle": (
+    <>
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
     </>
   ),
 };

@@ -2,13 +2,13 @@ import type { ReactNode } from "react";
 import { StackSidebar } from "@/components/organisms/StackSidebar";
 import { AgentPanel } from "@/components/organisms/AgentPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
-import { ActionBar } from "@/components/molecules/ActionBar";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { BranchWithPR } from "@/types/stack";
 import type { SidebarMode } from "@/types/sidebar";
 import type { FileTreeNode } from "@/types/file-tree";
 import type { ChangedFileInfo } from "@/components/organisms/FileTree";
+import type { StackSummary, ActivityLogEntry } from "@/types/activity";
 
 interface AppShellProps {
   stackName: string;
@@ -32,6 +32,20 @@ interface AppShellProps {
   diffFileCount?: number;
   onRefresh?: () => void;
   changedFiles?: Map<string, ChangedFileInfo>;
+
+  // Stack header + activity props
+  summary: StackSummary;
+  activityEntries: ActivityLogEntry[];
+  onSync?: () => void;
+  onMerge?: () => void;
+  onClearActivity?: () => void;
+
+  // Diff toolbar props
+  fileCount?: number;
+  additions?: number;
+  deletions?: number;
+  onCollapseAll?: () => void;
+  onExpandAll?: () => void;
 }
 
 /** Extract short branch name from full ref: "dug/frontend-mvp/3-stack-nav" → "3-stack-nav" */
@@ -60,6 +74,16 @@ function AppShell({
   diffFileCount,
   onRefresh,
   changedFiles,
+  summary,
+  activityEntries,
+  onSync,
+  onMerge,
+  onClearActivity,
+  fileCount,
+  additions,
+  deletions,
+  onCollapseAll,
+  onExpandAll,
 }: AppShellProps) {
   // Derive PRHeader props from the active branch
   const pr = activeBranch?.pull_request;
@@ -86,6 +110,12 @@ function AppShell({
         items={items}
         activeIndex={activeIndex}
         onSelect={onSelect}
+        summary={summary}
+        activityEntries={activityEntries}
+        onSync={onSync}
+        onRestackAll={summary.needsRestack > 0 ? () => console.log("restack all") : undefined}
+        onMerge={onMerge}
+        onClearActivity={onClearActivity}
         sidebarMode={sidebarMode}
         onSidebarModeChange={onSidebarModeChange}
         diffFiles={diffFiles}
@@ -102,11 +132,16 @@ function AppShell({
           baseBranch={baseBranch}
           headBranch={headBranch}
           description={description}
+          status={displayStatus}
+          fileCount={fileCount}
+          additions={additions}
+          deletions={deletions}
+          onCollapseAll={onCollapseAll}
+          onExpandAll={onExpandAll}
         />
         <div className="flex-1 overflow-auto">
           {children}
         </div>
-        <ActionBar status={displayStatus} />
       </main>
       <AgentPanel
         isOpen={agentOpen}
