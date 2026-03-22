@@ -17,6 +17,9 @@ build/
 # Claude Code worktrees
 .claude/worktrees/
 
+# MCP server caches
+.playwright-mcp/
+
 # Cloned reference repos
 dealbrain/
 
