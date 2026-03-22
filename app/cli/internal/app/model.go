@@ -312,7 +312,7 @@ func (m Model) renderStatus() string {
 	case PhaseSelectAgent:
 		hint = "j/k: navigate  enter: select  q: quit"
 	case PhaseChat:
-		hint = "enter: send  esc: back to agents  ctrl+c: quit"
+		hint = "enter: send  pgup/pgdn: scroll  esc: back  ctrl+c: quit"
 	}
 
 	// Map service health to molecule HealthState

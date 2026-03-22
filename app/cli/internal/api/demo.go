@@ -60,14 +60,23 @@ func (d *DemoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan 
 	ch := make(chan StreamChunk, 64)
 	go func() {
 		defer close(ch)
-		words := strings.Fields(content)
-		for i, word := range words {
-			token := word
-			if i < len(words)-1 {
-				token += " "
+		// Stream line-by-line, then word-by-word within each line,
+		// preserving newlines so markdown structure survives.
+		lines := strings.Split(content, "\n")
+		for li, line := range lines {
+			if li > 0 {
+				ch <- StreamChunk{Content: "\n", Type: ChunkText}
+				time.Sleep(15 * time.Millisecond)
 			}
-			ch <- StreamChunk{Content: token, Type: ChunkText}
-			time.Sleep(30 * time.Millisecond)
+			words := strings.Fields(line)
+			for wi, word := range words {
+				token := word
+				if wi < len(words)-1 {
+					token += " "
+				}
+				ch <- StreamChunk{Content: token, Type: ChunkText}
+				time.Sleep(50 * time.Millisecond)
+			}
 		}
 		ch <- StreamChunk{Done: true}
 	}()

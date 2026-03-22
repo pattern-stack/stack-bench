@@ -19,24 +19,38 @@ func (m *Model) View() string {
 	}
 
 	header := m.renderHeader()
-	prompt := m.renderPrompt()
 
-	headerH := lipgloss.Height(header)
-	promptH := lipgloss.Height(prompt)
-
-	// Reserve space for autocomplete overlay if active
+	// Adjust viewport height for autocomplete overlay if active
 	acView := m.autocomplete.View()
 	acH := 0
 	if acView != "" {
 		acH = lipgloss.Height(acView)
 	}
 
-	bodyH := m.height - headerH - promptH - acH
-	if bodyH < 1 {
-		bodyH = 1
+	// Temporarily adjust viewport height if autocomplete is visible
+	if acH > 0 {
+		origH := m.viewport.Height()
+		m.viewport.SetHeight(origH - acH)
+		defer m.viewport.SetHeight(origH)
 	}
 
-	body := m.renderMessages(bodyH)
+	body := m.viewport.View()
+
+	// Show a scroll indicator when the user has scrolled up
+	if !m.viewport.AtBottom() && len(m.messages) > 0 {
+		pct := int(m.viewport.ScrollPercent() * 100)
+		indicator := fmt.Sprintf(" ↑ %d%% ", pct)
+		// Right-align the indicator on the last line of the body
+		pad := m.width - lipgloss.Width(indicator)
+		if pad < 0 {
+			pad = 0
+		}
+		body += "\n" + strings.Repeat(" ", pad) + lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render(indicator)
+	}
+
+	prompt := m.renderPrompt()
 
 	result := header + "\n" + body + "\n"
 	if acView != "" {
@@ -83,63 +97,6 @@ func (m *Model) renderHeader() string {
 		Title:  "CHAT",
 		Badges: badges,
 	})
-}
-
-func (m *Model) renderMessages(maxH int) string {
-	ctx := atoms.DefaultContext(m.width)
-
-	if len(m.messages) == 0 {
-		empty := atoms.TextBlock(ctx, atoms.TextBlockData{
-			Text:  "  No messages yet. Type below to start a conversation.",
-			Style: theme.Style{Hierarchy: theme.Tertiary},
-		})
-		pad := maxH - 1
-		if pad < 0 {
-			pad = 0
-		}
-		return empty + strings.Repeat("\n", pad)
-	}
-
-	var rendered []string
-	for _, msg := range m.messages {
-		rendered = append(rendered, renderMessage(msg, m.width))
-	}
-
-	if m.streaming {
-		rendered = append(rendered, atoms.TextBlock(ctx, atoms.TextBlockData{
-			Text:  "  ...",
-			Style: theme.Style{Category: theme.CatAgent, Status: theme.Running},
-		}))
-	}
-
-	lineHeights := make([]int, len(rendered))
-	for i, r := range rendered {
-		lineHeights[i] = lipgloss.Height(r)
-	}
-
-	start := len(rendered)
-	remaining := maxH
-	for start > 0 && remaining > 0 {
-		start--
-		remaining -= lineHeights[start]
-	}
-	if remaining < 0 {
-		start++
-	}
-	visible := rendered[start:]
-
-	visibleLines := 0
-	for _, r := range visible {
-		visibleLines += lipgloss.Height(r)
-	}
-	padN := maxH - visibleLines
-	var lines []string
-	for i := 0; i < padN; i++ {
-		lines = append(lines, "")
-	}
-	lines = append(lines, visible...)
-
-	return strings.Join(lines, "\n")
 }
 
 func renderMessage(msg Message, width int) string {
