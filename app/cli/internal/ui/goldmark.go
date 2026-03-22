@@ -358,7 +358,11 @@ func (r *terminalRenderer) renderParagraph(w util.BufWriter, source []byte, node
 		r.popStyle()
 		styled := r.flushInlineRaw(style)
 		_, _ = w.WriteString(styled)
+		// Add blank line after paragraph for visual separation
 		_, _ = w.WriteString("\n")
+		if node.NextSibling() != nil {
+			_, _ = w.WriteString("\n")
+		}
 	}
 	return ast.WalkContinue, nil
 }
@@ -691,15 +695,15 @@ func (r *terminalRenderer) renderTableCell(w util.BufWriter, source []byte, node
 	return ast.WalkContinue, nil
 }
 
-func (r *terminalRenderer) renderTableNode(table *east.Table, source []byte) string {
+func (r *terminalRenderer) renderTableNode(tableNode *east.Table, source []byte) string {
+	var headers []string
 	var rows [][]string
-	var isHeader []bool
 
-	for child := table.FirstChild(); child != nil; child = child.NextSibling() {
+	for child := tableNode.FirstChild(); child != nil; child = child.NextSibling() {
 		var row []string
-		header := false
+		isHeader := false
 		if _, ok := child.(*east.TableHeader); ok {
-			header = true
+			isHeader = true
 		}
 		for cell := child.FirstChild(); cell != nil; cell = cell.NextSibling() {
 			var cellText strings.Builder
@@ -710,64 +714,31 @@ func (r *terminalRenderer) renderTableNode(table *east.Table, source []byte) str
 			}
 			row = append(row, cellText.String())
 		}
-		rows = append(rows, row)
-		isHeader = append(isHeader, header)
-	}
-
-	if len(rows) == 0 {
-		return ""
-	}
-
-	numCols := 0
-	for _, row := range rows {
-		if len(row) > numCols {
-			numCols = len(row)
-		}
-	}
-	colWidths := make([]int, numCols)
-	for _, row := range rows {
-		for i, cell := range row {
-			if len(cell) > colWidths[i] {
-				colWidths[i] = len(cell)
-			}
+		if isHeader {
+			headers = row
+		} else {
+			rows = append(rows, row)
 		}
 	}
 
-	headerStyle := r.ctx.Theme.Resolve(theme.Style{Hierarchy: theme.Secondary, Emphasis: theme.Strong})
-	cellStyle := r.ctx.Theme.Resolve(theme.Style{Hierarchy: theme.Secondary})
-	sepStyle := r.ctx.Theme.Resolve(theme.Style{Hierarchy: theme.Tertiary})
-
-	var out strings.Builder
-	for ri, row := range rows {
-		var cells []string
-		for ci := 0; ci < numCols; ci++ {
-			cellText := ""
-			if ci < len(row) {
-				cellText = row[ci]
-			}
-			padded := cellText + strings.Repeat(" ", colWidths[ci]-len(cellText))
-			if isHeader[ri] {
-				cells = append(cells, headerStyle.Render(padded))
-			} else {
-				cells = append(cells, cellStyle.Render(padded))
-			}
-		}
-		out.WriteString(strings.Join(cells, "  "))
-		if ri < len(rows)-1 {
-			out.WriteString("\n")
-		}
-		if isHeader[ri] {
-			var sepParts []string
-			for ci := 0; ci < numCols; ci++ {
-				sepParts = append(sepParts, sepStyle.Render(strings.Repeat("\u2500", colWidths[ci])))
-			}
-			out.WriteString("\n" + strings.Join(sepParts, "  "))
-			if ri < len(rows)-1 {
-				out.WriteString("\n")
-			}
+	// Map goldmark alignments to atom alignments.
+	var alignments []atoms.TableAlignment
+	for _, a := range tableNode.Alignments {
+		switch a {
+		case east.AlignCenter:
+			alignments = append(alignments, atoms.AlignCenter)
+		case east.AlignRight:
+			alignments = append(alignments, atoms.AlignRight)
+		default:
+			alignments = append(alignments, atoms.AlignLeft)
 		}
 	}
-	return out.String()
+
+	return atoms.Table(r.ctx, atoms.TableData{
+		Headers:    headers,
+		Rows:       rows,
+		Alignments: alignments,
+	})
 }
 
 // ---------------------------------------------------------------------------
