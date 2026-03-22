@@ -92,6 +92,22 @@ func (m *Model) AppendMessage(msg Message) {
 	m.messages = append(m.messages, msg)
 }
 
+// SetStreaming sets the streaming state and channel (used by demo mode).
+func (m *Model) SetStreaming(streaming bool, ch <-chan api.StreamChunk) {
+	m.streaming = streaming
+	m.streamCh = ch
+}
+
+// IsStreaming reports whether the model is currently streaming a response.
+func (m *Model) IsStreaming() bool {
+	return m.streaming
+}
+
+// Messages returns the current message history.
+func (m *Model) Messages() []Message {
+	return m.messages
+}
+
 // Update handles key input and streaming response messages.
 func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {

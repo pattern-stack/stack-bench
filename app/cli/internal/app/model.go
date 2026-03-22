@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -55,6 +56,10 @@ type Model struct {
 
 	// Runtime health
 	healthStatuses map[string]service.ServiceStatus
+
+	// Demo mode
+	demo       bool
+	demoRunner *DemoRunner
 }
 
 // New creates the initial app model.
@@ -104,6 +109,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.agents = msg.Agents
+		if m.demo {
+			return m.handleDemoAgentsLoaded()
+		}
 		return m, nil
 
 	case ConversationCreatedMsg:
@@ -113,7 +121,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.chat.SetConversationID(msg.ConversationID)
 		m.phase = PhaseChat
+		if m.demo {
+			return m, demoTickCmd(500 * time.Millisecond)
+		}
 		return m, nil
+
+	case DemoTickMsg:
+		return m.handleDemoTick()
+
+	case chat.ResponseMsg:
+		// In demo mode, intercept ResponseMsg to schedule next tick after streaming ends.
+		newChat, cmd := m.chat.Update(msg)
+		m.chat = newChat
+		if m.demo && msg.Chunk.Done {
+			// Get the last assistant message content for delay calculation
+			delay := 1 * time.Second
+			if msgs := m.chat.Messages(); len(msgs) > 0 {
+				last := msgs[len(msgs)-1]
+				if last.Role == chat.RoleAssistant {
+					delay = readingDelay(last.Content)
+				}
+			}
+			return m, tea.Batch(cmd, demoTickCmd(delay))
+		}
+		return m, cmd
 
 	case command.SwitchAgentMsg:
 		m.phase = PhaseSelectAgent
