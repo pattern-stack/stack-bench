@@ -1,4 +1,4 @@
-import { Icon } from "@/components/atoms";
+import { Button, Icon } from "@/components/atoms";
 import { StackConnector } from "@/components/molecules/StackConnector";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 
@@ -8,6 +8,8 @@ interface StackSidebarProps {
   items: StackConnectorItem[];
   activeIndex: number;
   onSelect: (index: number) => void;
+  onRestackAll?: () => void;
+  onPushStack?: () => void;
 }
 
 function StackSidebar({
@@ -16,6 +18,8 @@ function StackSidebar({
   items,
   activeIndex,
   onSelect,
+  onRestackAll,
+  onPushStack,
 }: StackSidebarProps) {
   return (
     <aside
@@ -36,11 +40,40 @@ function StackSidebar({
 
       {/* Branch list */}
       <div className="flex-1 overflow-y-auto px-1 py-2">
+        <div className="px-3 pb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
+            Stack
+          </span>
+        </div>
         <StackConnector
           items={items}
           activeIndex={activeIndex}
           onSelect={onSelect}
         />
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border-muted)]">
+        <Button
+          variant="subtle"
+          size="sm"
+          className="flex-1"
+          onClick={onRestackAll}
+          disabled={!onRestackAll}
+        >
+          <Icon name="refresh-cw" size="xs" />
+          Restack all
+        </Button>
+        <Button
+          variant="subtle"
+          size="sm"
+          className="flex-1"
+          onClick={onPushStack}
+          disabled={!onPushStack}
+        >
+          <Icon name="upload" size="xs" />
+          Push stack
+        </Button>
       </div>
     </aside>
   );

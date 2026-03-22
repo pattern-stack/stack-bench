@@ -31,6 +31,10 @@
   --purple: #bc8cff;             /* Reviews, special items */
   --yellow: #d29922;             /* Warnings, pending */
 
+  /* ── Emerald Accents ────────────────────────────────────── */
+  --accent-emerald: #6ee7b7;     /* Emerald accent (viewed, primary UI) */
+  --accent-emerald-dim: #065f46; /* Emerald background (viewed toggle bg) */
+
   /* ── Semantic Backgrounds ────────────────────────────────── */
   --green-bg: #12261e;           /* Diff addition background */
   --red-bg: #28171a;             /* Diff deletion background */
@@ -41,10 +45,10 @@
   --indent-guide-active: #30363d; /* Indent guide on hover scope */
 
   /* ── Typography ──────────────────────────────────────────── */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-    "Liberation Mono", monospace;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
 
   /* ── Spacing (for reference, Tailwind handles most) ──────── */
   --sidebar-width: 320px;

@@ -35,3 +35,6 @@ export type { DiffBadgeProps } from "./DiffBadge";
 
 export { FileIcon, getFileColor } from "./FileIcon";
 export type { FileIconProps } from "./FileIcon";
+
+export { ViewedToggle } from "./ViewedToggle";
+export type { ViewedToggleProps } from "./ViewedToggle";
