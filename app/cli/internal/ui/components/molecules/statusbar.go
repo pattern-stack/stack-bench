@@ -26,14 +26,17 @@ type StatusBarData struct {
 func StatusBar(ctx atoms.RenderContext, data StatusBarData) string {
 	sep := atoms.Separator(ctx)
 
-	hints := atoms.TextBlock(ctx, atoms.TextBlockData{
+	// Status bar elements render inline (no width padding)
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+
+	hints := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 		Text:  data.Hints,
 		Style: theme.Style{Hierarchy: theme.Tertiary},
 	})
 
-	dot := atoms.Icon(ctx, atoms.IconDot, theme.Style{Status: healthStatus(data.Health)})
+	dot := atoms.Icon(inlineCtx, atoms.IconDot, theme.Style{Status: healthStatus(data.Health)})
 
-	service := atoms.TextBlock(ctx, atoms.TextBlockData{
+	service := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 		Text:  data.ServiceName,
 		Style: theme.Style{Hierarchy: theme.Tertiary},
 	})

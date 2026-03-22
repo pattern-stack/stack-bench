@@ -17,7 +17,9 @@ type HeaderData struct {
 func Header(ctx atoms.RenderContext, data HeaderData) string {
 	var parts []string
 
-	title := atoms.TextBlock(ctx, atoms.TextBlockData{
+	// Title renders inline (no width padding) so badges sit beside it
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+	title := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 		Text:  data.Title,
 		Style: theme.Style{Hierarchy: theme.Primary, Emphasis: theme.Strong},
 	})

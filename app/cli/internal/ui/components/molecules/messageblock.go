@@ -1,6 +1,8 @@
 package molecules
 
 import (
+	"strings"
+
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
@@ -22,12 +24,22 @@ var roleLabels = map[atoms.Role]string{
 func MessageBlock(ctx atoms.RenderContext, data MessageBlockData) string {
 	badge := roleBadge(ctx, data.Role)
 
-	content := atoms.TextBlock(ctx, atoms.TextBlockData{
+	// Reduce width for indentation
+	contentCtx := ctx
+	if contentCtx.Width > 4 {
+		contentCtx.Width -= 4
+	}
+	content := atoms.TextBlock(contentCtx, atoms.TextBlockData{
 		Text:  data.Content,
 		Style: theme.Style{Hierarchy: theme.Secondary},
 	})
 
-	return badge + "\n" + "  " + content
+	// Indent every line of content
+	lines := strings.Split(content, "\n")
+	for i, l := range lines {
+		lines[i] = "  " + l
+	}
+	return badge + "\n" + strings.Join(lines, "\n")
 }
 
 // roleBadge returns the appropriately styled badge for a chat role.
