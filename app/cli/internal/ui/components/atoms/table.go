@@ -30,7 +30,7 @@ func Table(ctx RenderContext, data TableData) string {
 		return ""
 	}
 
-	headerStyle := ctx.Theme.Resolve(theme.Style{Hierarchy: theme.Secondary, Emphasis: theme.Strong})
+	headerStyle := ctx.Theme.Resolve(theme.Style{Hierarchy: theme.Secondary})
 	cellStyle := ctx.Theme.Resolve(theme.Style{Hierarchy: theme.Secondary})
 	borderStyle := lipgloss.NewStyle().Foreground(ctx.Theme.DimColor)
 
