@@ -1,8 +1,6 @@
 package theme
 
 import (
-	"os"
-
 	"charm.land/lipgloss/v2"
 )
 
@@ -16,11 +14,7 @@ func init() {
 		"dark":  DarkTheme(),
 		"light": LightTheme(),
 	}
-	if lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
-		active = themes["dark"]
-	} else {
-		active = themes["light"]
-	}
+	active = themes["dark"]
 }
 
 // Active returns the currently active theme.
