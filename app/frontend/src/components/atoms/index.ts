@@ -17,3 +17,9 @@ export { Tab } from "./Tab";
 export type { TabProps } from "./Tab";
 export { CountBadge } from "./Tab";
 export type { CountBadgeProps } from "./Tab";
+
+export { StackDot } from "./StackDot";
+export type { StackDotProps, StackDotColor } from "./StackDot";
+
+export { DiffStat } from "./DiffStat";
+export type { DiffStatProps } from "./DiffStat";
