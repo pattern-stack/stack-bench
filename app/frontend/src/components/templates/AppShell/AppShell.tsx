@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { StackSidebar } from "@/components/organisms/StackSidebar";
 import { AgentPanel } from "@/components/organisms/AgentPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
-import { TabBar } from "@/components/molecules/TabBar";
-import type { TabItem } from "@/components/molecules/TabBar";
 import { ActionBar } from "@/components/molecules/ActionBar";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
+import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { BranchWithPR } from "@/types/stack";
+import type { SidebarMode } from "@/types/sidebar";
+import type { FileTreeNode } from "@/types/file-tree";
 
 interface AppShellProps {
   stackName: string;
@@ -15,13 +16,20 @@ interface AppShellProps {
   activeIndex: number;
   onSelect: (index: number) => void;
   activeBranch: BranchWithPR | null;
-  tabs: TabItem[];
-  activeTab: string;
-  onTabChange: (tabId: string) => void;
   agentOpen: boolean;
   onAgentToggle: () => void;
   selectedLineCount: number;
   children?: ReactNode;
+
+  // Sidebar props
+  sidebarMode: SidebarMode;
+  onSidebarModeChange: (mode: SidebarMode) => void;
+  diffFiles: DiffFileListItem[];
+  fileTree: FileTreeNode | null;
+  selectedPath: string | null;
+  onSelectFile: (path: string) => void;
+  diffFileCount?: number;
+  onRefresh?: () => void;
 }
 
 /** Extract short branch name from full ref: "dug/frontend-mvp/3-stack-nav" → "3-stack-nav" */
@@ -37,13 +45,18 @@ function AppShell({
   activeIndex,
   onSelect,
   activeBranch,
-  tabs,
-  activeTab,
-  onTabChange,
   agentOpen,
   onAgentToggle,
   selectedLineCount,
   children,
+  sidebarMode,
+  onSidebarModeChange,
+  diffFiles,
+  fileTree,
+  selectedPath,
+  onSelectFile,
+  diffFileCount,
+  onRefresh,
 }: AppShellProps) {
   // Derive PRHeader props from the active branch
   const pr = activeBranch?.pull_request;
@@ -70,6 +83,14 @@ function AppShell({
         items={items}
         activeIndex={activeIndex}
         onSelect={onSelect}
+        sidebarMode={sidebarMode}
+        onSidebarModeChange={onSidebarModeChange}
+        diffFiles={diffFiles}
+        fileTree={fileTree}
+        selectedPath={selectedPath}
+        onSelectFile={onSelectFile}
+        diffFileCount={diffFileCount}
+        onRefresh={onRefresh}
       />
       <main className="flex-1 flex flex-col min-w-0">
         <PRHeader
@@ -77,11 +98,6 @@ function AppShell({
           baseBranch={baseBranch}
           headBranch={headBranch}
           description={description}
-        />
-        <TabBar
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={onTabChange}
         />
         <div className="flex-1 overflow-auto">
           {children}
