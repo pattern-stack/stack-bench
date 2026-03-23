@@ -8,6 +8,7 @@ from features.message_parts.models import MessagePart  # noqa: F401
 from features.messages.models import Message  # noqa: F401
 from features.projects.models import Project  # noqa: F401
 from features.pull_requests.models import PullRequest  # noqa: F401
+from features.review_comments.models import ReviewComment  # noqa: F401
 from features.role_templates.models import RoleTemplate  # noqa: F401
 from features.stacks.models import Stack  # noqa: F401
 from features.tool_calls.models import ToolCall  # noqa: F401

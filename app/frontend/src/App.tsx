@@ -192,7 +192,13 @@ export function App() {
     >
       {sidebarMode === "diffs" && (
         diffData ? (
-          <FilesChangedPanel diffData={diffData} forceExpanded={forceExpanded} />
+          <FilesChangedPanel
+            diffData={diffData}
+            forceExpanded={forceExpanded}
+            stackId={stackId}
+            branchId={activeBranchId}
+            pullRequestId={activeBranch?.pull_request?.id}
+          />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>
