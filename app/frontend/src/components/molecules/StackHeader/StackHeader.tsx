@@ -26,6 +26,11 @@ const summaryChips: {
   },
 ];
 
+function shortRef(ref: string): string {
+  const parts = ref.split("/");
+  return parts[parts.length - 1] ?? ref;
+}
+
 function StackHeader({
   stackName,
   trunk,
@@ -48,8 +53,12 @@ function StackHeader({
         </span>
       </div>
 
-      {/* Row 2: Status summary chips */}
+      {/* Row 2: Status summary + trunk */}
       <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] text-[var(--fg-subtle)]" title={trunk}>
+          ↑ {shortRef(trunk)}
+        </span>
+        <span className="text-[11px] text-[var(--fg-subtle)]">·</span>
         {summaryChips.map(({ key, label, color }) => {
           const count = summary[key];
           if (count <= 0) return null;
@@ -69,7 +78,7 @@ function StackHeader({
       <div className="flex items-center gap-1.5">
         <Button variant="subtle" size="sm" onClick={onSync} title={`Sync ${trunk}`}>
           <Icon name="download-cloud" size="xs" />
-          Sync
+          Sync {shortRef(trunk)}
         </Button>
         <Button
           variant="subtle"
