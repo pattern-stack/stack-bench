@@ -36,7 +36,7 @@ func buildGalleryMessages(width int) []chat.Message {
 	var msgs []chat.Message
 
 	raw := func(content string) {
-		msgs = append(msgs, chat.Message{Raw: true, Content: content + "\n"})
+		msgs = append(msgs, chat.Message{Raw: true, RawContent: content + "\n"})
 	}
 
 	section := func(title, description string) string {

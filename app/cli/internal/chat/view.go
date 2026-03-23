@@ -146,7 +146,7 @@ func (m *Model) RenderHeader() string {
 func renderMessage(msg Message, width int) string {
 	// Raw messages are pre-rendered — display as-is.
 	if msg.Raw {
-		return msg.Content
+		return msg.RawContent
 	}
 
 	ctx := atoms.DefaultContext(width)
@@ -155,29 +155,117 @@ func renderMessage(msg Message, width int) string {
 	case RoleUser:
 		return molecules.MessageBlock(ctx, molecules.MessageBlockData{
 			Role:    atoms.RoleUser,
-			Content: msg.Content,
+			Content: msg.Content(),
 		})
 
 	case RoleAssistant:
-		badge := atoms.Badge(ctx, atoms.BadgeData{
-			Label:   "assistant",
-			Style:   theme.Style{Category: theme.CatAgent},
-			Variant: atoms.BadgeFilled,
-		})
-		contentWidth := width - 4
-		if contentWidth < 20 {
-			contentWidth = 20
-		}
-		rendered := ui.RenderMarkdown(msg.Content, contentWidth)
-		lines := strings.Split(rendered, "\n")
-		indented := "  " + strings.Join(lines, "\n  ")
-		return badge + "\n" + indented
+		return renderAssistantMessage(ctx, msg, width)
 
 	case RoleSystem:
 		return molecules.MessageBlock(ctx, molecules.MessageBlockData{
 			Role:    atoms.RoleSystem,
-			Content: msg.Content,
+			Content: msg.Content(),
 		})
 	}
 	return ""
+}
+
+func renderAssistantMessage(ctx atoms.RenderContext, msg Message, width int) string {
+	badge := atoms.Badge(ctx, atoms.BadgeData{
+		Label:   "assistant",
+		Style:   theme.Style{Category: theme.CatAgent},
+		Variant: atoms.BadgeFilled,
+	})
+
+	contentWidth := width - 4
+	if contentWidth < 20 {
+		contentWidth = 20
+	}
+
+	var sections []string
+	sections = append(sections, badge)
+
+	for _, part := range msg.Parts {
+		rendered := renderPart(ctx, part, contentWidth)
+		if rendered != "" {
+			lines := strings.Split(rendered, "\n")
+			indented := "  " + strings.Join(lines, "\n  ")
+			sections = append(sections, indented)
+		}
+	}
+
+	if len(sections) == 1 {
+		return badge
+	}
+
+	return strings.Join(sections, "\n")
+}
+
+func renderPart(ctx atoms.RenderContext, part MessagePart, contentWidth int) string {
+	switch part.Type {
+	case PartText:
+		if part.Content == "" {
+			return ""
+		}
+		return ui.RenderMarkdown(part.Content, contentWidth)
+
+	case PartThinking:
+		if part.Content == "" {
+			return ""
+		}
+		summary := part.Content
+		if idx := strings.IndexByte(summary, '\n'); idx > 0 {
+			summary = summary[:idx]
+		}
+		if len(summary) > 60 {
+			summary = summary[:57] + "..."
+		}
+		return atoms.TextBlock(ctx, atoms.TextBlockData{
+			Text:  "thinking: " + summary,
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		})
+
+	case PartToolCall:
+		return renderToolCallPart(ctx, part)
+
+	case PartError:
+		return molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
+			Message: part.Content,
+		})
+	}
+	return ""
+}
+
+func renderToolCallPart(ctx atoms.RenderContext, part MessagePart) string {
+	tc := part.ToolCall
+	if tc == nil {
+		return ""
+	}
+
+	// Map chat ToolCallState to molecules ToolCallState
+	var state molecules.ToolCallState
+	switch tc.State {
+	case ToolCallStatePending:
+		state = molecules.ToolCallPending
+	case ToolCallStateRunning:
+		state = molecules.ToolCallRunning
+	case ToolCallStateComplete:
+		state = molecules.ToolCallSuccess
+	case ToolCallStateError:
+		state = molecules.ToolCallError
+	}
+
+	args := formatArgs(tc.Arguments)
+
+	result := tc.Result
+	if tc.Error != "" {
+		result = tc.Error
+	}
+
+	return molecules.ToolCallBlock(ctx, molecules.ToolCallBlockData{
+		ToolName: tc.Name,
+		State:    state,
+		Args:     args,
+		Result:   result,
+	})
 }
