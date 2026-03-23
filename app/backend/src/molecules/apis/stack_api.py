@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 from features.branches.schemas.output import BranchResponse
 from features.pull_requests.schemas.output import PullRequestResponse
+from features.review_comments.schemas.output import ReviewCommentResponse
+from features.review_comments.service import ReviewCommentService
 from features.stacks.schemas.output import StackResponse
 from molecules.entities.stack_entity import StackEntity
 
@@ -12,6 +14,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from features.review_comments.schemas.input import ReviewCommentCreate, ReviewCommentUpdate
     from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode, GitHubAdapter
 
 
@@ -35,6 +38,7 @@ class StackAPI:
         self.db = db
         self.entity = StackEntity(db)
         self.github = github
+        self._comment_svc = ReviewCommentService()
 
     async def create_stack(
         self,
@@ -194,3 +198,29 @@ class StackAPI:
 
         await self.db.commit()
         return {"stack_id": str(stack_id), "merged": results}
+
+    # --- Review comments (Stack Bench local, GitHub sync optional) ---
+
+    async def create_comment(self, data: ReviewCommentCreate) -> ReviewCommentResponse:
+        """Create a review comment. Saved locally; GitHub sync is best-effort."""
+        comment = await self._comment_svc.create(self.db, data)
+        await self.db.commit()
+        await self.db.refresh(comment)
+        return ReviewCommentResponse.model_validate(comment)
+
+    async def list_comments(self, branch_id: UUID) -> list[ReviewCommentResponse]:
+        """List all comments for a branch."""
+        comments = await self._comment_svc.list_by_branch(self.db, branch_id)
+        return [ReviewCommentResponse.model_validate(c) for c in comments]
+
+    async def update_comment(self, comment_id: UUID, data: ReviewCommentUpdate) -> ReviewCommentResponse:
+        """Update a comment body or resolved status."""
+        comment = await self._comment_svc.update(self.db, comment_id, data)
+        await self.db.commit()
+        await self.db.refresh(comment)
+        return ReviewCommentResponse.model_validate(comment)
+
+    async def delete_comment(self, comment_id: UUID) -> None:
+        """Soft-delete a comment."""
+        await self._comment_svc.delete(self.db, comment_id)
+        await self.db.commit()

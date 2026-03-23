@@ -45,3 +45,6 @@ export type { ActivityLogEntryProps } from "./ActivityLogEntry";
 
 export { ActivityLog } from "./ActivityLog";
 export type { ActivityLogProps } from "./ActivityLog";
+
+export { CommentInput } from "./CommentInput";
+export type { CommentInputProps } from "./CommentInput";

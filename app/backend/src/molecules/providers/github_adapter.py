@@ -460,7 +460,43 @@ class GitHubAdapter:
         )
         self._raise_for_status(response)
 
-    async def hydrate_stack(self, owner: str, repo: str, branches: list[tuple[str, str, str]]) -> None:
+    async def create_review_comment(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        body: str,
+        path: str,
+        line: int,
+        commit_id: str,
+        side: str = "RIGHT",
+    ) -> dict[str, object]:
+        """Create an inline review comment on a PR."""
+        response = await self._client.post(
+            f"/repos/{owner}/{repo}/pulls/{pr_number}/comments",
+            json={"body": body, "path": path, "line": line, "side": side, "commit_id": commit_id},
+        )
+        self._raise_for_status(response)
+        data: dict[str, object] = response.json()
+        return data
+
+    async def list_review_comments(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+    ) -> list[dict[str, object]]:
+        """List all inline review comments on a PR."""
+        response = await self._client.get(
+            f"/repos/{owner}/{repo}/pulls/{pr_number}/comments",
+        )
+        self._raise_for_status(response)
+        result: list[dict[str, object]] = response.json()
+        return result
+
+    async def hydrate_stack(
+        self, owner: str, repo: str, branches: list[tuple[str, str, str]]
+    ) -> None:
         """Pre-load cache for an entire stack's diffs.
 
         Args:
