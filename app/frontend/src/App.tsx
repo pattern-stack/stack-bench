@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/generated/api/client";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
 import { FileContent } from "@/components/molecules/FileContent";
@@ -58,6 +60,22 @@ export function App() {
   const { data: diffData } = useBranchDiff(stackId, activeBranchId);
   const { data: fileTree } = useFileTree(stackId, activeBranchId);
   const { data: fileContent } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
+
+  // Prefetch all branch diffs when stack loads
+  const queryClient = useQueryClient();
+  const prefetched = useRef(false);
+  useEffect(() => {
+    if (!data || !stackId || prefetched.current) return;
+    prefetched.current = true;
+    for (const b of data.branches) {
+      const bid = b.branch.id;
+      queryClient.prefetchQuery({
+        queryKey: ["branch-diff", stackId, bid],
+        queryFn: () => apiClient.get(`/api/v1/stacks/${stackId}/branches/${bid}/diff`),
+        staleTime: Infinity,
+      });
+    }
+  }, [data, stackId, queryClient]);
 
   // Reset sidebar mode and selection when branch changes
   useEffect(() => {
