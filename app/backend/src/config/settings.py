@@ -16,6 +16,11 @@ class AppSettings(BaseSettings):
     ANTHROPIC_API_KEY: str = Field(default="")
     GITHUB_TOKEN: str = Field(default="")
 
+    # Ephemeral clone settings
+    CLONE_BASE_DIR: str = Field(default="/tmp/stack-bench-clones")
+    CLONE_MAX_CONCURRENT: int = Field(default=5)
+    CLONE_TTL_SECONDS: int = Field(default=3600)
+
     model_config = {
         "env_file": str(PROJECT_ROOT / ".env"),
         "case_sensitive": True,

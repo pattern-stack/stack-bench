@@ -197,15 +197,12 @@ class StackEntity:
 
         owner, repo = parse_owner_repo(workspace.repo_url)
 
-        # Head ref: prefer SHA (immutable, cache-friendly), fall back to branch name
         head_ref = branch.head_sha if branch.head_sha else branch.name
 
-        # Base ref: position 1 diffs against trunk, otherwise against the previous branch
         stack = await self.get_stack(branch.stack_id)
         if branch.position == 1:
             base_ref = stack.trunk
         else:
-            # Find the branch at position N-1
             branches = await self.branch_service.list_by_stack(self.db, branch.stack_id)
             prev_branch = None
             for b in branches:
@@ -215,6 +212,78 @@ class StackEntity:
             base_ref = prev_branch.name if prev_branch is not None else stack.trunk
 
         return owner, repo, base_ref, head_ref
+
+    # --- Sync operations ---
+
+    async def sync_stack(
+        self,
+        stack_id: UUID,
+        workspace_id: UUID,
+        branches_data: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Reconcile DB state with branch/PR data from the client."""
+        await self.get_stack(stack_id)
+
+        synced_count = 0
+        created_count = 0
+        branch_results: list[dict[str, Any]] = []
+
+        for bd in branches_data:
+            name = bd["name"]
+            position = bd["position"]
+            head_sha = bd.get("head_sha")
+            pr_number = bd.get("pr_number")
+            pr_url = bd.get("pr_url")
+
+            branch = await self.branch_service.get_by_name(self.db, stack_id, name)
+
+            if branch is None:
+                branch = await self.branch_service.create(
+                    self.db,
+                    BranchCreate(
+                        stack_id=stack_id,
+                        workspace_id=workspace_id,
+                        name=name,
+                        position=position,
+                        head_sha=head_sha,
+                    ),
+                )
+                created_count += 1
+            else:
+                update_data = BranchUpdate(head_sha=head_sha, position=position)
+                branch = await self.branch_service.update(self.db, branch.id, update_data)
+                synced_count += 1
+
+            pr = await self.pr_service.get_by_branch(self.db, branch.id)
+
+            if pr_number is not None:
+                if pr is None:
+                    pr = await self.pr_service.create(
+                        self.db,
+                        PullRequestCreate(
+                            branch_id=branch.id,
+                            title=name,
+                            external_id=pr_number,
+                            external_url=pr_url,
+                        ),
+                    )
+                elif pr.external_id != pr_number:
+                    pr = await self.pr_service.update(
+                        self.db,
+                        pr.id,
+                        PullRequestUpdate(
+                            external_id=pr_number,
+                            external_url=pr_url,
+                        ),
+                    )
+
+            branch_results.append({"branch": branch, "pull_request": pr})
+
+        return {
+            "branches": branch_results,
+            "synced_count": synced_count,
+            "created_count": created_count,
+        }
 
     # --- DAG validation ---
 

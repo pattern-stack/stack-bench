@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -9,6 +10,7 @@ from molecules.apis.conversation_api import ConversationAPI
 from molecules.apis.stack_api import StackAPI
 from molecules.providers.github_adapter import GitHubAdapter
 from molecules.runtime.conversation_runner import ConversationRunner
+from molecules.services.clone_manager import CloneManager
 
 
 async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -48,3 +50,16 @@ def get_stack_api(db: DatabaseSession, github: GitHubAdapterDep) -> StackAPI:
 
 
 StackAPIDep = Annotated[StackAPI, Depends(get_stack_api)]
+
+
+def get_clone_manager() -> CloneManager:
+    settings = get_settings()
+    return CloneManager(
+        base_dir=Path(settings.CLONE_BASE_DIR),
+        max_clones=settings.CLONE_MAX_CONCURRENT,
+        ttl_seconds=settings.CLONE_TTL_SECONDS,
+        github_token=settings.GITHUB_TOKEN or None,
+    )
+
+
+CloneManagerDep = Annotated[CloneManager, Depends(get_clone_manager)]
