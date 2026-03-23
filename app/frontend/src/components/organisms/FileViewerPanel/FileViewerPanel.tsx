@@ -6,13 +6,14 @@ import { useFileTree } from "@/hooks/useFileTree";
 import { useFileContent } from "@/hooks/useFileContent";
 
 interface FileViewerPanelProps {
+  stackId?: string;
   branchId?: string;
 }
 
-function FileViewerPanel({ branchId }: FileViewerPanelProps) {
+function FileViewerPanel({ stackId, branchId }: FileViewerPanelProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const { data: tree } = useFileTree(branchId);
-  const { data: fileContent } = useFileContent(branchId, selectedPath);
+  const { data: tree } = useFileTree(stackId, branchId);
+  const { data: fileContent } = useFileContent(stackId, branchId, selectedPath);
 
   if (!tree) {
     return (
