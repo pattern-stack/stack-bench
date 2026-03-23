@@ -29,15 +29,31 @@ function CommentPopover({ onSubmit, onCancel, anchorRef, lineCount, existingComm
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // Position the popover relative to the anchor element
+  // Clamp so it never overlaps the app header, flip above if needed
   useEffect(() => {
     const anchor = anchorRef.current;
     if (!anchor) return;
 
+    const MIN_TOP = 60; // stay below app header
+    const POPOVER_HEIGHT_ESTIMATE = 200;
+
     const update = () => {
       const rect = anchor.getBoundingClientRect();
       const popoverWidth = Math.min(rect.width - 40, 480);
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      let top: number;
+      if (spaceBelow >= POPOVER_HEIGHT_ESTIMATE || spaceBelow >= spaceAbove) {
+        // Place below, but clamp to MIN_TOP
+        top = Math.max(rect.bottom + 4, MIN_TOP);
+      } else {
+        // Flip above
+        top = Math.max(rect.top - POPOVER_HEIGHT_ESTIMATE - 4, MIN_TOP);
+      }
+
       setPos({
-        top: rect.bottom + 4,
+        top,
         left: rect.left + 20,
         width: popoverWidth,
       });
