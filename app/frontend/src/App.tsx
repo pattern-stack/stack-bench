@@ -182,7 +182,23 @@ export function App() {
       summary={summary}
       activityEntries={activityEntries}
       onSync={() => console.log("sync trunk")}
-      onMerge={() => console.log("merge stack")}
+      onMerge={async () => {
+        if (!stackId) return;
+        try {
+          const result = await apiClient.post<{ stack_id: string; merged: { branch: string; pr_number: number; merged: boolean }[] }>(`/api/v1/stacks/${stackId}/merge`);
+          const count = result.merged.length;
+          setActivityEntries((prev) => [
+            { id: crypto.randomUUID(), operation: "merge", description: `Merged ${count} PR${count !== 1 ? "s" : ""} in stack`, timestamp: new Date().toISOString() },
+            ...prev,
+          ]);
+        } catch (err) {
+          const desc = err instanceof Error ? err.message : "Merge failed";
+          setActivityEntries((prev) => [
+            { id: crypto.randomUUID(), operation: "merge", description: desc, timestamp: new Date().toISOString() },
+            ...prev,
+          ]);
+        }
+      }}
       onClearActivity={() => setActivityEntries([])}
       fileCount={diffData?.files.length}
       additions={diffData?.total_additions}
