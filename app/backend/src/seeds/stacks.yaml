@@ -36,7 +36,47 @@ stacks:
     name: mvp-data-wiring
     trunk: dugshub/round-2-polish/8-real-data-wiring
 
+  - seed_key: stack-sb-restructure-v2
+    project: stack-bench
+    name: sb-restructure-v2
+    trunk: main
+
+  - seed_key: stack-real-data-wiring
+    project: stack-bench
+    name: real-data-wiring
+    trunk: main
+
+  - seed_key: stack-backend-wiring
+    project: stack-bench
+    name: backend-wiring
+    trunk: main
+
 branches:
+  # frontend-mvp stack
+  # sb-restructure-v2 stack
+  - seed_key: branch-sr2-3
+    stack: stack-sb-restructure-v2
+    workspace: stack-bench-workspace
+    name: dugshub/sb-restructure-v2/3-root-justfile-and-docs
+    position: 1
+    head_sha: 6ec85749e92b79b3
+
+  # real-data-wiring stack (shares branch with round-2-polish)
+  - seed_key: branch-rdw-1
+    stack: stack-real-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/real-data-wiring/6-dirty-state-consolidation
+    position: 1
+    head_sha: b7513b745fee2ed7
+
+  # backend-wiring stack (shares branch with round-2-polish)
+  - seed_key: branch-bw-1
+    stack: stack-backend-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/backend-wiring/6-dirty-state-consolidation
+    position: 1
+    head_sha: b7513b745fee2ed7
+
   # frontend-mvp stack
   - seed_key: branch-fmvp-1
     stack: stack-frontend-mvp
@@ -231,6 +271,30 @@ branches:
     head_sha: d009bc1b23faa101
 
 pull_requests:
+  # sb-restructure-v2 PRs
+  - seed_key: pr-42
+    branch: branch-sr2-3
+    title: "Root Justfile and Docs"
+    description: "Root Justfile with quality gates and documentation structure"
+    external_id: 42
+    external_url: https://github.com/pattern-stack/stack-bench/pull/42
+
+  # real-data-wiring PRs (PR #69 shared with round-2-polish)
+  - seed_key: pr-69-rdw
+    branch: branch-rdw-1
+    title: "Dirty State Consolidation"
+    description: "Stack header, branch enrichment, activity log, collapsible stack"
+    external_id: 69
+    external_url: https://github.com/pattern-stack/stack-bench/pull/69
+
+  # backend-wiring PRs (PR #69 shared with round-2-polish)
+  - seed_key: pr-69-bw
+    branch: branch-bw-1
+    title: "Dirty State Consolidation"
+    description: "Stack header, branch enrichment, activity log, collapsible stack"
+    external_id: 69
+    external_url: https://github.com/pattern-stack/stack-bench/pull/69
+
   # frontend-mvp PRs
   - seed_key: pr-43
     branch: branch-fmvp-1

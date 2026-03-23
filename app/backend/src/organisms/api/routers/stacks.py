@@ -121,6 +121,19 @@ async def sync_stack(stack_id: UUID, data: SyncStackRequest, api: StackAPIDep) -
     return await api.sync_stack(stack_id, data.workspace_id, branches)
 
 
+# --- Restack endpoint ---
+
+
+class RestackRequest(BaseModel):
+    from_position: int = Field(1, ge=1)
+
+
+@router.post("/{stack_id}/restack")
+async def restack_stack(stack_id: UUID, data: RestackRequest, api: StackAPIDep) -> dict[str, object]:
+    """Rebase all branches in the stack via ephemeral clone."""
+    return await api.restack(stack_id, from_position=data.from_position)
+
+
 # --- Merge endpoint ---
 
 

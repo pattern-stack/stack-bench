@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from features.review_comments.schemas.input import ReviewCommentCreate, ReviewCommentUpdate
     from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode, GitHubAdapter
+    from molecules.services.clone_manager import CloneManager
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +39,16 @@ class StackAPI:
     consume this. Permissions will be added here when auth is implemented.
     """
 
-    def __init__(self, db: AsyncSession, github: GitHubAdapter | None = None) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        github: GitHubAdapter | None = None,
+        clone_manager: CloneManager | None = None,
+    ) -> None:
         self.db = db
         self.entity = StackEntity(db)
         self.github = github
+        self.clone_manager = clone_manager
         self._comment_svc = ReviewCommentService()
 
     async def create_stack(
@@ -270,3 +277,97 @@ class StackAPI:
         """Soft-delete a comment."""
         await self._comment_svc.delete(self.db, comment_id)
         await self.db.commit()
+
+    # --- Sync operations ---
+
+    async def sync_stack(self, stack_id: UUID, workspace_id: UUID, branches: list[dict]) -> dict:
+        """Sync stack state from client-provided branch and PR data."""
+        result = await self.entity.sync_stack(stack_id, workspace_id, branches)
+        await self.db.commit()
+        synced = []
+        for bd in result["branches"]:
+            branch_resp = BranchResponse.model_validate(bd["branch"])
+            pr_resp = PullRequestResponse.model_validate(bd["pull_request"]) if bd["pull_request"] else None
+            synced.append({
+                "branch": branch_resp.model_dump(),
+                "pull_request": pr_resp.model_dump() if pr_resp else None,
+            })
+        return {
+            "branches": synced,
+            "synced_count": result["synced_count"],
+            "created_count": result["created_count"],
+        }
+
+    # --- Remote restack ---
+
+    async def restack(self, stack_id: UUID, *, from_position: int = 1) -> dict:
+        """Restack branches in a stack via ephemeral clone.
+
+        Clones the repo, rebases each branch onto its parent in position order,
+        force-pushes the results, and updates branch SHAs in the database.
+        """
+        if self.clone_manager is None:
+            msg = "CloneManager not configured"
+            raise RuntimeError(msg)
+
+        from molecules.services.remote_restack import RemoteRestackService
+
+        # Get stack with branches
+        data = await self.entity.get_stack_with_branches(stack_id)
+        stack = data["stack"]
+
+        # Resolve repo_url from the first branch's workspace
+        branch_data = data["branches"]
+        if not branch_data:
+            return {"success": True, "branches": [], "error": None}
+
+        first_branch = branch_data[0]["branch"]
+        workspace = await self.entity.workspace_service.get(self.db, first_branch.workspace_id)
+        if workspace is None:
+            msg = f"Workspace not found for branch {first_branch.name}"
+            raise ValueError(msg)
+
+        repo_url = workspace.repo_url
+
+        # Filter branches from from_position onward and build input
+        branches_input = []
+        for bd in branch_data:
+            branch = bd["branch"]
+            if branch.position >= from_position:
+                branches_input.append({
+                    "name": branch.name,
+                    "position": branch.position,
+                    "head_sha": branch.head_sha,
+                })
+
+        # Run the restack
+        svc = RemoteRestackService(self.clone_manager)
+        result = await svc.restack(repo_url, stack.trunk, branches_input)
+
+        # Update branch SHAs in DB for successfully rebased branches
+        for br in result.branches:
+            if br.status == "rebased" and br.new_sha:
+                for bd in branch_data:
+                    if bd["branch"].name == br.branch_name:
+                        await self.entity.update_branch_sha(bd["branch"].id, br.new_sha)
+                        break
+
+        await self.db.commit()
+
+        # Serialize result
+        return {
+            "success": result.success,
+            "branches": [
+                {
+                    "branch_name": br.branch_name,
+                    "position": br.position,
+                    "old_sha": br.old_sha,
+                    "new_sha": br.new_sha,
+                    "status": br.status,
+                    "error": br.error,
+                    "conflicting_files": br.conflicting_files,
+                }
+                for br in result.branches
+            ],
+            "error": result.error,
+        }
