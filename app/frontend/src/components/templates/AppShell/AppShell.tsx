@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { StackSidebar } from "@/components/organisms/StackSidebar";
 import { AgentPanel } from "@/components/organisms/AgentPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
+import { HeaderSkeleton } from "@/components/molecules/PRHeader/HeaderSkeleton";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { BranchWithPR, Stack } from "@/types/stack";
@@ -52,6 +53,8 @@ interface AppShellProps {
   onExpandAll?: () => void;
   floatingComments?: boolean;
   onToggleCommentMode?: () => void;
+  diffLoading?: boolean;
+  treeLoading?: boolean;
 }
 
 import { shortBranch } from "@/lib/short-branch";
@@ -90,6 +93,8 @@ function AppShell({
   onExpandAll,
   floatingComments,
   onToggleCommentMode,
+  diffLoading,
+  treeLoading,
 }: AppShellProps) {
   // Derive PRHeader props from the active branch
   const pr = activeBranch?.pull_request;
@@ -137,23 +142,29 @@ function AppShell({
         diffFileCount={diffFileCount}
         onRefresh={onRefresh}
         changedFiles={changedFiles}
+        diffLoading={diffLoading}
+        treeLoading={treeLoading}
       />
       <main className="flex-1 flex flex-col min-w-0">
-        <PRHeader
-          title={title}
-          baseBranch={baseBranch}
-          headBranch={headBranch}
-          fullHeadBranch={fullHeadBranch}
-          description={description}
-          status={displayStatus}
-          fileCount={fileCount}
-          additions={additions}
-          deletions={deletions}
-          onCollapseAll={onCollapseAll}
-          onExpandAll={onExpandAll}
-          floatingComments={floatingComments}
-          onToggleCommentMode={onToggleCommentMode}
-        />
+        {diffLoading ? (
+          <HeaderSkeleton />
+        ) : (
+          <PRHeader
+            title={title}
+            baseBranch={baseBranch}
+            headBranch={headBranch}
+            fullHeadBranch={fullHeadBranch}
+            description={description}
+            status={displayStatus}
+            fileCount={fileCount}
+            additions={additions}
+            deletions={deletions}
+            onCollapseAll={onCollapseAll}
+            onExpandAll={onExpandAll}
+            floatingComments={floatingComments}
+            onToggleCommentMode={onToggleCommentMode}
+          />
+        )}
         <div className="flex-1 overflow-auto">
           {children}
         </div>

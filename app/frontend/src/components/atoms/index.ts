@@ -50,3 +50,6 @@ export type { PRNumberProps } from "./PRNumber";
 
 export { RestackBadge } from "./RestackBadge";
 export type { RestackBadgeProps } from "./RestackBadge";
+
+export { Skeleton } from "./Skeleton";
+export type { SkeletonProps } from "./Skeleton";

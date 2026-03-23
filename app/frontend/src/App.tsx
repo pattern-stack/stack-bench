@@ -17,6 +17,7 @@ import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 import type { DiffData } from "@/types/diff";
 import type { SidebarMode } from "@/types/sidebar";
 import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
+import { DiffSkeleton } from "@/components/organisms/FilesChangedPanel/DiffSkeleton";
 
 import { shortBranch } from "@/lib/short-branch";
 
@@ -58,9 +59,9 @@ export function App() {
 
   const stackId = data?.stack.id;
   const activeBranchId = data?.branches[activeIndex]?.branch.id;
-  const { data: diffData } = useBranchDiff(stackId, activeBranchId);
-  const { data: fileTree } = useFileTree(stackId, activeBranchId);
-  const { data: fileContent } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
+  const { data: diffData, loading: diffLoading } = useBranchDiff(stackId, activeBranchId);
+  const { data: fileTree, loading: treeLoading } = useFileTree(stackId, activeBranchId);
+  const { data: fileContent, loading: contentLoading } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
 
   // Fetch all stacks for the same project (for the stack switcher)
   const projectId = data?.stack.project_id;
@@ -205,9 +206,13 @@ export function App() {
       onExpandAll={() => setForceExpanded(true)}
       floatingComments={floatingComments}
       onToggleCommentMode={() => setFloatingComments((prev) => !prev)}
+      diffLoading={diffLoading}
+      treeLoading={treeLoading}
     >
       {sidebarMode === "diffs" && (
-        diffData ? (
+        diffLoading ? (
+          <DiffSkeleton />
+        ) : diffData ? (
           <FilesChangedPanel
             diffData={diffData}
             forceExpanded={forceExpanded}
@@ -223,7 +228,9 @@ export function App() {
         )
       )}
       {sidebarMode === "files" && (
-        fileContent ? (
+        contentLoading ? (
+          <DiffSkeleton />
+        ) : fileContent ? (
           <>
             <PathBar path={fileContent.path} />
             <div className="flex-1 min-h-0 overflow-hidden">
