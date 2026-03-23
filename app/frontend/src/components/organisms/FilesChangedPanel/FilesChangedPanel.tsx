@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { DiffFileMolecule } from "@/components/molecules/DiffFile";
 import { useReviewComments, useCreateComment } from "@/hooks/useReviewComments";
 import type { ReviewComment } from "@/hooks/useReviewComments";
@@ -23,8 +23,47 @@ function FilesChangedPanel({
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
   const [commentingLine, setCommentingLine] = useState<string | null>(null);
 
+  // Range selection state for click-drag
+  const [rangeSelectedLines, setRangeSelectedLines] = useState<Set<string>>(new Set());
+  const dragState = useRef<{
+    active: boolean;
+    startKey: string;
+    startIndex: number;
+    allKeys: string[];
+  } | null>(null);
+
   const { data: comments } = useReviewComments(stackId, branchId);
   const createComment = useCreateComment(stackId, branchId);
+
+  // Build ordered list of all line keys for range selection
+  const allLineKeys = useMemo(() => {
+    const keys: string[] = [];
+    for (const file of diffData.files) {
+      for (const hunk of file.hunks) {
+        for (const line of hunk.lines) {
+          if (line.type === "hunk") continue;
+          keys.push(`${file.path}:${line.type}:${line.old_num ?? ""}:${line.new_num ?? ""}`);
+        }
+      }
+    }
+    return keys;
+  }, [diffData]);
+
+  // End drag on mouseup anywhere
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (!dragState.current?.active) return;
+      const range = rangeSelectedLines;
+      dragState.current = null;
+      if (range.size > 0) {
+        // Open comment input at the last line of the range
+        const lastKey = allLineKeys.filter(k => range.has(k)).pop();
+        if (lastKey) setCommentingLine(lastKey);
+      }
+    };
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [rangeSelectedLines, allLineKeys]);
 
   // Build a Map<lineKey, ReviewComment[]> for efficient lookup
   const commentsByLine = useMemo(() => {
@@ -95,7 +134,37 @@ function FilesChangedPanel({
 
   const handleCancelComment = useCallback(() => {
     setCommentingLine(null);
+    setRangeSelectedLines(new Set());
   }, []);
+
+  const handleRangeMouseDown = useCallback(
+    (lineKey: string, _lineIndex: number) => {
+      const globalIndex = allLineKeys.indexOf(lineKey);
+      if (globalIndex === -1) return;
+      dragState.current = {
+        active: true,
+        startKey: lineKey,
+        startIndex: globalIndex,
+        allKeys: allLineKeys,
+      };
+      setRangeSelectedLines(new Set([lineKey]));
+      setCommentingLine(null);
+    },
+    [allLineKeys]
+  );
+
+  const handleRangeMouseEnter = useCallback(
+    (lineKey: string, _lineIndex: number) => {
+      if (!dragState.current?.active) return;
+      const globalIndex = allLineKeys.indexOf(lineKey);
+      if (globalIndex === -1) return;
+      const { startIndex } = dragState.current;
+      const lo = Math.min(startIndex, globalIndex);
+      const hi = Math.max(startIndex, globalIndex);
+      setRangeSelectedLines(new Set(allLineKeys.slice(lo, hi + 1)));
+    },
+    [allLineKeys]
+  );
 
   const manyFiles = diffData.files.length > 5;
 
@@ -123,6 +192,9 @@ function FilesChangedPanel({
           commentingLine={commentingLine}
           onSubmitComment={handleSubmitComment}
           onCancelComment={handleCancelComment}
+          rangeSelectedLines={rangeSelectedLines}
+          onRangeMouseDown={handleRangeMouseDown}
+          onRangeMouseEnter={handleRangeMouseEnter}
           forceExpanded={forceExpanded}
           defaultExpanded={manyFiles ? index === 0 : true}
         />

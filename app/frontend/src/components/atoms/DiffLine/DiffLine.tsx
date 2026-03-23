@@ -6,9 +6,12 @@ interface DiffLineAtomProps {
   line: DiffLineType;
   highlightedHtml?: string;
   selected?: boolean;
+  rangeSelected?: boolean;
   onSelect?: () => void;
   onAskAgent?: () => void;
   onAddComment?: () => void;
+  onMouseDown?: () => void;
+  onMouseEnter?: () => void;
 }
 
 const bgMap: Record<DiffLineType["type"], string> = {
@@ -36,9 +39,12 @@ function DiffLineAtom({
   line,
   highlightedHtml,
   selected = false,
+  rangeSelected = false,
   onSelect,
   onAskAgent,
   onAddComment,
+  onMouseDown,
+  onMouseEnter,
 }: DiffLineAtomProps) {
   const isHunk = line.type === "hunk";
   const isInteractive = !isHunk && onSelect;
@@ -46,16 +52,39 @@ function DiffLineAtom({
   return (
     <div
       className={cn(
-        "group/line relative flex font-[family-name:var(--font-mono)] text-xs leading-5 border-b border-[var(--border-muted)]/50",
-        selected ? selectedBgMap[line.type] : bgMap[line.type],
-        selected && "border-l-2 border-l-[var(--accent-emerald)]",
+        "group/line relative flex font-[family-name:var(--font-mono)] text-xs leading-5 border-b border-[var(--border-muted)]/50 select-none",
+        rangeSelected
+          ? "bg-[var(--accent-muted)]/40 border-l-2 border-l-[var(--accent)]"
+          : selected
+            ? selectedBgMap[line.type]
+            : bgMap[line.type],
+        selected && !rangeSelected && "border-l-2 border-l-[var(--accent-emerald)]",
         isInteractive && "cursor-pointer"
       )}
       onClick={isInteractive ? onSelect : undefined}
+      onMouseDown={onMouseDown}
+      onMouseEnter={onMouseEnter}
     >
+      {/* Comment gutter — left of line numbers */}
+      {!isHunk && onAddComment ? (
+        <button
+          type="button"
+          className="w-[20px] shrink-0 flex items-center justify-center opacity-0 group-hover/line:opacity-100 transition-opacity text-[var(--accent)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)]"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddComment();
+          }}
+          title="Add comment"
+        >
+          <Icon name="plus" size="xs" />
+        </button>
+      ) : (
+        <span className="w-[20px] shrink-0" />
+      )}
+
       {/* Gutter: old line number */}
       <span
-        className="w-[50px] shrink-0 text-right pr-2 pl-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/50"
+        className="w-[40px] shrink-0 text-right pr-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/50"
         aria-hidden="true"
       >
         {line.old_num ?? ""}
@@ -63,7 +92,7 @@ function DiffLineAtom({
 
       {/* Gutter: new line number */}
       <span
-        className="w-[50px] shrink-0 text-right pr-2 pl-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/50"
+        className="w-[40px] shrink-0 text-right pr-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/50"
         aria-hidden="true"
       >
         {line.new_num ?? ""}
@@ -90,32 +119,20 @@ function DiffLineAtom({
         )}
       </span>
 
-      {/* Hover actions */}
-      {!isHunk && (onAskAgent || onAddComment) && (
+      {/* Hover actions — right side */}
+      {!isHunk && onAskAgent && (
         <div
           className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/line:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
-          {onAskAgent && (
-            <button
-              type="button"
-              className="flex items-center justify-center w-5 h-5 rounded text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)] transition-colors"
-              onClick={onAskAgent}
-              title="Ask agent"
-            >
-              <Icon name="sparkles" size="sm" />
-            </button>
-          )}
-          {onAddComment && (
-            <button
-              type="button"
-              className="flex items-center justify-center w-5 h-5 rounded text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)] transition-colors"
-              onClick={onAddComment}
-              title="Add comment"
-            >
-              <Icon name="message-square" size="sm" />
-            </button>
-          )}
+          <button
+            type="button"
+            className="flex items-center justify-center w-5 h-5 rounded text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)] transition-colors"
+            onClick={onAskAgent}
+            title="Ask agent"
+          >
+            <Icon name="sparkles" size="sm" />
+          </button>
         </div>
       )}
     </div>

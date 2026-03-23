@@ -14,6 +14,9 @@ interface DiffHunkMoleculeProps {
   commentingLine?: string | null;
   onSubmitComment?: (lineKey: string, body: string) => void;
   onCancelComment?: () => void;
+  rangeSelectedLines?: Set<string>;
+  onRangeMouseDown?: (lineKey: string, lineIndex: number) => void;
+  onRangeMouseEnter?: (lineKey: string, lineIndex: number) => void;
 }
 
 function makeLineKey(filePath: string, line: { type: string; old_num: number | null; new_num: number | null }): string {
@@ -31,6 +34,9 @@ function DiffHunkMolecule({
   commentingLine,
   onSubmitComment,
   onCancelComment,
+  rangeSelectedLines,
+  onRangeMouseDown,
+  onRangeMouseEnter,
 }: DiffHunkMoleculeProps) {
   return (
     <div>
@@ -56,9 +62,12 @@ function DiffHunkMolecule({
               line={line}
               highlightedHtml={line.highlightedHtml}
               selected={selectedLines?.has(lineKey)}
+              rangeSelected={rangeSelectedLines?.has(lineKey)}
               onSelect={onLineSelect ? () => onLineSelect(lineKey) : undefined}
               onAskAgent={onAskAgent ? () => onAskAgent(lineKey) : undefined}
               onAddComment={onAddComment ? () => onAddComment(lineKey) : undefined}
+              onMouseDown={onRangeMouseDown && line.type !== "hunk" ? () => onRangeMouseDown(lineKey, i) : undefined}
+              onMouseEnter={onRangeMouseEnter && line.type !== "hunk" ? () => onRangeMouseEnter(lineKey, i) : undefined}
             />
 
             {/* Existing comments */}
