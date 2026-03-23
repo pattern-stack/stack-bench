@@ -4,7 +4,7 @@ import { AgentPanel } from "@/components/organisms/AgentPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
-import type { BranchWithPR } from "@/types/stack";
+import type { BranchWithPR, Stack } from "@/types/stack";
 import type { SidebarMode } from "@/types/sidebar";
 import type { FileTreeNode } from "@/types/file-tree";
 import type { ChangedFileInfo } from "@/components/organisms/FileTree";
@@ -40,6 +40,10 @@ interface AppShellProps {
   onMerge?: () => void;
   onClearActivity?: () => void;
 
+  // Stack switcher props
+  stacks?: Stack[];
+  onStackChange?: (id: string) => void;
+
   // Diff toolbar props
   fileCount?: number;
   additions?: number;
@@ -74,6 +78,8 @@ function AppShell({
   diffFileCount,
   onRefresh,
   changedFiles,
+  stacks,
+  onStackChange,
   summary,
   activityEntries,
   onSync,
@@ -107,6 +113,8 @@ function AppShell({
       <StackSidebar
         stackName={stackName}
         trunk={trunk}
+        stacks={stacks}
+        onStackChange={onStackChange}
         items={items}
         activeIndex={activeIndex}
         onSelect={onSelect}
