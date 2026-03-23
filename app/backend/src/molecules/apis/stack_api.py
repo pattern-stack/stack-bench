@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode, GitHubAdapter
+
 
 class StackDetailResponse:
     """Not a Pydantic model -- a simple container for stack + branch + PR data.
@@ -29,9 +31,10 @@ class StackAPI:
     consume this. Permissions will be added here when auth is implemented.
     """
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, github: GitHubAdapter | None = None) -> None:
         self.db = db
         self.entity = StackEntity(db)
+        self.github = github
 
     async def create_stack(
         self,
@@ -116,3 +119,29 @@ class StackAPI:
         pr = await self.entity.link_external_pr(pull_request_id, external_id, external_url)
         await self.db.commit()
         return PullRequestResponse.model_validate(pr)
+
+    # --- Git data (read-through via GitHubAdapter) ---
+
+    async def get_branch_diff(self, stack_id: UUID, branch_id: UUID) -> DiffData:
+        """Get diff for a branch relative to its base."""
+        if self.github is None:
+            msg = "GitHubAdapter not configured"
+            raise RuntimeError(msg)
+        owner, repo, base_ref, head_ref = await self.entity.get_branch_repo_context(branch_id)
+        return await self.github.get_diff(owner, repo, base_ref, head_ref)
+
+    async def get_branch_tree(self, stack_id: UUID, branch_id: UUID) -> FileTreeNode:
+        """Get file tree at branch head."""
+        if self.github is None:
+            msg = "GitHubAdapter not configured"
+            raise RuntimeError(msg)
+        owner, repo, _, head_ref = await self.entity.get_branch_repo_context(branch_id)
+        return await self.github.get_file_tree(owner, repo, head_ref)
+
+    async def get_branch_file(self, stack_id: UUID, branch_id: UUID, path: str) -> FileContent:
+        """Get file content at branch head."""
+        if self.github is None:
+            msg = "GitHubAdapter not configured"
+            raise RuntimeError(msg)
+        owner, repo, _, head_ref = await self.entity.get_branch_repo_context(branch_id)
+        return await self.github.get_file_content(owner, repo, head_ref, path)

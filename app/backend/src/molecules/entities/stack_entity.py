@@ -8,12 +8,14 @@ from features.pull_requests.schemas.input import PullRequestCreate, PullRequestU
 from features.pull_requests.service import PullRequestService
 from features.stacks.schemas.input import StackCreate
 from features.stacks.service import StackService
+from features.workspaces.service import WorkspaceService
 from molecules.exceptions import (
     BranchNotFoundError,
     PullRequestNotFoundError,
     StackCycleError,
     StackNotFoundError,
 )
+from molecules.providers.github_adapter import parse_owner_repo
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -37,6 +39,7 @@ class StackEntity:
         self.stack_service = StackService()
         self.branch_service = BranchService()
         self.pr_service = PullRequestService()
+        self.workspace_service = WorkspaceService()
 
     # --- Stack operations ---
 
@@ -175,6 +178,43 @@ class StackEntity:
             PullRequestUpdate(external_id=external_id, external_url=external_url),
         )
         return updated
+
+    # --- Git context resolution ---
+
+    async def get_branch_repo_context(self, branch_id: UUID) -> tuple[str, str, str, str]:
+        """Resolve branch -> workspace -> repo_url, plus base/head refs.
+
+        Returns (owner, repo, base_ref, head_ref) where:
+        - owner: GitHub org/user (from workspace.repo_url)
+        - repo: GitHub repo name (from workspace.repo_url)
+        - base_ref: the parent branch name or trunk (for diff base)
+        - head_ref: branch head_sha if available, otherwise branch name
+        """
+        branch = await self.get_branch(branch_id)
+        workspace = await self.workspace_service.get(self.db, branch.workspace_id)
+        if workspace is None:
+            raise BranchNotFoundError(branch_id)
+
+        owner, repo = parse_owner_repo(workspace.repo_url)
+
+        # Head ref: prefer SHA (immutable, cache-friendly), fall back to branch name
+        head_ref = branch.head_sha if branch.head_sha else branch.name
+
+        # Base ref: position 1 diffs against trunk, otherwise against the previous branch
+        stack = await self.get_stack(branch.stack_id)
+        if branch.position == 1:
+            base_ref = stack.trunk
+        else:
+            # Find the branch at position N-1
+            branches = await self.branch_service.list_by_stack(self.db, branch.stack_id)
+            prev_branch = None
+            for b in branches:
+                if b.position == branch.position - 1:
+                    prev_branch = b
+                    break
+            base_ref = prev_branch.name if prev_branch is not None else stack.trunk
+
+        return owner, repo, base_ref, head_ref
 
     # --- DAG validation ---
 
