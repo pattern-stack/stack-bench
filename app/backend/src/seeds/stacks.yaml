@@ -1,0 +1,236 @@
+# Real stack data from stack-bench development
+# Source: ~/.claude/stacks/stack-bench.json
+
+projects:
+  - seed_key: stack-bench
+    name: stack-bench
+    description: Developer workbench for AI-assisted development with stacked PRs
+
+workspaces:
+  - seed_key: stack-bench-workspace
+    project: stack-bench
+    name: stack-bench
+    repo_url: https://github.com/pattern-stack/stack-bench
+    provider: github
+    default_branch: main
+    local_path: /Users/dug/Projects/stack-bench
+
+stacks:
+  - seed_key: stack-frontend-mvp
+    project: stack-bench
+    name: frontend-mvp
+    trunk: main
+
+  - seed_key: stack-file-viewer
+    project: stack-bench
+    name: file-viewer
+    trunk: dugshub/frontend-mvp/6-syntax-highlighting
+
+  - seed_key: stack-round-2-polish
+    project: stack-bench
+    name: round-2-polish
+    trunk: dugshub/file-viewer/3-file-icons
+
+branches:
+  # frontend-mvp stack
+  - seed_key: branch-fmvp-1
+    stack: stack-frontend-mvp
+    workspace: stack-bench-workspace
+    name: dugshub/frontend-mvp/1-scaffold
+    position: 1
+    head_sha: 541df828968aa81e
+
+  - seed_key: branch-fmvp-2
+    stack: stack-frontend-mvp
+    workspace: stack-bench-workspace
+    name: dugshub/frontend-mvp/2-atoms
+    position: 2
+    head_sha: 37d79b97b92a7c5f
+
+  - seed_key: branch-fmvp-3
+    stack: stack-frontend-mvp
+    workspace: stack-bench-workspace
+    name: dugshub/frontend-mvp/3-nav
+    position: 3
+    head_sha: 944fb68bff738536
+
+  - seed_key: branch-fmvp-4
+    stack: stack-frontend-mvp
+    workspace: stack-bench-workspace
+    name: dugshub/frontend-mvp/4-shell
+    position: 4
+    head_sha: 324bdefb49242420
+
+  - seed_key: branch-fmvp-5
+    stack: stack-frontend-mvp
+    workspace: stack-bench-workspace
+    name: dugshub/frontend-mvp/5-diff
+    position: 5
+    head_sha: 083258ca5e188433
+
+  - seed_key: branch-fmvp-6
+    stack: stack-frontend-mvp
+    workspace: stack-bench-workspace
+    name: dugshub/frontend-mvp/6-syntax-highlighting
+    position: 6
+    head_sha: cb4f07f26cd9e049
+
+  # file-viewer stack
+  - seed_key: branch-fv-1
+    stack: stack-file-viewer
+    workspace: stack-bench-workspace
+    name: dugshub/file-viewer/1-file-viewer-scaffold
+    position: 1
+    head_sha: 345f5f4144be9901
+
+  - seed_key: branch-fv-2
+    stack: stack-file-viewer
+    workspace: stack-bench-workspace
+    name: dugshub/file-viewer/2-explorer-polish
+    position: 2
+    head_sha: 55aaceb70a051791
+
+  - seed_key: branch-fv-3
+    stack: stack-file-viewer
+    workspace: stack-bench-workspace
+    name: dugshub/file-viewer/3-file-icons
+    position: 3
+    head_sha: 577f8558c2514158
+
+  # round-2-polish stack (skipping 1-initial — it's a no-op branch)
+  - seed_key: branch-r2p-2
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/2-design-polish
+    position: 1
+    head_sha: 3de4d92ccf844a93
+
+  - seed_key: branch-r2p-3
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/3-line-interactions
+    position: 2
+    head_sha: 0079277b79a4167c
+
+  - seed_key: branch-r2p-4
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/4-agent-panel
+    position: 3
+    head_sha: e62f50126a9f4bdf
+
+  - seed_key: branch-r2p-5
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/5-sidebar-merge
+    position: 4
+    head_sha: 18b0e814b03ae9f0
+
+  - seed_key: branch-r2p-6
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/6-dirty-state-consolidation
+    position: 5
+    head_sha: 8cf139fc11c6a7f3
+
+pull_requests:
+  # frontend-mvp PRs
+  - seed_key: pr-43
+    branch: branch-fmvp-1
+    title: "Scaffold"
+    description: "Vite + React + Tailwind 4 scaffold with dark design system"
+    external_id: 43
+    external_url: https://github.com/pattern-stack/stack-bench/pull/43
+
+  - seed_key: pr-44
+    branch: branch-fmvp-2
+    title: "Atoms"
+    description: "Button, Input, Badge shared atom components"
+    external_id: 44
+    external_url: https://github.com/pattern-stack/stack-bench/pull/44
+
+  - seed_key: pr-45
+    branch: branch-fmvp-3
+    title: "Nav"
+    description: "Stack sidebar + branch list"
+    external_id: 45
+    external_url: https://github.com/pattern-stack/stack-bench/pull/45
+
+  - seed_key: pr-46
+    branch: branch-fmvp-4
+    title: "Shell"
+    description: "App shell with PR header, tab bar, and action bar"
+    external_id: 46
+    external_url: https://github.com/pattern-stack/stack-bench/pull/46
+
+  - seed_key: pr-47
+    branch: branch-fmvp-5
+    title: "Diff"
+    description: "Diff review panel with file viewer and mock diff data"
+    external_id: 47
+    external_url: https://github.com/pattern-stack/stack-bench/pull/47
+
+  - seed_key: pr-48
+    branch: branch-fmvp-6
+    title: "Syntax Highlighting"
+    description: "Shiki syntax highlighting for diff viewer"
+    external_id: 48
+    external_url: https://github.com/pattern-stack/stack-bench/pull/48
+
+  # file-viewer PRs
+  - seed_key: pr-49
+    branch: branch-fv-1
+    title: "File Viewer Scaffold"
+    description: "File viewer with source browser and Shiki highlighting"
+    external_id: 49
+    external_url: https://github.com/pattern-stack/stack-bench/pull/49
+
+  - seed_key: pr-50
+    branch: branch-fv-2
+    title: "Explorer Polish"
+    description: "VS Code-like explorer with search, indent guides, and toolbar"
+    external_id: 50
+    external_url: https://github.com/pattern-stack/stack-bench/pull/50
+
+  - seed_key: pr-51
+    branch: branch-fv-3
+    title: "File Icons"
+    description: "Semantic file icon system with Material icon pack"
+    external_id: 51
+    external_url: https://github.com/pattern-stack/stack-bench/pull/51
+
+  # round-2-polish PRs
+  - seed_key: pr-65
+    branch: branch-r2p-2
+    title: "Design Polish"
+    description: "Viewed toggle, action bar, sidebar, fonts, emerald palette"
+    external_id: 65
+    external_url: https://github.com/pattern-stack/stack-bench/pull/65
+
+  - seed_key: pr-66
+    branch: branch-r2p-3
+    title: "Line Interactions"
+    description: "Line selection and hover actions for diff viewer"
+    external_id: 66
+    external_url: https://github.com/pattern-stack/stack-bench/pull/66
+
+  - seed_key: pr-67
+    branch: branch-r2p-4
+    title: "Agent Panel"
+    description: "Collapsible agent panel with mock chat"
+    external_id: 67
+    external_url: https://github.com/pattern-stack/stack-bench/pull/67
+
+  - seed_key: pr-68
+    branch: branch-r2p-5
+    title: "Sidebar Merge"
+    description: "Merge file explorer into stack sidebar with diffs/files toggle"
+    external_id: 68
+    external_url: https://github.com/pattern-stack/stack-bench/pull/68
+
+  - seed_key: pr-69
+    branch: branch-r2p-6
+    title: "Dirty State Consolidation"
+    description: "Stack header, branch enrichment, activity log, collapsible stack"
+    external_id: 69
+    external_url: https://github.com/pattern-stack/stack-bench/pull/69
