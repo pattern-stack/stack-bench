@@ -12,11 +12,14 @@ import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { SidebarMode } from "@/types/sidebar";
 import type { FileTreeNode } from "@/types/file-tree";
+import type { Stack } from "@/types/stack";
 import type { StackSummary, ActivityLogEntry } from "@/types/activity";
 
 interface StackSidebarProps {
   stackName: string;
   trunk: string;
+  stacks?: Stack[];
+  onStackChange?: (id: string) => void;
   items: StackConnectorItem[];
   activeIndex: number;
   onSelect: (index: number) => void;
@@ -41,6 +44,8 @@ interface StackSidebarProps {
 function StackSidebar({
   stackName,
   trunk,
+  stacks,
+  onStackChange,
   items,
   activeIndex,
   onSelect,
@@ -84,6 +89,8 @@ function StackSidebar({
       <StackHeader
         stackName={stackName}
         trunk={trunk}
+        stacks={stacks}
+        onStackChange={onStackChange}
         branchCount={items.length}
         summary={summary}
         onSync={onSync}
