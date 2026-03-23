@@ -29,6 +29,7 @@ export function useBranchDiff(
         `/api/v1/stacks/${stackId}/branches/${branchId}/diff`
       ),
     enabled: !!stackId && !!branchId,
+    staleTime: Infinity, // SHA-addressed — never changes for a given branch
   });
 
   const error = queryError ? String(queryError) : null;
