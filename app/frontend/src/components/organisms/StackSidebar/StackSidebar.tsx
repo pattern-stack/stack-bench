@@ -14,6 +14,7 @@ import type { SidebarMode } from "@/types/sidebar";
 import type { FileTreeNode } from "@/types/file-tree";
 import type { Stack } from "@/types/stack";
 import type { StackSummary, ActivityLogEntry } from "@/types/activity";
+import { TreeSkeleton } from "./TreeSkeleton";
 
 interface StackSidebarProps {
   stackName: string;
@@ -39,6 +40,8 @@ interface StackSidebarProps {
   diffFileCount?: number;
   onRefresh?: () => void;
   changedFiles?: Map<string, ChangedFileInfo>;
+  diffLoading?: boolean;
+  treeLoading?: boolean;
 }
 
 function StackSidebar({
@@ -64,6 +67,8 @@ function StackSidebar({
   diffFileCount,
   onRefresh,
   changedFiles,
+  diffLoading,
+  treeLoading,
 }: StackSidebarProps) {
   const isFilesMode = sidebarMode === "files";
   const [stackExpanded, setStackExpanded] = useState(true);
@@ -153,20 +158,28 @@ function StackSidebar({
       {/* Tree area */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {sidebarMode === "diffs" ? (
-          <DiffFileList
-            files={diffFiles}
-            selectedPath={selectedPath}
-            onSelectFile={onSelectFile}
-          />
-        ) : (
-          fileTree && (
-            <FileTree
-              tree={fileTree}
+          diffLoading ? (
+            <TreeSkeleton />
+          ) : (
+            <DiffFileList
+              files={diffFiles}
               selectedPath={selectedPath}
               onSelectFile={onSelectFile}
-              onRefresh={onRefresh}
-              changedFiles={changedFiles}
             />
+          )
+        ) : (
+          treeLoading ? (
+            <TreeSkeleton />
+          ) : (
+            fileTree && (
+              <FileTree
+                tree={fileTree}
+                selectedPath={selectedPath}
+                onSelectFile={onSelectFile}
+                onRefresh={onRefresh}
+                changedFiles={changedFiles}
+              />
+            )
           )
         )}
       </div>
