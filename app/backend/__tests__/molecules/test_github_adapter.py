@@ -12,6 +12,7 @@ import pytest
 from pattern_stack.atoms.cache import reset_cache
 
 from molecules.providers.github_adapter import (
+    CheckStatusResult,
     DiffData,
     DiffFile,
     DiffHunk,
@@ -548,6 +549,121 @@ class TestGitHubAdapterAuth:
         adapter = GitHubAdapter(token="")
         headers = dict(adapter._client.headers)
         assert "authorization" not in {k.lower() for k in headers}
+
+
+# ---------------------------------------------------------------------------
+# GitHubAdapter.get_check_status
+# ---------------------------------------------------------------------------
+
+
+class TestGitHubAdapterGetCheckStatus:
+    @pytest.mark.unit
+    async def test_all_passing(self) -> None:
+        check_runs_response = {
+            "total_count": 2,
+            "check_runs": [
+                {"name": "lint", "status": "completed", "conclusion": "success"},
+                {"name": "test", "status": "completed", "conclusion": "success"},
+            ],
+        }
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            assert "/commits/abc123/check-runs" in str(request.url)
+            return _make_response(check_runs_response)
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.get_check_status("o", "r", "abc123")
+
+        assert isinstance(result, CheckStatusResult)
+        assert result.status == "pass"
+        assert result.total == 2
+        assert result.passed == 2
+        assert result.failed == 0
+        assert result.pending == 0
+
+    @pytest.mark.unit
+    async def test_some_failing(self) -> None:
+        check_runs_response = {
+            "total_count": 3,
+            "check_runs": [
+                {"name": "lint", "status": "completed", "conclusion": "success"},
+                {"name": "test", "status": "completed", "conclusion": "failure"},
+                {"name": "build", "status": "completed", "conclusion": "success"},
+            ],
+        }
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return _make_response(check_runs_response)
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.get_check_status("o", "r", "sha1")
+
+        assert result.status == "fail"
+        assert result.total == 3
+        assert result.passed == 2
+        assert result.failed == 1
+        assert result.pending == 0
+
+    @pytest.mark.unit
+    async def test_some_pending(self) -> None:
+        check_runs_response = {
+            "total_count": 2,
+            "check_runs": [
+                {"name": "lint", "status": "completed", "conclusion": "success"},
+                {"name": "test", "status": "in_progress", "conclusion": None},
+            ],
+        }
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return _make_response(check_runs_response)
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.get_check_status("o", "r", "sha2")
+
+        assert result.status == "pending"
+        assert result.total == 2
+        assert result.passed == 1
+        assert result.failed == 0
+        assert result.pending == 1
+
+    @pytest.mark.unit
+    async def test_no_check_runs(self) -> None:
+        check_runs_response = {
+            "total_count": 0,
+            "check_runs": [],
+        }
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return _make_response(check_runs_response)
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.get_check_status("o", "r", "sha3")
+
+        assert result.status == "none"
+        assert result.total == 0
+
+    @pytest.mark.unit
+    async def test_check_status_is_cached(self) -> None:
+        call_count = 0
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return _make_response({"total_count": 0, "check_runs": []})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        await adapter.get_check_status("o", "r", "sha4")
+        await adapter.get_check_status("o", "r", "sha4")
+        assert call_count == 1
+
+    @pytest.mark.unit
+    async def test_error_propagates(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=404, json={"message": "Not Found"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubNotFoundError):
+            await adapter.get_check_status("o", "r", "missing")
 
 
 # ---------------------------------------------------------------------------

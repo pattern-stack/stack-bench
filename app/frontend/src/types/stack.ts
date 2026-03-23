@@ -40,6 +40,7 @@ export interface PullRequest {
 export interface BranchWithPR {
   branch: Branch;
   pull_request: PullRequest | null;
+  ci_status?: string;
 }
 
 export interface StackDetail {

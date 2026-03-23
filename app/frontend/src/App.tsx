@@ -133,7 +133,7 @@ export function App() {
       additions: diffResult?.total_additions,
       deletions: diffResult?.total_deletions,
       prNumber: b.pull_request?.external_id ?? null,
-      ciStatus: "none" as CIStatus,
+      ciStatus: (b.ci_status ?? "none") as CIStatus,
       needsRestack: false,
     };
   });
