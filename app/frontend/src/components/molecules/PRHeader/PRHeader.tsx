@@ -7,6 +7,8 @@ interface PRHeaderProps {
   title: string;
   baseBranch: string;
   headBranch: string;
+  fullBaseBranch?: string;
+  fullHeadBranch?: string;
   description?: string | null;
   status?: string;
   fileCount?: number;
@@ -21,7 +23,7 @@ interface PRHeaderProps {
 }
 
 function PRHeader({
-  title, baseBranch, headBranch, description, status,
+  title, baseBranch, headBranch, fullBaseBranch, fullHeadBranch, description, status,
   fileCount, additions, deletions,
   onPush, onRestack, onCollapseAll, onExpandAll,
   floatingComments, onToggleCommentMode,
@@ -34,7 +36,7 @@ function PRHeader({
             {title}
           </h2>
           <div className="mt-1 flex items-center gap-3">
-            <BranchMeta base={baseBranch} head={headBranch} />
+            <BranchMeta base={baseBranch} head={headBranch} fullBase={fullBaseBranch} fullHead={fullHeadBranch} />
             {status && <StatusBadge status={status} />}
           </div>
           {description && (
