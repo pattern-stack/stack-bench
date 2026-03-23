@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DiffFileHeader } from "@/components/molecules/DiffFileHeader";
 import { DiffHunkMolecule } from "@/components/molecules/DiffHunk";
 import { useHighlightedDiff } from "@/hooks/useHighlightedDiff";
+import type { ReviewComment } from "@/hooks/useReviewComments";
 import type { DiffFile as DiffFileType } from "@/types/diff";
 
 interface DiffFileMoleculeProps {
@@ -12,6 +13,10 @@ interface DiffFileMoleculeProps {
   onLineSelect?: (lineKey: string) => void;
   onAskAgent?: (lineKey: string) => void;
   onAddComment?: (lineKey: string) => void;
+  commentsByLine?: Map<string, ReviewComment[]>;
+  commentingLine?: string | null;
+  onSubmitComment?: (lineKey: string, body: string) => void;
+  onCancelComment?: () => void;
   forceExpanded?: boolean | null;
   defaultExpanded?: boolean;
 }
@@ -24,6 +29,10 @@ function DiffFileMolecule({
   onLineSelect,
   onAskAgent,
   onAddComment,
+  commentsByLine,
+  commentingLine,
+  onSubmitComment,
+  onCancelComment,
   forceExpanded = null,
   defaultExpanded = true,
 }: DiffFileMoleculeProps) {
@@ -54,6 +63,10 @@ function DiffFileMolecule({
               onLineSelect={onLineSelect}
               onAskAgent={onAskAgent}
               onAddComment={onAddComment}
+              commentsByLine={commentsByLine}
+              commentingLine={commentingLine}
+              onSubmitComment={onSubmitComment}
+              onCancelComment={onCancelComment}
             />
           ))}
         </div>

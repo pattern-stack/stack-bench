@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 
 from features.branches.schemas.output import BranchResponse
 from features.pull_requests.schemas.output import PullRequestResponse
+from features.review_comments.schemas.input import ReviewCommentCreate, ReviewCommentUpdate
+from features.review_comments.schemas.output import ReviewCommentResponse
 from features.stacks.schemas.output import StackResponse
 from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode
 from organisms.api.dependencies import StackAPIDep
@@ -51,6 +53,21 @@ class BranchSyncItem(BaseModel):
 class SyncStackRequest(BaseModel):
     workspace_id: UUID
     branches: list[BranchSyncItem]
+
+
+class CreateCommentRequest(BaseModel):
+    pull_request_id: UUID
+    path: str = Field(..., max_length=500)
+    line_key: str = Field(..., max_length=200)
+    body: str = Field(..., min_length=1)
+    author: str = Field(..., max_length=200)
+    line_number: int | None = None
+    side: str | None = None
+
+
+class UpdateCommentRequest(BaseModel):
+    body: str | None = None
+    resolved: bool | None = None
 
 
 # --- Stack endpoints ---
@@ -189,3 +206,69 @@ async def get_branch_tree(stack_id: UUID, branch_id: UUID, api: StackAPIDep) -> 
 async def get_branch_file(stack_id: UUID, branch_id: UUID, path: str, api: StackAPIDep) -> FileContent:
     """Get file content at branch head."""
     return await api.get_branch_file(stack_id, branch_id, path)
+
+
+# --- Review comment endpoints (Stack Bench local comments) ---
+
+
+@router.post(
+    "/{stack_id}/branches/{branch_id}/comments",
+    response_model=ReviewCommentResponse,
+    status_code=201,
+)
+async def create_comment(
+    stack_id: UUID,
+    branch_id: UUID,
+    data: CreateCommentRequest,
+    api: StackAPIDep,
+) -> ReviewCommentResponse:
+    """Create an inline review comment on a branch diff."""
+    create_data = ReviewCommentCreate(
+        pull_request_id=data.pull_request_id,
+        branch_id=branch_id,
+        path=data.path,
+        line_key=data.line_key,
+        body=data.body,
+        author=data.author,
+        line_number=data.line_number,
+        side=data.side,
+    )
+    return await api.create_comment(create_data)
+
+
+@router.get(
+    "/{stack_id}/branches/{branch_id}/comments",
+    response_model=list[ReviewCommentResponse],
+)
+async def list_comments(
+    stack_id: UUID,
+    branch_id: UUID,
+    api: StackAPIDep,
+) -> list[ReviewCommentResponse]:
+    """List all inline review comments for a branch."""
+    return await api.list_comments(branch_id)
+
+
+@router.patch(
+    "/{stack_id}/comments/{comment_id}",
+    response_model=ReviewCommentResponse,
+)
+async def update_comment(
+    stack_id: UUID,
+    comment_id: UUID,
+    data: UpdateCommentRequest,
+    api: StackAPIDep,
+) -> ReviewCommentResponse:
+    """Update a review comment."""
+    update_data = ReviewCommentUpdate(body=data.body, resolved=data.resolved)
+    return await api.update_comment(comment_id, update_data)
+
+
+@router.delete("/{stack_id}/comments/{comment_id}", status_code=204)
+async def delete_comment(
+    stack_id: UUID,
+    comment_id: UUID,
+    api: StackAPIDep,
+) -> None:
+    """Delete a review comment."""
+    await api.delete_comment(comment_id)
