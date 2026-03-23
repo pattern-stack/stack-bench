@@ -193,6 +193,7 @@ function FilesChangedPanel({
           onSubmitComment={handleSubmitComment}
           onCancelComment={handleCancelComment}
           rangeSelectedLines={rangeSelectedLines}
+          rangeLineCount={rangeSelectedLines.size}
           onRangeMouseDown={handleRangeMouseDown}
           onRangeMouseEnter={handleRangeMouseEnter}
           forceExpanded={forceExpanded}

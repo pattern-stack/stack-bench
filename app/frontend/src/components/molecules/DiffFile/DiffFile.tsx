@@ -20,6 +20,7 @@ interface DiffFileMoleculeProps {
   forceExpanded?: boolean | null;
   defaultExpanded?: boolean;
   rangeSelectedLines?: Set<string>;
+  rangeLineCount?: number;
   onRangeMouseDown?: (lineKey: string, lineIndex: number) => void;
   onRangeMouseEnter?: (lineKey: string, lineIndex: number) => void;
 }
@@ -39,6 +40,7 @@ function DiffFileMolecule({
   forceExpanded = null,
   defaultExpanded = true,
   rangeSelectedLines,
+  rangeLineCount,
   onRangeMouseDown,
   onRangeMouseEnter,
 }: DiffFileMoleculeProps) {
@@ -74,6 +76,7 @@ function DiffFileMolecule({
               onSubmitComment={onSubmitComment}
               onCancelComment={onCancelComment}
               rangeSelectedLines={rangeSelectedLines}
+              rangeLineCount={rangeLineCount}
               onRangeMouseDown={onRangeMouseDown}
               onRangeMouseEnter={onRangeMouseEnter}
             />
