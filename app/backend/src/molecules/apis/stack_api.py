@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import TYPE_CHECKING
 
 from features.branches.schemas.output import BranchResponse
@@ -16,6 +18,8 @@ if TYPE_CHECKING:
 
     from features.review_comments.schemas.input import ReviewCommentCreate, ReviewCommentUpdate
     from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode, GitHubAdapter
+
+logger = logging.getLogger(__name__)
 
 
 class StackDetailResponse:
@@ -76,6 +80,32 @@ class StackAPI:
                     "pull_request": pr_resp.model_dump() if pr_resp else None,
                 }
             )
+
+        # Fetch CI status for each branch that has a PR and a head_sha
+        if self.github is not None:
+            ci_tasks = []
+            ci_indices: list[int] = []
+            for i, bd in enumerate(data["branches"]):
+                branch = bd["branch"]
+                pr = bd["pull_request"]
+                if pr is not None and branch.head_sha:
+                    from molecules.providers.github_adapter import parse_owner_repo
+
+                    workspace = await self.entity.workspace_service.get(self.db, branch.workspace_id)
+                    if workspace is not None:
+                        owner, repo = parse_owner_repo(workspace.repo_url)
+                        ci_tasks.append(self.github.get_check_status(owner, repo, branch.head_sha))
+                        ci_indices.append(i)
+
+            if ci_tasks:
+                results = await asyncio.gather(*ci_tasks, return_exceptions=True)
+                for idx, result in zip(ci_indices, results):
+                    if isinstance(result, BaseException):
+                        logger.warning("Failed to fetch CI status for branch %s: %s", branches[idx]["branch"]["name"], result)
+                        branches[idx]["ci_status"] = "none"
+                    else:
+                        branches[idx]["ci_status"] = result.status
+
         return {
             "stack": StackResponse.model_validate(stack).model_dump(),
             "branches": branches,

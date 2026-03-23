@@ -151,6 +151,15 @@ def _detect_language(path: str) -> str | None:
 _MAX_CONTENT_SIZE = 100 * 1024  # 100KB
 _CACHE_NS = "github"
 _CACHE_TTL = 3600  # 1 hour — git SHAs are content-addressed, safe to cache long
+_CI_CACHE_TTL = 300  # 5 minutes — CI status changes frequently
+
+
+class CheckStatusResult(BaseModel):
+    status: str  # "pass" | "fail" | "pending" | "none"
+    total: int
+    passed: int
+    failed: int
+    pending: int
 
 
 # ---------------------------------------------------------------------------
@@ -504,3 +513,47 @@ class GitHubAdapter:
 
         tasks = [self.get_diff(owner, repo, base, head) for _, base, head in branches]
         await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def get_check_status(self, owner: str, repo: str, ref: str) -> CheckStatusResult:
+        """Get aggregated CI check status for a commit ref."""
+        cache_key = f"checks:{owner}/{repo}:{ref}"
+        cached = await self._cache.get(cache_key, namespace=_CACHE_NS)
+        if cached is not None:
+            return CheckStatusResult.model_validate(cached)
+
+        response = await self._client.get(f"/repos/{owner}/{repo}/commits/{ref}/check-runs")
+        self._raise_for_status(response)
+        data = response.json()
+
+        check_runs: list[dict[str, object]] = data.get("check_runs", [])
+        total = len(check_runs)
+
+        if total == 0:
+            result = CheckStatusResult(status="none", total=0, passed=0, failed=0, pending=0)
+        else:
+            passed = 0
+            failed = 0
+            pending = 0
+            for run in check_runs:
+                status = str(run.get("status", ""))
+                conclusion = run.get("conclusion")
+                if status != "completed":
+                    pending += 1
+                elif conclusion == "success":
+                    passed += 1
+                else:
+                    failed += 1
+
+            if pending > 0:
+                agg_status = "pending"
+            elif failed > 0:
+                agg_status = "fail"
+            else:
+                agg_status = "pass"
+
+            result = CheckStatusResult(
+                status=agg_status, total=total, passed=passed, failed=failed, pending=pending
+            )
+
+        await self._cache.set(cache_key, result.model_dump(), ttl=_CI_CACHE_TTL, namespace=_CACHE_NS)
+        return result
