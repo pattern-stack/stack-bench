@@ -23,6 +23,7 @@ interface DiffFileMoleculeProps {
   rangeLineCount?: number;
   onRangeMouseDown?: (lineKey: string, lineIndex: number) => void;
   onRangeMouseEnter?: (lineKey: string, lineIndex: number) => void;
+  floatingComments?: boolean;
 }
 
 function DiffFileMolecule({
@@ -43,6 +44,7 @@ function DiffFileMolecule({
   rangeLineCount,
   onRangeMouseDown,
   onRangeMouseEnter,
+  floatingComments,
 }: DiffFileMoleculeProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -79,6 +81,7 @@ function DiffFileMolecule({
               rangeLineCount={rangeLineCount}
               onRangeMouseDown={onRangeMouseDown}
               onRangeMouseEnter={onRangeMouseEnter}
+              floatingComments={floatingComments}
             />
           ))}
         </div>

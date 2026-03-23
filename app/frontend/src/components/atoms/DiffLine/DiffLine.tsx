@@ -67,6 +67,32 @@ function DiffLineAtom({
       onMouseDown={onMouseDown}
       onMouseEnter={onMouseEnter}
     >
+      {/* Comment gutter — left of line numbers */}
+      <span className="w-[20px] shrink-0 flex items-center justify-center">
+        {!isHunk && onAddComment && (
+          <button
+            type="button"
+            className={cn(
+              "w-4 h-4 rounded-sm flex items-center justify-center transition-all cursor-pointer",
+              hasComment
+                ? "opacity-100 bg-[var(--accent)] text-white"
+                : "opacity-0 group-hover/line:opacity-100 bg-[var(--accent)] text-white hover:brightness-110"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddComment();
+            }}
+            title={hasComment ? "View comments" : "Add comment"}
+          >
+            {hasComment ? (
+              <Icon name="message-square" size="xs" />
+            ) : (
+              <Icon name="plus" size="xs" />
+            )}
+          </button>
+        )}
+      </span>
+
       {/* Gutter: old line number */}
       <span
         className="w-[40px] shrink-0 text-right pr-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/30"
@@ -104,37 +130,20 @@ function DiffLineAtom({
         )}
       </span>
 
-      {/* Right-side actions */}
-      {!isHunk && (onAddComment || onAskAgent) && (
+      {/* Hover actions — right side (agent only) */}
+      {!isHunk && onAskAgent && (
         <div
-          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5"
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/line:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
-          {onAskAgent && (
-            <button
-              type="button"
-              className="flex items-center justify-center w-5 h-5 rounded text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)] transition-colors opacity-0 group-hover/line:opacity-100 cursor-pointer"
-              onClick={onAskAgent}
-              title="Ask agent"
-            >
-              <Icon name="sparkles" size="sm" />
-            </button>
-          )}
-          {onAddComment && (
-            <button
-              type="button"
-              className={cn(
-                "flex items-center justify-center w-6 h-6 rounded-full transition-all cursor-pointer",
-                hasComment
-                  ? "opacity-100 bg-[var(--accent)] text-white"
-                  : "opacity-0 group-hover/line:opacity-100 bg-[var(--accent)] text-white hover:brightness-110 hover:scale-110"
-              )}
-              onClick={onAddComment}
-              title={hasComment ? "View comments" : "Add comment"}
-            >
-              <Icon name={hasComment ? "message-square" : "plus"} size="xs" />
-            </button>
-          )}
+          <button
+            type="button"
+            className="flex items-center justify-center w-5 h-5 rounded text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)] transition-colors cursor-pointer"
+            onClick={onAskAgent}
+            title="Ask agent"
+          >
+            <Icon name="sparkles" size="sm" />
+          </button>
         </div>
       )}
     </div>

@@ -1,6 +1,8 @@
 import { useRef } from "react";
 import { DiffLineAtom } from "@/components/atoms/DiffLine";
+import { CommentInput } from "@/components/molecules/CommentInput";
 import { CommentPopover } from "@/components/molecules/CommentPopover";
+import { Icon } from "@/components/atoms/Icon";
 import type { ReviewComment } from "@/hooks/useReviewComments";
 import type { DiffHunk as DiffHunkType } from "@/types/diff";
 
@@ -19,13 +21,61 @@ interface DiffHunkMoleculeProps {
   rangeLineCount?: number;
   onRangeMouseDown?: (lineKey: string, lineIndex: number) => void;
   onRangeMouseEnter?: (lineKey: string, lineIndex: number) => void;
+  floatingComments?: boolean;
 }
 
 function makeLineKey(filePath: string, line: { type: string; old_num: number | null; new_num: number | null }): string {
   return `${filePath}:${line.type}:${line.old_num ?? ""}:${line.new_num ?? ""}`;
 }
 
-function DiffLineWithRef({
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function InlineCommentThread({ comments }: { comments: ReviewComment[] }) {
+  return (
+    <div className="mx-4 my-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] overflow-hidden shadow-sm shadow-black/10">
+      {comments.map((comment, i) => (
+        <div
+          key={comment.id}
+          className={i > 0 ? "border-t border-[var(--border-muted)]" : ""}
+        >
+          <div className="flex items-start gap-2.5 px-3 py-2.5">
+            <div className="w-5 h-5 rounded-full bg-[var(--accent-muted)] flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-[10px] text-[var(--accent)] font-medium">
+                {comment.author.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs font-medium text-[var(--fg-default)]">
+                  {comment.author}
+                </span>
+                <span className="text-[10px] text-[var(--fg-subtle)]">
+                  {timeAgo(comment.created_at)}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--fg-muted)] leading-relaxed whitespace-pre-wrap">
+                {comment.body}
+              </p>
+            </div>
+            {comment.resolved && (
+              <Icon name="check" size="xs" className="text-[var(--green)] shrink-0 mt-1" />
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DiffLineWithComments({
   lineKey,
   hunkLine,
   selectedLines,
@@ -33,6 +83,7 @@ function DiffLineWithRef({
   commentsByLine,
   commentingLine,
   rangeLineCount,
+  floatingComments,
   onLineSelect,
   onAskAgent,
   onAddComment,
@@ -49,6 +100,7 @@ function DiffLineWithRef({
   commentsByLine?: Map<string, ReviewComment[]>;
   commentingLine?: string | null;
   rangeLineCount?: number;
+  floatingComments: boolean;
   onLineSelect?: (lineKey: string) => void;
   onAskAgent?: (lineKey: string) => void;
   onAddComment?: (lineKey: string) => void;
@@ -78,15 +130,29 @@ function DiffLineWithRef({
         onMouseEnter={onRangeMouseEnter && hunkLine.type !== "hunk" ? () => onRangeMouseEnter(lineKey, lineIndex) : undefined}
       />
 
-      {/* Floating popover for both new comments and existing threads */}
-      {isCommenting && onSubmitComment && onCancelComment && (
-        <CommentPopover
-          anchorRef={lineRef}
-          onSubmit={(body) => onSubmitComment(lineKey, body)}
-          onCancel={onCancelComment}
-          lineCount={rangeLineCount}
-          existingComments={lineComments}
-        />
+      {floatingComments ? (
+        /* Floating: popover with thread + input */
+        isCommenting && onSubmitComment && onCancelComment && (
+          <CommentPopover
+            anchorRef={lineRef}
+            onSubmit={(body) => onSubmitComment(lineKey, body)}
+            onCancel={onCancelComment}
+            lineCount={rangeLineCount}
+            existingComments={lineComments}
+          />
+        )
+      ) : (
+        /* Inline: thread cards + input between rows */
+        <>
+          {hasComment && <InlineCommentThread comments={lineComments!} />}
+          {isCommenting && onSubmitComment && onCancelComment && (
+            <CommentInput
+              onSubmit={(body) => onSubmitComment(lineKey, body)}
+              onCancel={onCancelComment}
+              lineCount={rangeLineCount}
+            />
+          )}
+        </>
       )}
     </div>
   );
@@ -107,6 +173,7 @@ function DiffHunkMolecule({
   rangeLineCount,
   onRangeMouseDown,
   onRangeMouseEnter,
+  floatingComments = true,
 }: DiffHunkMoleculeProps) {
   return (
     <div>
@@ -125,7 +192,7 @@ function DiffHunkMolecule({
         const lineKey = makeLineKey(filePath, line);
 
         return (
-          <DiffLineWithRef
+          <DiffLineWithComments
             key={i}
             lineKey={lineKey}
             hunkLine={line}
@@ -134,6 +201,7 @@ function DiffHunkMolecule({
             commentsByLine={commentsByLine}
             commentingLine={commentingLine}
             rangeLineCount={rangeLineCount}
+            floatingComments={floatingComments}
             onLineSelect={onLineSelect}
             onAskAgent={onAskAgent}
             onAddComment={onAddComment}
