@@ -40,6 +40,19 @@ class LinkExternalPRRequest(BaseModel):
     external_url: str = Field(..., max_length=500)
 
 
+class BranchSyncItem(BaseModel):
+    name: str = Field(..., min_length=1, max_length=500)
+    position: int = Field(..., ge=1)
+    head_sha: str | None = Field(None, max_length=40)
+    pr_number: int | None = None
+    pr_url: str | None = Field(None, max_length=500)
+
+
+class SyncStackRequest(BaseModel):
+    workspace_id: UUID
+    branches: list[BranchSyncItem]
+
+
 # --- Stack endpoints ---
 
 
@@ -75,6 +88,20 @@ async def get_stack_detail(stack_id: UUID, api: StackAPIDep) -> dict[str, object
 @router.delete("/{stack_id}", status_code=204)
 async def delete_stack(stack_id: UUID, api: StackAPIDep) -> None:
     await api.delete_stack(stack_id)
+
+
+# --- Sync endpoint ---
+
+
+@router.post("/{stack_id}/sync")
+async def sync_stack(stack_id: UUID, data: SyncStackRequest, api: StackAPIDep) -> dict[str, object]:
+    """Sync stack state from client-provided branch and PR data.
+
+    Called after `st push`, after merges, or manually from the UI.
+    Creates or updates branches and links PRs as needed.
+    """
+    branches = [b.model_dump() for b in data.branches]
+    return await api.sync_stack(stack_id, data.workspace_id, branches)
 
 
 # --- Branch endpoints (nested under stack) ---
