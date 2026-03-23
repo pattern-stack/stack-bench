@@ -158,3 +158,39 @@ class StackAPI:
             raise RuntimeError(msg)
         owner, repo, _, head_ref = await self.entity.get_branch_repo_context(branch_id)
         return await self.github.get_file_content(owner, repo, head_ref, path)
+
+    async def merge_stack(self, stack_id: UUID) -> dict[str, object]:
+        """Merge all PRs in the stack, bottom-up."""
+        if self.github is None:
+            msg = "GitHubAdapter not configured"
+            raise RuntimeError(msg)
+
+        data = await self.entity.get_stack_with_branches(stack_id)
+        results: list[dict[str, object]] = []
+
+        for bd in data["branches"]:
+            branch = bd["branch"]
+            pr = bd.get("pull_request")
+            if pr is None or pr.state == "merged":
+                continue
+            if pr.external_id is None:
+                msg = f"PR for branch {branch.name} has no GitHub PR number"
+                raise ValueError(msg)
+
+            owner, repo, _, _ = await self.entity.get_branch_repo_context(branch.id)
+
+            # Mark ready if draft
+            if pr.state == "draft":
+                await self.github.mark_pr_ready(owner, repo, pr.external_id)
+                pr.transition_to("open")
+
+            # Merge
+            await self.github.merge_pr(owner, repo, pr.external_id)
+            if pr.state == "open":
+                pr.transition_to("approved")
+            pr.transition_to("merged")
+            branch.transition_to("merged")
+            results.append({"branch": branch.name, "pr_number": pr.external_id, "merged": True})
+
+        await self.db.commit()
+        return {"stack_id": str(stack_id), "merged": results}

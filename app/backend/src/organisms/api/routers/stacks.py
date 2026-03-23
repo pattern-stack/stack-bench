@@ -104,6 +104,15 @@ async def sync_stack(stack_id: UUID, data: SyncStackRequest, api: StackAPIDep) -
     return await api.sync_stack(stack_id, data.workspace_id, branches)
 
 
+# --- Merge endpoint ---
+
+
+@router.post("/{stack_id}/merge")
+async def merge_stack(stack_id: UUID, api: StackAPIDep) -> dict[str, object]:
+    """Merge all PRs in the stack bottom-up via GitHub API."""
+    return await api.merge_stack(stack_id)
+
+
 # --- Branch endpoints (nested under stack) ---
 
 

@@ -436,7 +436,35 @@ class GitHubAdapter:
         await self._cache.set(cache_key, result.model_dump(), ttl=_CACHE_TTL, namespace=_CACHE_NS)
         return result
 
-    async def hydrate_stack(self, owner: str, repo: str, branches: list[tuple[str, str, str]]) -> None:
+    async def merge_pr(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        merge_method: str = "squash",
+    ) -> dict[str, object]:
+        """Merge a pull request via GitHub API."""
+        response = await self._client.put(
+            f"/repos/{owner}/{repo}/pulls/{pr_number}/merge",
+            json={"merge_method": merge_method},
+        )
+        self._raise_for_status(response)
+        data: dict[str, object] = response.json()
+        return data
+
+    async def mark_pr_ready(
+        self, owner: str, repo: str, pr_number: int
+    ) -> None:
+        """Remove draft status from a pull request."""
+        response = await self._client.patch(
+            f"/repos/{owner}/{repo}/pulls/{pr_number}",
+            json={"draft": False},
+        )
+        self._raise_for_status(response)
+
+    async def hydrate_stack(
+        self, owner: str, repo: str, branches: list[tuple[str, str, str]]
+    ) -> None:
         """Pre-load cache for an entire stack's diffs.
 
         Args:
