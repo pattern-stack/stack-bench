@@ -1,4 +1,4 @@
-import { Icon, Button } from "@/components/atoms";
+import { Icon, Button, Badge } from "@/components/atoms";
 import type { StackSummary } from "@/types/activity";
 
 interface StackHeaderProps {
@@ -53,12 +53,9 @@ function StackHeader({
         </span>
       </div>
 
-      {/* Row 2: Status summary + trunk */}
+      {/* Row 2: Trunk badge + status summary */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] text-[var(--fg-subtle)]" title={trunk}>
-          ↑ {shortRef(trunk)}
-        </span>
-        <span className="text-[11px] text-[var(--fg-subtle)]">·</span>
+        <Badge size="sm" title={trunk}>↑ {shortRef(trunk)}</Badge>
         {summaryChips.map(({ key, label, color }) => {
           const count = summary[key];
           if (count <= 0) return null;
@@ -76,9 +73,9 @@ function StackHeader({
 
       {/* Row 3: Toolbar buttons */}
       <div className="flex items-center gap-1.5">
-        <Button variant="subtle" size="sm" onClick={onSync} title={`Sync ${trunk}`}>
+        <Button variant="subtle" size="sm" onClick={onSync}>
           <Icon name="download-cloud" size="xs" />
-          Sync {shortRef(trunk)}
+          Sync
         </Button>
         <Button
           variant="subtle"
