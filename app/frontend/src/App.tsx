@@ -19,23 +19,6 @@ function branchTitle(name: string): string {
   return parts[parts.length - 1] ?? name;
 }
 
-const mockBranchMeta: Record<
-  string,
-  {
-    additions: number;
-    deletions: number;
-    prNumber: number | null;
-    ciStatus: CIStatus;
-    needsRestack: boolean;
-  }
-> = {
-  "b-001": { additions: 48, deletions: 12, prNumber: 64, ciStatus: "pass", needsRestack: false },
-  "b-002": { additions: 142, deletions: 18, prNumber: 65, ciStatus: "pass", needsRestack: false },
-  "b-003": { additions: 89, deletions: 34, prNumber: 66, ciStatus: "pending", needsRestack: false },
-  "b-004": { additions: 67, deletions: 4, prNumber: 67, ciStatus: "pending", needsRestack: true },
-  "b-005": { additions: 112, deletions: 45, prNumber: 68, ciStatus: "fail", needsRestack: true },
-  "b-006": { additions: 0, deletions: 0, prNumber: null, ciStatus: "none", needsRestack: true },
-};
 
 /** Status values that count as "draft" (no PR or local-only) */
 const DRAFT_STATUSES = new Set(["draft", "created", "local"]);
@@ -60,7 +43,7 @@ function computeSummary(items: StackConnectorItem[]): StackSummary {
 
 export function App() {
   const { data, loading, error } = useStackDetail();
-  const [activeIndex, setActiveIndex] = useState(2);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("diffs");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
@@ -82,6 +65,20 @@ export function App() {
     setForceExpanded(null);
   }, [activeIndex]);
 
+  // Build changed files map for dirty state in file explorer
+  const changedFiles = useMemo(() => {
+    if (!diffData) return undefined;
+    const map = new Map<string, ChangedFileInfo>();
+    for (const f of diffData.files) {
+      map.set(f.path, {
+        changeType: f.change_type,
+        additions: f.additions,
+        deletions: f.deletions,
+      });
+    }
+    return map;
+  }, [diffData]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--fg-default)] flex items-center justify-center">
@@ -100,23 +97,15 @@ export function App() {
 
   const items: StackConnectorItem[] = data.branches.map((b) => {
     const displayStatus = b.pull_request?.state ?? b.branch.state;
-    const meta = mockBranchMeta[b.branch.id] ?? {
-      additions: 0,
-      deletions: 0,
-      prNumber: null,
-      ciStatus: "none" as CIStatus,
-      needsRestack: false,
-    };
 
     return {
       id: b.branch.id,
       title: branchTitle(b.branch.name),
       status: displayStatus,
-      additions: meta.additions,
-      deletions: meta.deletions,
-      prNumber: meta.prNumber,
-      ciStatus: meta.ciStatus,
-      needsRestack: meta.needsRestack,
+      prNumber: b.pull_request?.external_id ?? null,
+      // TODO: wire from GitHub API / git analysis when available
+      ciStatus: "none" as CIStatus,
+      needsRestack: false,
     };
   });
 
@@ -138,20 +127,6 @@ export function App() {
   });
 
   const fileCount = diffData?.files.length ?? 0;
-
-  // Build changed files map for dirty state in file explorer
-  const changedFiles = useMemo(() => {
-    if (!diffData) return undefined;
-    const map = new Map<string, ChangedFileInfo>();
-    for (const f of diffData.files) {
-      map.set(f.path, {
-        changeType: f.change_type,
-        additions: f.additions,
-        deletions: f.deletions,
-      });
-    }
-    return map;
-  }, [diffData]);
 
   return (
     <AppShell
