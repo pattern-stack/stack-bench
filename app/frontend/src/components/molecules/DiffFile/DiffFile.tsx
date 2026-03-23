@@ -19,6 +19,9 @@ interface DiffFileMoleculeProps {
   onCancelComment?: () => void;
   forceExpanded?: boolean | null;
   defaultExpanded?: boolean;
+  rangeSelectedLines?: Set<string>;
+  onRangeMouseDown?: (lineKey: string, lineIndex: number) => void;
+  onRangeMouseEnter?: (lineKey: string, lineIndex: number) => void;
 }
 
 function DiffFileMolecule({
@@ -35,6 +38,9 @@ function DiffFileMolecule({
   onCancelComment,
   forceExpanded = null,
   defaultExpanded = true,
+  rangeSelectedLines,
+  onRangeMouseDown,
+  onRangeMouseEnter,
 }: DiffFileMoleculeProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -67,6 +73,9 @@ function DiffFileMolecule({
               commentingLine={commentingLine}
               onSubmitComment={onSubmitComment}
               onCancelComment={onCancelComment}
+              rangeSelectedLines={rangeSelectedLines}
+              onRangeMouseDown={onRangeMouseDown}
+              onRangeMouseEnter={onRangeMouseEnter}
             />
           ))}
         </div>
