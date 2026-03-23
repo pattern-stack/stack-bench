@@ -30,6 +30,7 @@ export function useFileContent(
         `/api/v1/stacks/${stackId}/branches/${branchId}/files/${path}`
       ),
     enabled: !!stackId && !!branchId && !!path,
+    staleTime: Infinity,
   });
 
   const error = queryError ? String(queryError) : null;
