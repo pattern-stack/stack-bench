@@ -6,6 +6,7 @@ import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
 import { FileContent } from "@/components/molecules/FileContent";
 import { PathBar } from "@/components/molecules/PathBar";
 import { useStackDetail } from "@/hooks/useStackDetail";
+import { useStackList } from "@/hooks/useStackList";
 import { useBranchDiff, branchDiffKeys } from "@/hooks/useBranchDiff";
 import { useFileTree } from "@/hooks/useFileTree";
 import { useFileContent } from "@/hooks/useFileContent";
@@ -45,7 +46,8 @@ function computeSummary(items: StackConnectorItem[]): StackSummary {
 }
 
 export function App() {
-  const { data, loading, error } = useStackDetail();
+  const [selectedStackId, setSelectedStackId] = useState<string | undefined>(undefined);
+  const { data, loading, error } = useStackDetail(selectedStackId);
   const [activeIndex, setActiveIndex] = useState(0);
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("diffs");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -61,6 +63,18 @@ export function App() {
   const { data: diffData } = useBranchDiff(stackId, activeBranchId);
   const { data: fileTree } = useFileTree(stackId, activeBranchId);
   const { data: fileContent } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
+
+  // Fetch all stacks for the same project (for the stack switcher)
+  const projectId = data?.stack.project_id;
+  const { data: stacks } = useStackList(projectId);
+
+  const handleStackChange = (id: string) => {
+    setSelectedStackId(id);
+    setActiveIndex(0);
+    setSidebarMode("diffs");
+    setSelectedPath(null);
+    setForceExpanded(null);
+  };
 
   // Subscribe reactively to all branch diffs
   const branchDiffQueries = useQueries({
@@ -148,6 +162,8 @@ export function App() {
     <AppShell
       stackName={data.stack.name}
       trunk={data.stack.trunk}
+      stacks={stacks}
+      onStackChange={handleStackChange}
       items={items}
       activeIndex={activeIndex}
       onSelect={setActiveIndex}

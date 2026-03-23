@@ -1,9 +1,12 @@
 import { Icon, Button, Badge } from "@/components/atoms";
+import type { Stack } from "@/types/stack";
 import type { StackSummary } from "@/types/activity";
 
 interface StackHeaderProps {
   stackName: string;
   trunk: string;
+  stacks?: Stack[];
+  onStackChange?: (id: string) => void;
   branchCount: number;
   summary: StackSummary;
   onSync?: () => void;
@@ -34,6 +37,8 @@ function shortRef(ref: string): string {
 function StackHeader({
   stackName,
   trunk,
+  stacks,
+  onStackChange,
   branchCount,
   summary,
   onSync,
@@ -45,9 +50,25 @@ function StackHeader({
       {/* Row 1: Name + branch count */}
       <div className="flex items-center gap-2">
         <Icon name="git-branch" size="sm" className="text-[var(--fg-muted)] shrink-0" />
-        <span className="text-sm font-semibold text-[var(--fg-default)] truncate">
-          {stackName}
-        </span>
+        {stacks && stacks.length > 1 ? (
+          <select
+            value={stackName}
+            onChange={(e) => {
+              const stack = stacks.find(s => s.name === e.target.value);
+              if (stack) onStackChange?.(stack.id);
+            }}
+            className="text-sm font-semibold text-[var(--fg-default)] bg-transparent border-none outline-none cursor-pointer truncate appearance-none hover:text-[var(--accent)]"
+            style={{ backgroundImage: "none" }}
+          >
+            {stacks.map(s => (
+              <option key={s.id} value={s.name}>{s.name}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-sm font-semibold text-[var(--fg-default)] truncate">
+            {stackName}
+          </span>
+        )}
         <span className="text-xs text-[var(--fg-subtle)] shrink-0">
           {branchCount} {branchCount === 1 ? "branch" : "branches"}
         </span>
