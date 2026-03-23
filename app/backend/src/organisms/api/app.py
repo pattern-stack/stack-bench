@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from config.settings import get_settings
 from molecules.exceptions import MoleculeError
-from organisms.api.error_handlers import molecule_exception_handler
+from molecules.providers.github_adapter import GitHubAPIError
+from organisms.api.error_handlers import github_exception_handler, molecule_exception_handler
 from organisms.api.routers.agents import router as agents_router
 from organisms.api.routers.conversations import router as conversations_router
 from organisms.api.routers.projects import router as projects_router
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
 
     # Error handlers
     app.add_exception_handler(MoleculeError, molecule_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(GitHubAPIError, github_exception_handler)  # type: ignore[arg-type]
 
     return app
 

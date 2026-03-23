@@ -53,10 +53,11 @@ export function App() {
   // TODO: Lift selectedLineCount from FilesChangedPanel in a future PR
   const selectedLineCount = 0;
 
+  const stackId = data?.stack.id;
   const activeBranchId = data?.branches[activeIndex]?.branch.id;
-  const { data: diffData } = useBranchDiff(activeBranchId);
-  const { data: fileTree } = useFileTree(activeBranchId);
-  const { data: fileContent } = useFileContent(activeBranchId, sidebarMode === "files" ? selectedPath : null);
+  const { data: diffData } = useBranchDiff(stackId, activeBranchId);
+  const { data: fileTree } = useFileTree(stackId, activeBranchId);
+  const { data: fileContent } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
 
   // Reset sidebar mode and selection when branch changes
   useEffect(() => {

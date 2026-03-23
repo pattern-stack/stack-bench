@@ -14,6 +14,7 @@ class AppSettings(BaseSettings):
     DATABASE_URL: str = Field(default="postgresql+asyncpg://stack-bench:password@localhost:5932/stack-bench")
     WEBHOOK_SECRET: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
+    GITHUB_TOKEN: str = Field(default="")
 
     model_config = {
         "env_file": str(PROJECT_ROOT / ".env"),
