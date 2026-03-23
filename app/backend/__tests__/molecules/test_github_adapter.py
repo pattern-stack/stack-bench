@@ -667,6 +667,48 @@ class TestGitHubAdapterGetCheckStatus:
 
 
 # ---------------------------------------------------------------------------
+# GitHubAdapter.mark_pr_ready
+# ---------------------------------------------------------------------------
+
+
+class TestGitHubAdapterMarkPRReady:
+    @pytest.mark.unit
+    async def test_sends_patch_with_draft_false(self) -> None:
+        captured_request: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            captured_request["url"] = str(request.url)
+            captured_request["method"] = request.method
+            captured_request["body"] = request.content.decode()
+            return _make_response({"id": 1, "draft": False})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        await adapter.mark_pr_ready("myorg", "myrepo", 42)
+
+        assert "/repos/myorg/myrepo/pulls/42" in str(captured_request["url"])
+        assert captured_request["method"] == "PATCH"
+        assert '"draft": false' in str(captured_request["body"]) or '"draft":false' in str(captured_request["body"])
+
+    @pytest.mark.unit
+    async def test_raises_on_404(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=404, json={"message": "Not Found"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubNotFoundError):
+            await adapter.mark_pr_ready("o", "r", 999)
+
+    @pytest.mark.unit
+    async def test_raises_on_422(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=422, json={"message": "Validation failed"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubAPIError):
+            await adapter.mark_pr_ready("o", "r", 1)
+
+
+# ---------------------------------------------------------------------------
 # DTO serialization round-trip
 # ---------------------------------------------------------------------------
 

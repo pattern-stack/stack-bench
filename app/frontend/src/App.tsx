@@ -10,6 +10,7 @@ import { useStackList } from "@/hooks/useStackList";
 import { useBranchDiff, branchDiffKeys } from "@/hooks/useBranchDiff";
 import { useFileTree } from "@/hooks/useFileTree";
 import { useFileContent } from "@/hooks/useFileContent";
+import { useMarkReady } from "@/hooks/useMarkReady";
 import { mockActivityEntries } from "@/lib/mock-activity-data";
 import type { StackConnectorItem } from "@/components/molecules";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
@@ -62,6 +63,7 @@ export function App() {
   const { data: diffData, loading: diffLoading } = useBranchDiff(stackId, activeBranchId);
   const { data: fileTree, loading: treeLoading } = useFileTree(stackId, activeBranchId);
   const { data: fileContent, loading: contentLoading } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
+  const markReady = useMarkReady(stackId, activeBranchId);
 
   // Fetch all stacks for the same project (for the stack switcher)
   const projectId = data?.stack.project_id;
@@ -199,6 +201,7 @@ export function App() {
         }
       }}
       onClearActivity={() => setActivityEntries([])}
+      onMarkReady={() => markReady.mutate()}
       fileCount={diffData?.files.length}
       additions={diffData?.total_additions}
       deletions={diffData?.total_deletions}
