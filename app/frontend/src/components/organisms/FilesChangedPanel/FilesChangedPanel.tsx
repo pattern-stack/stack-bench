@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { DiffFileMolecule } from "@/components/molecules/DiffFile";
-import { Icon } from "@/components/atoms/Icon";
 import { useReviewComments, useCreateComment } from "@/hooks/useReviewComments";
 import type { ReviewComment } from "@/hooks/useReviewComments";
 import type { DiffData } from "@/types/diff";
@@ -11,6 +10,7 @@ interface FilesChangedPanelProps {
   stackId?: string;
   branchId?: string;
   pullRequestId?: string;
+  floatingComments?: boolean;
 }
 
 function FilesChangedPanel({
@@ -19,11 +19,11 @@ function FilesChangedPanel({
   stackId,
   branchId,
   pullRequestId,
+  floatingComments: floatingCommentsProp = true,
 }: FilesChangedPanelProps) {
   const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
   const [commentingLine, setCommentingLine] = useState<string | null>(null);
-  const [floatingComments, setFloatingComments] = useState(true);
 
   // Range selection state for click-drag
   const [rangeSelectedLines, setRangeSelectedLines] = useState<Set<string>>(new Set());
@@ -180,18 +180,6 @@ function FilesChangedPanel({
 
   return (
     <div className="p-4 space-y-3">
-      {/* Comment display toggle */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-[var(--fg-subtle)] hover:text-[var(--fg-muted)] rounded border border-[var(--border-muted)] hover:border-[var(--border)] transition-colors cursor-pointer"
-          onClick={() => setFloatingComments((prev) => !prev)}
-          title={floatingComments ? "Switch to inline comments" : "Switch to floating comments"}
-        >
-          <Icon name={floatingComments ? "message-square" : "layout"} size="xs" />
-          {floatingComments ? "Floating" : "Inline"}
-        </button>
-      </div>
       {diffData.files.map((file, index) => (
         <DiffFileMolecule
           key={file.path}
@@ -210,7 +198,7 @@ function FilesChangedPanel({
           rangeLineCount={rangeSelectedLines.size}
           onRangeMouseDown={handleRangeMouseDown}
           onRangeMouseEnter={handleRangeMouseEnter}
-          floatingComments={floatingComments}
+          floatingComments={floatingCommentsProp}
           forceExpanded={forceExpanded}
           defaultExpanded={manyFiles ? index === 0 : true}
         />
