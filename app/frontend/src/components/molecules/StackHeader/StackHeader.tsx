@@ -67,9 +67,9 @@ function StackHeader({
 
       {/* Row 3: Toolbar buttons */}
       <div className="flex items-center gap-1.5">
-        <Button variant="subtle" size="sm" onClick={onSync}>
+        <Button variant="subtle" size="sm" onClick={onSync} title={`Sync ${trunk}`}>
           <Icon name="download-cloud" size="xs" />
-          Sync {trunk}
+          Sync
         </Button>
         <Button
           variant="subtle"
