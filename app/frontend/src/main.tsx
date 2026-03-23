@@ -6,7 +6,7 @@ import { App } from "./App";
 import "./index.css";
 
 // Configure generated API client — uses Vite proxy so no explicit baseUrl needed
-setApiConfig({ baseUrl: "" });
+setApiConfig({ baseUrl: window.location.origin });
 
 const queryClient = new QueryClient({
   defaultOptions: {
