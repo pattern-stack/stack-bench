@@ -72,14 +72,22 @@ type SSEReasoningData struct {
 
 // SSEToolStartData is the JSON payload for tool start events.
 type SSEToolStartData struct {
-	ToolName string `json:"tool_name"`
-	Input    string `json:"input"`
+	ToolCallID  string         `json:"tool_call_id"`
+	ToolName    string         `json:"tool_name"`
+	DisplayType string         `json:"display_type"`
+	Arguments   map[string]any `json:"arguments"`
+	Input       string         `json:"input"`
 }
 
 // SSEToolEndData is the JSON payload for tool end events.
 type SSEToolEndData struct {
-	ToolName string `json:"tool_name"`
-	Output   string `json:"output"`
+	ToolCallID  string `json:"tool_call_id"`
+	ToolName    string `json:"tool_name"`
+	DisplayType string `json:"display_type"`
+	Result      any    `json:"result"`
+	Output      string `json:"output"`
+	Error       string `json:"error"`
+	DurationMs  int    `json:"duration_ms"`
 }
 
 // SSEErrorData is the JSON payload for error / agent.error events.
@@ -116,14 +124,55 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{Content: d.ToolName, Type: ChunkToolStart}
+		name := d.ToolName
+		if name == "" {
+			name = d.Input
+		}
+		return &StreamChunk{
+			Content:     name,
+			Type:        ChunkToolStart,
+			ToolCallID:  d.ToolCallID,
+			ToolName:    d.ToolName,
+			DisplayType: d.DisplayType,
+			Arguments:   d.Arguments,
+		}
 
 	case "agent.tool.end", "tool_end":
 		var d SSEToolEndData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{Content: d.Output, Type: ChunkToolEnd}
+		result := d.Output
+		if r, ok := d.Result.(string); ok && result == "" {
+			result = r
+		}
+		return &StreamChunk{
+			Content:     result,
+			Type:        ChunkToolEnd,
+			ToolCallID:  d.ToolCallID,
+			ToolName:    d.ToolName,
+			DisplayType: d.DisplayType,
+			Result:      result,
+			ToolError:   d.Error,
+			DurationMs:  d.DurationMs,
+		}
+
+	case "agent.tool.rejected":
+		var d struct {
+			ToolName string `json:"tool_name"`
+			Reason   string `json:"reason"`
+		}
+		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
+			return nil
+		}
+		return &StreamChunk{
+			Content:  d.Reason,
+			Type:     ChunkToolReject,
+			ToolName: d.ToolName,
+		}
+
+	case "agent.iteration.start", "agent.iteration.end":
+		return &StreamChunk{Type: ChunkIteration}
 
 	case "done":
 		return &StreamChunk{Done: true, Type: ChunkText}
