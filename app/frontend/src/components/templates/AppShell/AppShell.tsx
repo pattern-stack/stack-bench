@@ -47,6 +47,7 @@ interface AppShellProps {
 
   // PR action props
   onMarkReady?: () => void;
+  onRestackAll?: () => void;
 
   // Diff toolbar props
   fileCount?: number;
@@ -90,6 +91,7 @@ function AppShell({
   onMerge,
   onClearActivity,
   onMarkReady,
+  onRestackAll,
   fileCount,
   additions,
   deletions,
@@ -134,7 +136,7 @@ function AppShell({
         summary={summary}
         activityEntries={activityEntries}
         onSync={onSync}
-        onRestackAll={summary.needsRestack > 0 ? () => console.log("restack all") : undefined}
+        onRestackAll={onRestackAll}
         onMerge={onMerge}
         onClearActivity={onClearActivity}
         sidebarMode={sidebarMode}

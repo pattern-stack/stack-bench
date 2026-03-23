@@ -45,13 +45,6 @@ def get_github_adapter() -> GitHubAdapter:
 GitHubAdapterDep = Annotated[GitHubAdapter, Depends(get_github_adapter)]
 
 
-def get_stack_api(db: DatabaseSession, github: GitHubAdapterDep) -> StackAPI:
-    return StackAPI(db, github)
-
-
-StackAPIDep = Annotated[StackAPI, Depends(get_stack_api)]
-
-
 def get_clone_manager() -> CloneManager:
     settings = get_settings()
     return CloneManager(
@@ -63,3 +56,10 @@ def get_clone_manager() -> CloneManager:
 
 
 CloneManagerDep = Annotated[CloneManager, Depends(get_clone_manager)]
+
+
+def get_stack_api(db: DatabaseSession, github: GitHubAdapterDep, clone_manager: CloneManagerDep) -> StackAPI:
+    return StackAPI(db, github, clone_manager=clone_manager)
+
+
+StackAPIDep = Annotated[StackAPI, Depends(get_stack_api)]
