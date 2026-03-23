@@ -229,6 +229,35 @@ class StackAPI:
         await self.db.commit()
         return {"stack_id": str(stack_id), "merged": results}
 
+    async def mark_pr_ready(self, stack_id: UUID, branch_id: UUID) -> PullRequestResponse:
+        """Mark a draft PR as ready for review via GitHub API and transition local state."""
+        if self.github is None:
+            msg = "GitHubAdapter not configured"
+            raise RuntimeError(msg)
+
+        from features.pull_requests.service import PullRequestService
+
+        pr_svc = PullRequestService()
+        pr = await pr_svc.get_by_branch(self.db, branch_id)
+        if pr is None:
+            msg = f"No pull request found for branch {branch_id}"
+            raise ValueError(msg)
+
+        if pr.state != "draft":
+            msg = f"PR is not in draft state (current: {pr.state})"
+            raise ValueError(msg)
+
+        if pr.external_id is None:
+            msg = f"PR for branch {branch_id} has no GitHub PR number"
+            raise ValueError(msg)
+
+        owner, repo, _, _ = await self.entity.get_branch_repo_context(branch_id)
+        await self.github.mark_pr_ready(owner, repo, pr.external_id)
+        pr.transition_to("open")
+        await self.db.commit()
+        await self.db.refresh(pr)
+        return PullRequestResponse.model_validate(pr)
+
     # --- Review comments (Stack Bench local, GitHub sync optional) ---
 
     async def create_comment(self, data: ReviewCommentCreate) -> ReviewCommentResponse:

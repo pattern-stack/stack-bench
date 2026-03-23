@@ -178,6 +178,22 @@ async def link_external_pr(
     return await api.link_external_pr(pull_request_id, data.external_id, data.external_url)
 
 
+# --- Mark PR ready endpoint ---
+
+
+@router.post(
+    "/{stack_id}/branches/{branch_id}/pr/ready",
+    response_model=PullRequestResponse,
+)
+async def mark_pr_ready(
+    stack_id: UUID,
+    branch_id: UUID,
+    api: StackAPIDep,
+) -> PullRequestResponse:
+    """Mark a draft PR as ready for review via GitHub API."""
+    return await api.mark_pr_ready(stack_id, branch_id)
+
+
 # --- Git data endpoints (read-through via GitHub API) ---
 
 

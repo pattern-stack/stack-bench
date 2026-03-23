@@ -45,6 +45,9 @@ interface AppShellProps {
   stacks?: Stack[];
   onStackChange?: (id: string) => void;
 
+  // PR action props
+  onMarkReady?: () => void;
+
   // Diff toolbar props
   fileCount?: number;
   additions?: number;
@@ -86,6 +89,7 @@ function AppShell({
   onSync,
   onMerge,
   onClearActivity,
+  onMarkReady,
   fileCount,
   additions,
   deletions,
@@ -159,6 +163,7 @@ function AppShell({
             fileCount={fileCount}
             additions={additions}
             deletions={deletions}
+            onPush={displayStatus === "draft" ? onMarkReady : undefined}
             onCollapseAll={onCollapseAll}
             onExpandAll={onExpandAll}
             floatingComments={floatingComments}
