@@ -77,7 +77,7 @@ function PRHeader({
           <div className="flex items-center gap-1">
             {onToggleCommentMode && (
               <Button variant="subtle" size="sm" onClick={onToggleCommentMode}>
-                <Icon name={floatingComments ? "message-square" : "layout"} size="xs" />
+                <Icon name="message-square" size="xs" />
                 {floatingComments ? "Floating" : "Inline"}
               </Button>
             )}
