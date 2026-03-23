@@ -1,18 +1,24 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/generated/api/client";
 import type { StackDetail } from "@/types/stack";
-import { mockStackDetail } from "@/lib/mock-data";
 
-interface UseStackDetailResult {
-  data: StackDetail | null;
-  loading: boolean;
-  error: string | null;
-}
+const DEFAULT_STACK_ID = "d285f701-e77c-46a2-949a-8b486de3c3b9"; // round-2-polish (seeded)
 
-export function useStackDetail(_stackId?: string): UseStackDetailResult {
-  // MVP: return mock data directly. Replace with real fetch when backend is wired.
-  const [data] = useState<StackDetail | null>(mockStackDetail);
-  const [loading] = useState(false);
-  const [error] = useState<string | null>(null);
+export const stackDetailKeys = {
+  all: ["stack-detail"] as const,
+  detail: (id: string) => [...stackDetailKeys.all, id] as const,
+};
+
+export function useStackDetail(stackId?: string) {
+  const id = stackId ?? DEFAULT_STACK_ID;
+
+  const { data = null, isLoading: loading, error: queryError } = useQuery({
+    queryKey: stackDetailKeys.detail(id),
+    queryFn: () => apiClient.get<StackDetail>(`/api/v1/stacks/${id}/detail`),
+    enabled: !!id,
+  });
+
+  const error = queryError ? String(queryError) : null;
 
   return { data, loading, error };
 }
