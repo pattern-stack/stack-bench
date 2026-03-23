@@ -6,10 +6,10 @@ All tests use httpx.MockTransport to avoid real HTTP calls.
 from __future__ import annotations
 
 import base64
-import time
 
 import httpx
 import pytest
+from pattern_stack.atoms.cache import reset_cache
 
 from molecules.providers.github_adapter import (
     DiffData,
@@ -25,7 +25,6 @@ from molecules.providers.github_adapter import (
     _build_file_tree,
     _detect_language,
     _parse_patch,
-    _TTLCache,
     parse_owner_repo,
 )
 
@@ -255,32 +254,6 @@ class TestBuildFileTree:
 
 
 # ---------------------------------------------------------------------------
-# _TTLCache
-# ---------------------------------------------------------------------------
-
-
-class TestTTLCache:
-    @pytest.mark.unit
-    def test_set_and_get(self) -> None:
-        cache = _TTLCache(ttl=60.0)
-        cache.set("key", "value")
-        assert cache.get("key") == "value"
-
-    @pytest.mark.unit
-    def test_missing_key(self) -> None:
-        cache = _TTLCache(ttl=60.0)
-        assert cache.get("missing") is None
-
-    @pytest.mark.unit
-    def test_expired_entry(self) -> None:
-        cache = _TTLCache(ttl=0.01)
-        cache.set("key", "value")
-        # Manually expire by patching the stored timestamp
-        cache._store["key"] = (time.monotonic() - 1.0, "value")
-        assert cache.get("key") is None
-
-
-# ---------------------------------------------------------------------------
 # GitHubAdapter (using httpx.MockTransport)
 # ---------------------------------------------------------------------------
 
@@ -292,6 +265,12 @@ def _make_response(data: dict | list, status_code: int = 200, headers: dict[str,
         json=data,
         headers=headers or {},
     )
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache() -> None:
+    """Reset cache singleton between tests to avoid cross-test pollution."""
+    reset_cache()
 
 
 def _make_adapter(handler: httpx.MockTransport | None = None) -> GitHubAdapter:

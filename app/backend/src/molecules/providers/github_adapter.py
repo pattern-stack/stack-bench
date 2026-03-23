@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import base64
 import re
-import time
 from pathlib import PurePosixPath
 from typing import Protocol
 
 import httpx
 from pydantic import BaseModel
+
+from pattern_stack.atoms.cache import get_cache
 
 # ---------------------------------------------------------------------------
 # Protocol DTOs
@@ -148,32 +149,9 @@ def _detect_language(path: str) -> str | None:
     return _EXTENSION_LANGUAGE_MAP.get(suffix)
 
 
-# ---------------------------------------------------------------------------
-# Simple TTL cache
-# ---------------------------------------------------------------------------
-
 _MAX_CONTENT_SIZE = 100 * 1024  # 100KB
-
-
-class _TTLCache:
-    """Simple dict-based TTL cache (will migrate to pattern-stack cache subsystem later)."""
-
-    def __init__(self, ttl: float = 3600.0) -> None:
-        self._store: dict[str, tuple[float, object]] = {}
-        self._ttl = ttl
-
-    def get(self, key: str) -> object | None:
-        entry = self._store.get(key)
-        if entry is None:
-            return None
-        ts, value = entry
-        if time.monotonic() - ts > self._ttl:
-            del self._store[key]
-            return None
-        return value
-
-    def set(self, key: str, value: object) -> None:
-        self._store[key] = (time.monotonic(), value)
+_CACHE_NS = "github"
+_CACHE_TTL = 3600  # 1 hour — git SHAs are content-addressed, safe to cache long
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +316,7 @@ class GitHubAdapter:
         if token:
             headers["Authorization"] = f"Bearer {token}"
         self._client = httpx.AsyncClient(base_url=self.BASE_URL, headers=headers, timeout=30.0)
-        self._cache = _TTLCache(ttl=3600.0)
+        self._cache = get_cache()
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -358,10 +336,10 @@ class GitHubAdapter:
 
     async def get_diff(self, owner: str, repo: str, base_ref: str, head_ref: str) -> DiffData:
         """Get diff between two refs via GitHub compare API."""
-        cache_key = f"github:diff:{owner}/{repo}:{base_ref}:{head_ref}"
-        cached = self._cache.get(cache_key)
+        cache_key = f"diff:{owner}/{repo}:{base_ref}:{head_ref}"
+        cached = await self._cache.get(cache_key, namespace=_CACHE_NS)
         if cached is not None:
-            return cached  # type: ignore[return-value]
+            return DiffData.model_validate(cached)
 
         response = await self._client.get(f"/repos/{owner}/{repo}/compare/{base_ref}...{head_ref}")
         self._raise_for_status(response)
@@ -396,15 +374,15 @@ class GitHubAdapter:
             total_additions=total_additions,
             total_deletions=total_deletions,
         )
-        self._cache.set(cache_key, result)
+        await self._cache.set(cache_key, result.model_dump(), ttl=_CACHE_TTL, namespace=_CACHE_NS)
         return result
 
     async def get_file_tree(self, owner: str, repo: str, ref: str) -> FileTreeNode:
         """Get file tree at a ref via GitHub git trees API."""
-        cache_key = f"github:tree:{owner}/{repo}:{ref}"
-        cached = self._cache.get(cache_key)
+        cache_key = f"tree:{owner}/{repo}:{ref}"
+        cached = await self._cache.get(cache_key, namespace=_CACHE_NS)
         if cached is not None:
-            return cached  # type: ignore[return-value]
+            return FileTreeNode.model_validate(cached)
 
         response = await self._client.get(
             f"/repos/{owner}/{repo}/git/trees/{ref}",
@@ -415,15 +393,15 @@ class GitHubAdapter:
 
         entries: list[dict[str, object]] = data.get("tree", [])
         result = _build_file_tree(entries)
-        self._cache.set(cache_key, result)
+        await self._cache.set(cache_key, result.model_dump(), ttl=_CACHE_TTL, namespace=_CACHE_NS)
         return result
 
     async def get_file_content(self, owner: str, repo: str, ref: str, path: str) -> FileContent:
         """Get file content at a ref via GitHub contents API."""
-        cache_key = f"github:file:{owner}/{repo}:{ref}:{path}"
-        cached = self._cache.get(cache_key)
+        cache_key = f"file:{owner}/{repo}:{ref}:{path}"
+        cached = await self._cache.get(cache_key, namespace=_CACHE_NS)
         if cached is not None:
-            return cached  # type: ignore[return-value]
+            return FileContent.model_validate(cached)
 
         response = await self._client.get(
             f"/repos/{owner}/{repo}/contents/{path}",
@@ -456,5 +434,18 @@ class GitHubAdapter:
             lines=line_count,
             truncated=truncated,
         )
-        self._cache.set(cache_key, result)
+        await self._cache.set(cache_key, result.model_dump(), ttl=_CACHE_TTL, namespace=_CACHE_NS)
         return result
+
+    async def hydrate_stack(
+        self, owner: str, repo: str, branches: list[tuple[str, str, str]]
+    ) -> None:
+        """Pre-load cache for an entire stack's diffs.
+
+        Args:
+            branches: List of (branch_name, base_ref, head_ref) tuples
+        """
+        import asyncio
+
+        tasks = [self.get_diff(owner, repo, base, head) for _, base, head in branches]
+        await asyncio.gather(*tasks, return_exceptions=True)
