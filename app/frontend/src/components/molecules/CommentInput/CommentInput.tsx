@@ -1,12 +1,19 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Icon } from "@/components/atoms/Icon";
 
 interface CommentInputProps {
   onSubmit: (body: string) => void;
   onCancel: () => void;
+  lineCount?: number;
 }
 
-function CommentInput({ onSubmit, onCancel }: CommentInputProps) {
+function CommentInput({ onSubmit, onCancel, lineCount }: CommentInputProps) {
   const [body, setBody] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   const handleSubmit = useCallback(() => {
     const trimmed = body.trim();
@@ -31,27 +38,49 @@ function CommentInput({ onSubmit, onCancel }: CommentInputProps) {
   );
 
   return (
-    <div className="flex flex-col gap-2 p-3 bg-[var(--bg-sunken)] border-y border-[var(--border)]">
-      <textarea
-        className="w-full px-3 py-2 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--fg)] placeholder:text-[var(--fg-muted)] resize-y min-h-[60px] focus:outline-none focus:border-[var(--accent)]"
-        placeholder="Leave a comment..."
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={handleKeyDown}
-        autoFocus
-        rows={2}
-      />
-      <div className="flex items-center justify-end gap-2">
+    <div className="mx-4 my-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] shadow-lg shadow-black/20 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-muted)]">
+        <div className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
+          <div className="w-5 h-5 rounded-full bg-[var(--accent)] flex items-center justify-center">
+            <span className="text-[10px] text-white font-medium">Y</span>
+          </div>
+          <span>
+            {lineCount && lineCount > 1
+              ? `Comment on ${lineCount} lines`
+              : "Add a comment"}
+          </span>
+        </div>
         <button
           type="button"
-          className="px-3 py-1 text-xs text-[var(--fg-muted)] hover:text-[var(--fg)] rounded transition-colors cursor-pointer"
+          className="p-0.5 rounded text-[var(--fg-subtle)] hover:text-[var(--fg-muted)] transition-colors cursor-pointer"
           onClick={onCancel}
         >
-          Cancel
+          <Icon name="x" size="xs" />
         </button>
+      </div>
+
+      {/* Textarea */}
+      <div className="p-2">
+        <textarea
+          ref={textareaRef}
+          className="w-full px-2 py-1.5 text-sm bg-transparent text-[var(--fg-default)] placeholder:text-[var(--fg-subtle)] resize-none focus:outline-none"
+          placeholder="Write a comment..."
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={3}
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between px-3 py-2 border-t border-[var(--border-muted)]">
+        <span className="text-[10px] text-[var(--fg-subtle)]">
+          ⌘↵ to submit · Esc to cancel
+        </span>
         <button
           type="button"
-          className="px-3 py-1 text-xs text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded disabled:opacity-50 transition-colors cursor-pointer"
+          className="px-3 py-1 text-xs font-medium text-white bg-[var(--accent)] hover:brightness-110 rounded-md disabled:opacity-40 transition-all cursor-pointer"
           onClick={handleSubmit}
           disabled={!body.trim()}
         >

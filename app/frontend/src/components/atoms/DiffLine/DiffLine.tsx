@@ -7,6 +7,7 @@ interface DiffLineAtomProps {
   highlightedHtml?: string;
   selected?: boolean;
   rangeSelected?: boolean;
+  hasComment?: boolean;
   onSelect?: () => void;
   onAskAgent?: () => void;
   onAddComment?: () => void;
@@ -40,6 +41,7 @@ function DiffLineAtom({
   highlightedHtml,
   selected = false,
   rangeSelected = false,
+  hasComment = false,
   onSelect,
   onAskAgent,
   onAddComment,
@@ -52,9 +54,9 @@ function DiffLineAtom({
   return (
     <div
       className={cn(
-        "group/line relative flex font-[family-name:var(--font-mono)] text-xs leading-5 border-b border-[var(--border-muted)]/50 select-none",
+        "group/line relative flex font-[family-name:var(--font-mono)] text-xs leading-5 select-none",
         rangeSelected
-          ? "bg-[var(--accent-muted)]/40 border-l-2 border-l-[var(--accent)]"
+          ? "bg-[var(--accent-muted)]/50"
           : selected
             ? selectedBgMap[line.type]
             : bgMap[line.type],
@@ -65,26 +67,35 @@ function DiffLineAtom({
       onMouseDown={onMouseDown}
       onMouseEnter={onMouseEnter}
     >
-      {/* Comment gutter — left of line numbers */}
-      {!isHunk && onAddComment ? (
-        <button
-          type="button"
-          className="w-[20px] shrink-0 flex items-center justify-center opacity-0 group-hover/line:opacity-100 transition-opacity text-[var(--accent)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)]"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddComment();
-          }}
-          title="Add comment"
-        >
-          <Icon name="plus" size="xs" />
-        </button>
-      ) : (
-        <span className="w-[20px] shrink-0" />
-      )}
+      {/* Comment gutter */}
+      <span className="w-[20px] shrink-0 flex items-center justify-center relative">
+        {!isHunk && onAddComment && (
+          <button
+            type="button"
+            className={cn(
+              "w-4 h-4 rounded-sm flex items-center justify-center transition-all cursor-pointer",
+              hasComment
+                ? "opacity-100 bg-[var(--accent)] text-white"
+                : "opacity-0 group-hover/line:opacity-100 bg-[var(--accent)] text-white hover:brightness-110"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddComment();
+            }}
+            title="Add comment"
+          >
+            {hasComment ? (
+              <Icon name="message-square" size="xs" />
+            ) : (
+              <Icon name="plus" size="xs" />
+            )}
+          </button>
+        )}
+      </span>
 
       {/* Gutter: old line number */}
       <span
-        className="w-[40px] shrink-0 text-right pr-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/50"
+        className="w-[40px] shrink-0 text-right pr-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/30"
         aria-hidden="true"
       >
         {line.old_num ?? ""}
@@ -92,7 +103,7 @@ function DiffLineAtom({
 
       {/* Gutter: new line number */}
       <span
-        className="w-[40px] shrink-0 text-right pr-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/50"
+        className="w-[40px] shrink-0 text-right pr-2 select-none text-[var(--fg-subtle)] border-r border-[var(--border-muted)]/30"
         aria-hidden="true"
       >
         {line.new_num ?? ""}
@@ -127,7 +138,7 @@ function DiffLineAtom({
         >
           <button
             type="button"
-            className="flex items-center justify-center w-5 h-5 rounded text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)] transition-colors"
+            className="flex items-center justify-center w-5 h-5 rounded text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--accent-muted)] transition-colors cursor-pointer"
             onClick={onAskAgent}
             title="Ask agent"
           >
