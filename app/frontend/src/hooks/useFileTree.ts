@@ -29,6 +29,7 @@ export function useFileTree(
         `/api/v1/stacks/${stackId}/branches/${branchId}/tree`
       ),
     enabled: !!stackId && !!branchId,
+    staleTime: Infinity,
   });
 
   const error = queryError ? String(queryError) : null;
