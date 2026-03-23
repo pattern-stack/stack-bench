@@ -48,3 +48,6 @@ export type { ActivityLogProps } from "./ActivityLog";
 
 export { CommentInput } from "./CommentInput";
 export type { CommentInputProps } from "./CommentInput";
+
+export { CommentPopover } from "./CommentPopover";
+export type { CommentPopoverProps } from "./CommentPopover";

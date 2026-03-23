@@ -1,5 +1,6 @@
+import { useRef } from "react";
 import { DiffLineAtom } from "@/components/atoms/DiffLine";
-import { CommentInput } from "@/components/molecules/CommentInput";
+import { CommentPopover } from "@/components/molecules/CommentPopover";
 import { Icon } from "@/components/atoms/Icon";
 import type { ReviewComment } from "@/hooks/useReviewComments";
 import type { DiffHunk as DiffHunkType } from "@/types/diff";
@@ -72,6 +73,77 @@ function CommentThread({ comments }: { comments: ReviewComment[] }) {
   );
 }
 
+function DiffLineWithRef({
+  lineKey,
+  line,
+  hunkLine,
+  selectedLines,
+  rangeSelectedLines,
+  commentsByLine,
+  commentingLine,
+  rangeLineCount,
+  onLineSelect,
+  onAskAgent,
+  onAddComment,
+  onSubmitComment,
+  onCancelComment,
+  onRangeMouseDown,
+  onRangeMouseEnter,
+  lineIndex,
+}: {
+  lineKey: string;
+  line: DiffHunkType["lines"][number];
+  hunkLine: DiffHunkType["lines"][number];
+  selectedLines?: Set<string>;
+  rangeSelectedLines?: Set<string>;
+  commentsByLine?: Map<string, ReviewComment[]>;
+  commentingLine?: string | null;
+  rangeLineCount?: number;
+  onLineSelect?: (lineKey: string) => void;
+  onAskAgent?: (lineKey: string) => void;
+  onAddComment?: (lineKey: string) => void;
+  onSubmitComment?: (lineKey: string, body: string) => void;
+  onCancelComment?: () => void;
+  onRangeMouseDown?: (lineKey: string, lineIndex: number) => void;
+  onRangeMouseEnter?: (lineKey: string, lineIndex: number) => void;
+  lineIndex: number;
+}) {
+  const lineRef = useRef<HTMLDivElement>(null);
+  const lineComments = commentsByLine?.get(lineKey);
+  const isCommenting = commentingLine === lineKey;
+  const hasComment = (lineComments && lineComments.length > 0) || false;
+
+  return (
+    <div ref={lineRef}>
+      <DiffLineAtom
+        line={hunkLine}
+        highlightedHtml={line.highlightedHtml}
+        selected={selectedLines?.has(lineKey)}
+        rangeSelected={rangeSelectedLines?.has(lineKey)}
+        hasComment={hasComment}
+        onSelect={onLineSelect ? () => onLineSelect(lineKey) : undefined}
+        onAskAgent={onAskAgent ? () => onAskAgent(lineKey) : undefined}
+        onAddComment={onAddComment ? () => onAddComment(lineKey) : undefined}
+        onMouseDown={onRangeMouseDown && hunkLine.type !== "hunk" ? () => onRangeMouseDown(lineKey, lineIndex) : undefined}
+        onMouseEnter={onRangeMouseEnter && hunkLine.type !== "hunk" ? () => onRangeMouseEnter(lineKey, lineIndex) : undefined}
+      />
+
+      {/* Existing comments — inline thread */}
+      {hasComment && <CommentThread comments={lineComments!} />}
+
+      {/* Comment popover — floats over the diff */}
+      {isCommenting && onSubmitComment && onCancelComment && (
+        <CommentPopover
+          anchorRef={lineRef}
+          onSubmit={(body) => onSubmitComment(lineKey, body)}
+          onCancel={onCancelComment}
+          lineCount={rangeLineCount}
+        />
+      )}
+    </div>
+  );
+}
+
 function DiffHunkMolecule({
   hunk,
   filePath,
@@ -103,37 +175,27 @@ function DiffHunkMolecule({
       {/* Hunk lines */}
       {hunk.lines.map((line, i) => {
         const lineKey = makeLineKey(filePath, line);
-        const lineComments = commentsByLine?.get(lineKey);
-        const isCommenting = commentingLine === lineKey;
-        const hasComment = (lineComments && lineComments.length > 0) || false;
 
         return (
-          <div key={i}>
-            <DiffLineAtom
-              line={line}
-              highlightedHtml={line.highlightedHtml}
-              selected={selectedLines?.has(lineKey)}
-              rangeSelected={rangeSelectedLines?.has(lineKey)}
-              hasComment={hasComment}
-              onSelect={onLineSelect ? () => onLineSelect(lineKey) : undefined}
-              onAskAgent={onAskAgent ? () => onAskAgent(lineKey) : undefined}
-              onAddComment={onAddComment ? () => onAddComment(lineKey) : undefined}
-              onMouseDown={onRangeMouseDown && line.type !== "hunk" ? () => onRangeMouseDown(lineKey, i) : undefined}
-              onMouseEnter={onRangeMouseEnter && line.type !== "hunk" ? () => onRangeMouseEnter(lineKey, i) : undefined}
-            />
-
-            {/* Existing comments */}
-            {hasComment && <CommentThread comments={lineComments!} />}
-
-            {/* Comment input */}
-            {isCommenting && onSubmitComment && onCancelComment && (
-              <CommentInput
-                onSubmit={(body) => onSubmitComment(lineKey, body)}
-                onCancel={onCancelComment}
-                lineCount={rangeLineCount}
-              />
-            )}
-          </div>
+          <DiffLineWithRef
+            key={i}
+            lineKey={lineKey}
+            line={line}
+            hunkLine={line}
+            selectedLines={selectedLines}
+            rangeSelectedLines={rangeSelectedLines}
+            commentsByLine={commentsByLine}
+            commentingLine={commentingLine}
+            rangeLineCount={rangeLineCount}
+            onLineSelect={onLineSelect}
+            onAskAgent={onAskAgent}
+            onAddComment={onAddComment}
+            onSubmitComment={onSubmitComment}
+            onCancelComment={onCancelComment}
+            onRangeMouseDown={onRangeMouseDown}
+            onRangeMouseEnter={onRangeMouseEnter}
+            lineIndex={i}
+          />
         );
       })}
     </div>
