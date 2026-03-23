@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils";
 interface BranchMetaProps {
   base: string;
   head: string;
+  fullBase?: string;
+  fullHead?: string;
   className?: string;
 }
 
-function BranchMeta({ base, head, className }: BranchMetaProps) {
+function BranchMeta({ base, head, fullBase, fullHead, className }: BranchMetaProps) {
   return (
     <span
       className={cn(
@@ -14,9 +16,9 @@ function BranchMeta({ base, head, className }: BranchMetaProps) {
         className
       )}
     >
-      <span>{base}</span>
+      <span title={fullBase ?? base}>{base}</span>
       <span className="text-[var(--accent)]">&larr;</span>
-      <span>{head}</span>
+      <span title={fullHead ?? head}>{head}</span>
     </span>
   );
 }
