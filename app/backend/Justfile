@@ -10,9 +10,10 @@ migrate:
 migration msg:
     uv run alembic revision --autogenerate -m "{{msg}}"
 
-# Seed the database with SDLC agents
+# Seed the database
 seed:
     pts db seed src/seeds/agents.yaml
+    pts db seed src/seeds/example.yaml
 
 # Run tests
 test:

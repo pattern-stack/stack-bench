@@ -14,14 +14,11 @@ node_modules/
 .next/
 build/
 
+# Keys / secrets
+.keys/
+
 # Claude Code worktrees
 .claude/worktrees/
-
-# MCP server caches
-.playwright-mcp/
-
-# Browser-pilot screenshots (uploaded to GitHub CDN, not committed)
-screenshots/
 
 # Cloned reference repos
 dealbrain/

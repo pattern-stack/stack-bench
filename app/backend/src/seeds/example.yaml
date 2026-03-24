@@ -1,0 +1,42 @@
+# Example seed data for Stack Bench
+# Uses a public repo so no GitHub auth is required for basic testing.
+#
+# Usage: pts db seed src/seeds/example.yaml
+
+projects:
+  - seed_key: example-project
+    name: example
+    description: Example project for testing Stack Bench
+
+workspaces:
+  - seed_key: example-workspace
+    project: example-project
+    name: example
+    repo_url: https://github.com/pattern-stack/stack-bench
+    provider: github
+    default_branch: main
+
+stacks:
+  - seed_key: stack-example
+    project: example-project
+    name: onboarding
+    trunk: main
+
+branches:
+  - seed_key: branch-ex-1
+    stack: stack-example
+    workspace: example-workspace
+    name: example/onboarding/1-setup
+    position: 1
+
+  - seed_key: branch-ex-2
+    stack: stack-example
+    workspace: example-workspace
+    name: example/onboarding/2-config
+    position: 2
+
+  - seed_key: branch-ex-3
+    stack: stack-example
+    workspace: example-workspace
+    name: example/onboarding/3-deploy
+    position: 3

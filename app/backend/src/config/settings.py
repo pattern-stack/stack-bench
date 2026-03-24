@@ -14,6 +14,18 @@ class AppSettings(BaseSettings):
     DATABASE_URL: str = Field(default="postgresql+asyncpg://stack-bench:password@localhost:5932/stack-bench")
     WEBHOOK_SECRET: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
+    GITHUB_TOKEN: str = Field(default="")
+
+    # GitHub App
+    GITHUB_APP_ID: str = Field(default="")
+    GITHUB_APP_CLIENT_ID: str = Field(default="")
+    GITHUB_APP_CLIENT_SECRET: str = Field(default="")
+    GITHUB_APP_PRIVATE_KEY: str = Field(default="")  # PEM contents (from env var)
+
+    # Ephemeral clone settings
+    CLONE_BASE_DIR: str = Field(default="/tmp/stack-bench-clones")
+    CLONE_MAX_CONCURRENT: int = Field(default=5)
+    CLONE_TTL_SECONDS: int = Field(default=3600)
 
     model_config = {
         "env_file": str(PROJECT_ROOT / ".env"),

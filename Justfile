@@ -1,7 +1,11 @@
 # Stack Bench — cross-language orchestration
 
-# Start all services
+# Start all services (secrets injected from 1Password)
 dev:
+    op run --env-file=.env.tpl --account=my.1password.com -- pts dev
+
+# Start without 1Password (requires app/.env to exist)
+dev-local:
     pts dev
 
 # Run all tests
@@ -18,9 +22,15 @@ quality-backend:
     cd app/backend && just quality
 
 migrate:
+    op run --env-file=.env.tpl --account=my.1password.com -- just _migrate
+
+_migrate:
     cd app/backend && just migrate
 
 seed:
+    op run --env-file=.env.tpl --account=my.1password.com -- just _seed
+
+_seed:
     cd app/backend && just seed
 
 # CLI
