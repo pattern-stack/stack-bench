@@ -27,3 +27,9 @@ export type { DiffFileHeaderProps } from "./DiffFileHeader";
 
 export { DiffFileMolecule } from "./DiffFile";
 export type { DiffFileMoleculeProps } from "./DiffFile";
+
+export { FileTreeItem } from "./FileTreeItem";
+export type { FileTreeItemProps } from "./FileTreeItem";
+
+export { FileContent } from "./FileContent";
+export type { FileContentProps } from "./FileContent";
