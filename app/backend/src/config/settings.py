@@ -22,6 +22,13 @@ class AppSettings(BaseSettings):
     GITHUB_APP_CLIENT_SECRET: str = Field(default="")
     GITHUB_APP_PRIVATE_KEY: str = Field(default="")  # PEM contents (from env var)
 
+    # Encryption
+    ENCRYPTION_KEY: str = Field(default="")  # Fernet key for encrypting tokens
+
+    # OAuth
+    GITHUB_OAUTH_REDIRECT_URI: str = Field(default="http://localhost:8500/api/v1/auth/github/callback")
+    FRONTEND_URL: str = Field(default="http://localhost:3500")
+
     # Ephemeral clone settings
     CLONE_BASE_DIR: str = Field(default="/tmp/stack-bench-clones")
     CLONE_MAX_CONCURRENT: int = Field(default=5)
