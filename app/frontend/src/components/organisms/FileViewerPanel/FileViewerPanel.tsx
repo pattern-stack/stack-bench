@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileTree } from "@/components/organisms/FileTree";
 import { FileContent } from "@/components/molecules/FileContent";
+import { PathBar } from "@/components/molecules/PathBar";
 import { useFileTree } from "@/hooks/useFileTree";
 import { useFileContent } from "@/hooks/useFileContent";
 
@@ -24,7 +25,7 @@ function FileViewerPanel({ branchId }: FileViewerPanelProps) {
   return (
     <div className="flex h-full">
       {/* File tree sidebar */}
-      <div className="w-[250px] shrink-0 border-r border-[var(--border)] bg-[var(--bg-surface)] overflow-hidden">
+      <div className="w-[250px] shrink-0 border-r border-[var(--border)] bg-[var(--bg-surface)] overflow-hidden flex flex-col">
         <FileTree
           tree={tree}
           selectedPath={selectedPath}
@@ -33,9 +34,14 @@ function FileViewerPanel({ branchId }: FileViewerPanelProps) {
       </div>
 
       {/* File content area */}
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
         {fileContent ? (
-          <FileContent file={fileContent} />
+          <>
+            <PathBar path={fileContent.path} />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <FileContent file={fileContent} />
+            </div>
+          </>
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-[var(--fg-muted)] text-sm">

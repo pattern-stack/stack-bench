@@ -12,11 +12,6 @@ function FileContent({ file }: FileContentProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* File path breadcrumb */}
-      <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--bg-surface)] text-xs font-[family-name:var(--font-mono)] text-[var(--fg-muted)]">
-        {file.path}
-      </div>
-
       {/* File content */}
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse">
