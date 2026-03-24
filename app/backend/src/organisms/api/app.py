@@ -11,6 +11,7 @@ from organisms.api.routers.agents import router as agents_router
 from organisms.api.routers.conversations import router as conversations_router
 from organisms.api.routers.projects import router as projects_router
 from organisms.api.routers.stacks import router as stacks_router
+from organisms.api.routers.tasks import router as tasks_router
 
 
 @asynccontextmanager
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(agents_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(stacks_router, prefix="/api/v1")
+    app.include_router(tasks_router, prefix="/api/v1")
 
     # Error handlers
     app.add_exception_handler(MoleculeError, molecule_exception_handler)  # type: ignore[arg-type]

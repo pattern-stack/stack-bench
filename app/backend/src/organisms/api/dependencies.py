@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from molecules.apis.conversation_api import ConversationAPI
 from molecules.apis.stack_api import StackAPI
+from molecules.apis.task_management_api import TaskManagementAPI
 from molecules.runtime.conversation_runner import ConversationRunner
 
 
@@ -38,3 +39,10 @@ def get_stack_api(db: DatabaseSession) -> StackAPI:
 
 
 StackAPIDep = Annotated[StackAPI, Depends(get_stack_api)]
+
+
+def get_task_management_api(db: DatabaseSession) -> TaskManagementAPI:
+    return TaskManagementAPI(db)
+
+
+TaskManagementAPIDep = Annotated[TaskManagementAPI, Depends(get_task_management_api)]
