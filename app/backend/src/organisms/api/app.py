@@ -8,6 +8,7 @@ from config.settings import get_settings
 from molecules.exceptions import MoleculeError
 from organisms.api.error_handlers import molecule_exception_handler
 from organisms.api.routers.agents import router as agents_router
+from organisms.api.routers.auth import router as auth_router
 from organisms.api.routers.conversations import router as conversations_router
 from organisms.api.routers.projects import router as projects_router
 from organisms.api.routers.stacks import router as stacks_router
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     # Register routers
+    app.include_router(auth_router, prefix="/api/v1")
     app.include_router(conversations_router, prefix="/api/v1")
     app.include_router(agents_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")

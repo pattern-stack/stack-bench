@@ -5,6 +5,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from molecules.apis.conversation_api import ConversationAPI
+from molecules.apis.github_oauth_api import GitHubOAuthAPI
 from molecules.apis.stack_api import StackAPI
 from molecules.runtime.conversation_runner import ConversationRunner
 
@@ -38,3 +39,10 @@ def get_stack_api(db: DatabaseSession) -> StackAPI:
 
 
 StackAPIDep = Annotated[StackAPI, Depends(get_stack_api)]
+
+
+def get_github_oauth_api(db: DatabaseSession) -> GitHubOAuthAPI:
+    return GitHubOAuthAPI(db)
+
+
+GitHubOAuthAPIDep = Annotated[GitHubOAuthAPI, Depends(get_github_oauth_api)]
