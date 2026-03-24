@@ -1,6 +1,7 @@
 # Stack Bench — cross-language orchestration
 
 # Start all services (secrets injected from 1Password)
+# Set OP_ACCOUNT env var to select 1Password account
 dev:
     op run --env-file=.env.example -- pts dev
 
