@@ -32,3 +32,6 @@ export type { DiffLineAtomProps } from "./DiffLine";
 
 export { DiffBadge } from "./DiffBadge";
 export type { DiffBadgeProps } from "./DiffBadge";
+
+export { FileIcon } from "./FileIcon";
+export type { FileIconProps } from "./FileIcon";
