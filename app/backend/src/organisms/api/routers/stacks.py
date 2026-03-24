@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from features.branches.schemas.output import BranchResponse
@@ -134,13 +135,56 @@ async def restack_stack(stack_id: UUID, data: RestackRequest, api: StackAPIDep) 
     return await api.restack(stack_id, from_position=data.from_position)
 
 
-# --- Merge endpoint ---
+# --- Merge endpoint (deprecated) ---
 
 
-@router.post("/{stack_id}/merge")
-async def merge_stack(stack_id: UUID, api: StackAPIDep) -> dict[str, object]:
-    """Merge all PRs in the stack bottom-up via GitHub API."""
-    return await api.merge_stack(stack_id)
+@router.post("/{stack_id}/merge", deprecated=True)
+async def merge_stack(stack_id: UUID, api: StackAPIDep) -> JSONResponse:
+    """Deprecated: Use POST /{stack_id}/merge-cascade instead."""
+    return JSONResponse(
+        status_code=410,
+        content={"detail": "Use POST /stacks/{stack_id}/merge-cascade instead"},
+    )
+
+
+# --- Merge Cascade endpoints ---
+
+
+class StartCascadeRequest(BaseModel):
+    merge_method: str = Field("squash", max_length=20)
+
+
+@router.post("/{stack_id}/merge-cascade", status_code=201)
+async def start_merge_cascade(
+    stack_id: UUID,
+    data: StartCascadeRequest,
+    api: StackAPIDep,
+) -> dict[str, object]:
+    """Start a merge cascade for the stack.
+
+    Creates cascade + steps, processes first step (retarget, rebase, check run).
+    """
+    return await api.start_merge_cascade(stack_id, triggered_by="api")
+
+
+@router.get("/{stack_id}/merge-cascade/{cascade_id}")
+async def get_merge_cascade(
+    stack_id: UUID,
+    cascade_id: UUID,
+    api: StackAPIDep,
+) -> dict[str, object]:
+    """Get cascade status with all steps."""
+    return await api.get_cascade_detail(cascade_id)
+
+
+@router.post("/{stack_id}/merge-cascade/{cascade_id}/cancel")
+async def cancel_merge_cascade(
+    stack_id: UUID,
+    cascade_id: UUID,
+    api: StackAPIDep,
+) -> dict[str, object]:
+    """Cancel a running cascade."""
+    return await api.cancel_cascade(cascade_id)
 
 
 # --- Branch endpoints (nested under stack) ---

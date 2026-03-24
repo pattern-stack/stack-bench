@@ -8,9 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config.settings import get_settings
 from molecules.apis.conversation_api import ConversationAPI
 from molecules.apis.stack_api import StackAPI
+from molecules.entities.merge_cascade_entity import MergeCascadeEntity
 from molecules.providers.github_adapter import GitHubAdapter
 from molecules.runtime.conversation_runner import ConversationRunner
 from molecules.services.clone_manager import CloneManager
+from molecules.workflows.cascade_workflow import CascadeWorkflow
 
 
 async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -58,8 +60,36 @@ def get_clone_manager() -> CloneManager:
 CloneManagerDep = Annotated[CloneManager, Depends(get_clone_manager)]
 
 
-def get_stack_api(db: DatabaseSession, github: GitHubAdapterDep, clone_manager: CloneManagerDep) -> StackAPI:
-    return StackAPI(db, github, clone_manager=clone_manager)
+def get_cascade_entity(db: DatabaseSession) -> MergeCascadeEntity:
+    return MergeCascadeEntity(db)
+
+
+CascadeEntityDep = Annotated[MergeCascadeEntity, Depends(get_cascade_entity)]
+
+
+def get_cascade_workflow(
+    entity: CascadeEntityDep, github: GitHubAdapterDep, clone_manager: CloneManagerDep
+) -> CascadeWorkflow:
+    return CascadeWorkflow(entity=entity, github=github, clone_manager=clone_manager)
+
+
+CascadeWorkflowDep = Annotated[CascadeWorkflow, Depends(get_cascade_workflow)]
+
+
+def get_stack_api(
+    db: DatabaseSession,
+    github: GitHubAdapterDep,
+    clone_manager: CloneManagerDep,
+    cascade_entity: CascadeEntityDep,
+    cascade_workflow: CascadeWorkflowDep,
+) -> StackAPI:
+    return StackAPI(
+        db,
+        github,
+        clone_manager=clone_manager,
+        cascade_entity=cascade_entity,
+        cascade_workflow=cascade_workflow,
+    )
 
 
 StackAPIDep = Annotated[StackAPI, Depends(get_stack_api)]

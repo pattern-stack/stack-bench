@@ -17,8 +17,10 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from features.review_comments.schemas.input import ReviewCommentCreate, ReviewCommentUpdate
+    from molecules.entities.merge_cascade_entity import MergeCascadeEntity
     from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode, GitHubAdapter
     from molecules.services.clone_manager import CloneManager
+    from molecules.workflows.cascade_workflow import CascadeWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +46,16 @@ class StackAPI:
         db: AsyncSession,
         github: GitHubAdapter | None = None,
         clone_manager: CloneManager | None = None,
+        cascade_entity: MergeCascadeEntity | None = None,
+        cascade_workflow: CascadeWorkflow | None = None,
     ) -> None:
         self.db = db
         self.entity = StackEntity(db)
         self.github = github
         self.clone_manager = clone_manager
         self._comment_svc = ReviewCommentService()
+        self._cascade_entity = cascade_entity
+        self._cascade_workflow = cascade_workflow
 
     async def create_stack(
         self,
@@ -106,9 +112,11 @@ class StackAPI:
 
             if ci_tasks:
                 results = await asyncio.gather(*ci_tasks, return_exceptions=True)
-                for idx, result in zip(ci_indices, results):
+                for idx, result in zip(ci_indices, results, strict=True):
                     if isinstance(result, BaseException):
-                        logger.warning("Failed to fetch CI status for branch %s: %s", branches[idx]["branch"]["name"], result)
+                        logger.warning(
+                            "Failed to fetch CI status for branch %s: %s", branches[idx]["branch"]["name"], result
+                        )
                         branches[idx]["ci_status"] = "none"
                     else:
                         branches[idx]["ci_status"] = result.status
@@ -252,6 +260,56 @@ class StackAPI:
         await self.db.refresh(pr)
         return PullRequestResponse.model_validate(pr)
 
+    # --- Merge cascade ---
+
+    async def start_merge_cascade(self, stack_id: UUID, triggered_by: str) -> dict:
+        """Start a merge cascade.
+
+        1. Create cascade via entity.create_cascade(db, stack_id, triggered_by)
+        2. Get the first pending step
+        3. Get workspace for the stack
+        4. Process the first step via workflow.process_step(db, cascade_id, step, workspace)
+        5. Return cascade detail
+        """
+        if self._cascade_entity is None or self._cascade_workflow is None:
+            msg = "Cascade entity/workflow not configured"
+            raise RuntimeError(msg)
+
+        cascade = await self._cascade_entity.create_cascade(self.db, stack_id, triggered_by)
+
+        # Get the first pending step
+        from features.cascade_steps.service import CascadeStepService
+
+        step_svc = CascadeStepService()
+        first_step = await step_svc.get_pending_step(self.db, cascade.id)
+
+        if first_step is not None:
+            # Resolve workspace from first branch
+            branch = await self.entity.branch_service.get(self.db, first_step.branch_id)
+            if branch is not None:
+                workspace = await self.entity.workspace_service.get(self.db, branch.workspace_id)
+                if workspace is not None:
+                    await self._cascade_workflow.process_step(self.db, cascade.id, first_step, workspace)
+
+        await self.db.commit()
+        return await self._cascade_entity.get_cascade_detail(self.db, cascade.id)
+
+    async def get_cascade_detail(self, cascade_id: UUID) -> dict:
+        """Delegate to entity.get_cascade_detail."""
+        if self._cascade_entity is None:
+            msg = "Cascade entity not configured"
+            raise RuntimeError(msg)
+        return await self._cascade_entity.get_cascade_detail(self.db, cascade_id)
+
+    async def cancel_cascade(self, cascade_id: UUID) -> dict:
+        """Cancel a running cascade, return detail."""
+        if self._cascade_entity is None:
+            msg = "Cascade entity not configured"
+            raise RuntimeError(msg)
+        await self._cascade_entity.cancel_cascade(self.db, cascade_id)
+        await self.db.commit()
+        return await self._cascade_entity.get_cascade_detail(self.db, cascade_id)
+
     # --- Review comments (Stack Bench local, GitHub sync optional) ---
 
     async def create_comment(self, data: ReviewCommentCreate) -> ReviewCommentResponse:
@@ -288,10 +346,12 @@ class StackAPI:
         for bd in result["branches"]:
             branch_resp = BranchResponse.model_validate(bd["branch"])
             pr_resp = PullRequestResponse.model_validate(bd["pull_request"]) if bd["pull_request"] else None
-            synced.append({
-                "branch": branch_resp.model_dump(),
-                "pull_request": pr_resp.model_dump() if pr_resp else None,
-            })
+            synced.append(
+                {
+                    "branch": branch_resp.model_dump(),
+                    "pull_request": pr_resp.model_dump() if pr_resp else None,
+                }
+            )
         return {
             "branches": synced,
             "synced_count": result["synced_count"],
@@ -334,11 +394,13 @@ class StackAPI:
         for bd in branch_data:
             branch = bd["branch"]
             if branch.position >= from_position:
-                branches_input.append({
-                    "name": branch.name,
-                    "position": branch.position,
-                    "head_sha": branch.head_sha,
-                })
+                branches_input.append(
+                    {
+                        "name": branch.name,
+                        "position": branch.position,
+                        "head_sha": branch.head_sha,
+                    }
+                )
 
         # Run the restack
         svc = RemoteRestackService(self.clone_manager)
