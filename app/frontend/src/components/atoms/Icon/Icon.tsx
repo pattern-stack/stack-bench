@@ -53,6 +53,38 @@ const iconPaths: Record<string, React.ReactNode> = {
   "message-square": (
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </>
+  ),
+  "x-circle": (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </>
+  ),
+  "collapse-all": (
+    <>
+      <polyline points="15 4 9 10 15 16" />
+      <polyline points="19 4 13 10 19 16" />
+    </>
+  ),
+  "expand-all": (
+    <>
+      <polyline points="4 9 10 15 16 9" />
+      <polyline points="4 5 10 11 16 5" />
+    </>
+  ),
+  "refresh-cw": (
+    <>
+      <polyline points="23 4 23 10 17 10" />
+      <polyline points="1 20 1 14 7 14" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </>
+  ),
 };
 
 type IconName = keyof typeof iconPaths;
