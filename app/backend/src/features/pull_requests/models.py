@@ -33,3 +33,4 @@ class PullRequest(EventPattern):
     title = Field(str, required=True, max_length=500)
     description = Field(str, nullable=True)
     review_notes = Field(str, nullable=True)
+    base_ref = Field(str, nullable=True, max_length=200)

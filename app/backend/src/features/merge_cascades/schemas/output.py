@@ -4,16 +4,13 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
-class PullRequestResponse(BaseModel):
+class MergeCascadeResponse(BaseModel):
     id: UUID
     reference_number: str | None = None
-    branch_id: UUID
-    external_id: int | None = None
-    external_url: str | None = None
-    title: str
-    description: str | None = None
-    review_notes: str | None = None
-    base_ref: str | None = None
+    stack_id: UUID
+    triggered_by: str
+    current_position: int
+    error: str | None = None
     state: str
     created_at: datetime
     updated_at: datetime

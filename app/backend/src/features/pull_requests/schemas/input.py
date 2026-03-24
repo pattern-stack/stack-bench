@@ -11,6 +11,7 @@ class PullRequestCreate(BaseModel):
     review_notes: str | None = None
     external_id: int | None = None
     external_url: str | None = PydanticField(None, max_length=500)
+    base_ref: str | None = PydanticField(None, max_length=200)
 
 
 class PullRequestUpdate(BaseModel):
@@ -19,3 +20,4 @@ class PullRequestUpdate(BaseModel):
     review_notes: str | None = None
     external_id: int | None = None
     external_url: str | None = PydanticField(None, max_length=500)
+    base_ref: str | None = PydanticField(None, max_length=200)

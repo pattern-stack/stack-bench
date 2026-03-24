@@ -2,8 +2,11 @@
 from features.agent_definitions.models import AgentDefinition  # noqa: F401
 from features.agent_runs.models import AgentRun  # noqa: F401
 from features.branches.models import Branch  # noqa: F401
+from features.cascade_steps.models import CascadeStep  # noqa: F401
+from features.check_runs.models import CheckRun  # noqa: F401
 from features.conversations.models import Conversation  # noqa: F401
 from features.jobs.models import Job  # noqa: F401
+from features.merge_cascades.models import MergeCascade  # noqa: F401
 from features.message_parts.models import MessagePart  # noqa: F401
 from features.messages.models import Message  # noqa: F401
 from features.projects.models import Project  # noqa: F401
