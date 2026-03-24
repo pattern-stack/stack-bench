@@ -36,6 +36,10 @@
   --red-bg: #28171a;             /* Diff deletion background */
   --accent-muted: #1f6feb33;     /* Selected/active background */
 
+  /* ── Indent Guides ─────────────────────────────────────── */
+  --indent-guide: #21262d;       /* Indent guide line color */
+  --indent-guide-active: #30363d; /* Indent guide on hover scope */
+
   /* ── Typography ──────────────────────────────────────────── */
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
