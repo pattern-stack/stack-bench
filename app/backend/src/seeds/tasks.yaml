@@ -1,0 +1,32 @@
+# Default task management seed data
+specs:
+  - type: TaskProjectSeed
+    name: "Stack Bench"
+    description: "Default development project"
+
+  - type: TaskTagSeed
+    name: "bug"
+    color: "#d73a4a"
+    group: "issue_type"
+
+  - type: TaskTagSeed
+    name: "feature"
+    color: "#0075ca"
+    group: "issue_type"
+
+  - type: TaskTagSeed
+    name: "chore"
+    color: "#e4e669"
+    group: "issue_type"
+
+  - type: TaskTagSeed
+    name: "high-priority"
+    color: "#b60205"
+    group: "priority"
+    is_exclusive: true
+
+  - type: TaskTagSeed
+    name: "low-priority"
+    color: "#0e8a16"
+    group: "priority"
+    is_exclusive: true
