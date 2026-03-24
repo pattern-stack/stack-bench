@@ -27,3 +27,6 @@ export type { DiffFileHeaderProps } from "./DiffFileHeader";
 
 export { DiffFileMolecule } from "./DiffFile";
 export type { DiffFileMoleculeProps } from "./DiffFile";
+
+export { GitHubConnect } from "./GitHubConnect";
+export type { GitHubConnectProps } from "./GitHubConnect";

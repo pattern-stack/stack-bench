@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
+import { GitHubConnect } from "@/components/molecules/GitHubConnect";
 import { useStackDetail } from "@/hooks/useStackDetail";
 import { useBranchDiff } from "@/hooks/useBranchDiff";
 import type { StackConnectorItem } from "@/components/molecules";
@@ -65,24 +66,29 @@ export function App() {
   ];
 
   return (
-    <AppShell
-      stackName={data.stack.name}
-      trunk={data.stack.trunk}
-      items={items}
-      activeIndex={activeIndex}
-      onSelect={setActiveIndex}
-      activeBranch={activeBranch}
-      tabs={tabs}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-    >
-      {diffData ? (
-        <FilesChangedPanel diffData={diffData} />
-      ) : (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>
-        </div>
-      )}
-    </AppShell>
+    <div className="relative h-screen">
+      <div className="absolute top-2 right-3 z-10">
+        <GitHubConnect />
+      </div>
+      <AppShell
+        stackName={data.stack.name}
+        trunk={data.stack.trunk}
+        items={items}
+        activeIndex={activeIndex}
+        onSelect={setActiveIndex}
+        activeBranch={activeBranch}
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      >
+        {diffData ? (
+          <FilesChangedPanel diffData={diffData} />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>
+          </div>
+        )}
+      </AppShell>
+    </div>
   );
 }
