@@ -1,5 +1,2 @@
-export { StackSidebar } from "./StackSidebar";
-export type { StackSidebarProps } from "./StackSidebar";
-
 export { FilesChangedPanel } from "./FilesChangedPanel";
 export type { FilesChangedPanelProps } from "./FilesChangedPanel";
