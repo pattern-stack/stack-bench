@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
+import { FileViewerPanel } from "@/components/organisms/FileViewerPanel";
 import { useStackDetail } from "@/hooks/useStackDetail";
 import { useBranchDiff } from "@/hooks/useBranchDiff";
 import type { StackConnectorItem } from "@/components/molecules";
@@ -62,6 +63,7 @@ export function App() {
 
   const tabs: TabItem[] = [
     { id: "files", label: "Files changed", count: fileCount || undefined },
+    { id: "source", label: "Source" },
   ];
 
   return (
@@ -76,12 +78,17 @@ export function App() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
     >
-      {diffData ? (
-        <FilesChangedPanel diffData={diffData} />
-      ) : (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>
-        </div>
+      {activeTab === "files" && (
+        diffData ? (
+          <FilesChangedPanel diffData={diffData} />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>
+          </div>
+        )
+      )}
+      {activeTab === "source" && (
+        <FileViewerPanel branchId={activeBranchId} />
       )}
     </AppShell>
   );
