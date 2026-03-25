@@ -120,6 +120,19 @@ class StackAPI:
         await self.db.commit()
         return PullRequestResponse.model_validate(pr)
 
+    # --- Sync operations ---
+
+    async def sync_stack(
+        self,
+        stack_id: UUID,
+        workspace_id: UUID,
+        branches_data: list[dict[str, object]],
+    ) -> dict[str, object]:
+        """Sync stack state from client-provided branch and PR data."""
+        result: dict[str, object] = await self.entity.sync_stack(stack_id, workspace_id, branches_data)
+        await self.db.commit()
+        return result
+
     # --- Git data (read-through via GitHubAdapter) ---
 
     async def get_branch_diff(self, stack_id: UUID, branch_id: UUID) -> DiffData:
