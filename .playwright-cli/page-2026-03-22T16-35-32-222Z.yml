@@ -1,0 +1,695 @@
+- generic [ref=e2]:
+  - region
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner "Global Navigation Menu" [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - button "Open menu" [ref=e12] [cursor=pointer]:
+            - img [ref=e13]
+          - link "Homepage (g then d)" [ref=e15] [cursor=pointer]:
+            - /url: /
+            - img [ref=e16]
+        - generic [ref=e18]:
+          - navigation "Breadcrumbs" [ref=e19]:
+            - list [ref=e20]:
+              - listitem [ref=e21]:
+                - link "pattern-stack" [ref=e22] [cursor=pointer]:
+                  - /url: /pattern-stack
+                  - generic [ref=e23]: pattern-stack
+              - listitem [ref=e24]:
+                - link "stack-bench" [ref=e25] [cursor=pointer]:
+                  - /url: /pattern-stack/stack-bench
+                  - generic [ref=e26]: stack-bench
+                  - img [ref=e27]
+          - button "Search or jump to…" [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]:
+              - generic:
+                - img
+              - generic [ref=e33]:
+                - generic:
+                  - text: Type
+                  - generic: /
+                  - text: to search
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e37]:
+              - link "Chat with Copilot" [ref=e39] [cursor=pointer]:
+                - /url: /copilot
+                - img [ref=e40]
+              - button "Open Copilot…" [ref=e44] [cursor=pointer]:
+                - generic:
+                  - img
+            - button "Create new..." [ref=e46] [cursor=pointer]:
+              - generic [ref=e47]:
+                - generic:
+                  - img
+              - generic:
+                - img
+            - link "Issues" [ref=e48] [cursor=pointer]:
+              - /url: /issues
+              - img [ref=e49]
+            - link "Pull requests" [ref=e52] [cursor=pointer]:
+              - /url: /pulls
+              - img [ref=e53]
+            - link "Repositories" [ref=e55] [cursor=pointer]:
+              - /url: /repos
+              - img [ref=e56]
+          - link "You have no unread notifications (g then n)" [ref=e58] [cursor=pointer]:
+            - /url: /notifications
+            - img [ref=e59]
+          - button "Open user navigation menu" [ref=e62] [cursor=pointer]:
+            - img "User avatar" [ref=e63]
+      - heading "Repository navigation" [level=2] [ref=e64]
+      - navigation "Repository" [ref=e65]:
+        - list [ref=e66]:
+          - listitem [ref=e67]:
+            - link "Code" [ref=e68] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench
+              - img [ref=e70]
+              - generic [ref=e72]: Code
+          - listitem [ref=e73]:
+            - link "Issues (16)" [ref=e74] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/issues
+              - img [ref=e76]
+              - generic [ref=e79]: Issues
+              - generic [ref=e80]:
+                - generic [ref=e81]: "16"
+                - generic [ref=e82]: (16)
+          - listitem [ref=e83]:
+            - link "Pull requests (23)" [ref=e84] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/pulls
+              - img [ref=e86]
+              - generic [ref=e88]: Pull requests
+              - generic [ref=e89]:
+                - generic [ref=e90]: "23"
+                - generic [ref=e91]: (23)
+          - listitem [ref=e92]:
+            - link "Actions" [ref=e93] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/actions
+              - img [ref=e95]
+              - generic [ref=e97]: Actions
+          - listitem [ref=e98]:
+            - link "Projects" [ref=e99] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/projects
+              - img [ref=e101]
+              - generic [ref=e103]: Projects
+          - listitem [ref=e104]:
+            - link "Security" [ref=e105] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/security
+              - img [ref=e107]
+              - generic [ref=e109]: Security
+          - listitem [ref=e110]:
+            - link "Insights" [ref=e111] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/pulse
+              - img [ref=e113]
+              - generic [ref=e115]: Insights
+          - listitem [ref=e116]:
+            - link "Settings" [ref=e117] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/settings
+              - img [ref=e119]
+              - generic [ref=e121]: Settings
+  - main [ref=e125]:
+    - generic [ref=e132]:
+      - generic [ref=e135]:
+        - 'heading "chore: browser-pilot agent config and screenshot pipeline #74 Edit title" [level=1] [ref=e137]':
+          - text: "chore: browser-pilot agent config and screenshot pipeline"
+          - generic [ref=e138]:
+            - generic [ref=e139]: "#74"
+            - button "Edit title" [ref=e140] [cursor=pointer]:
+              - img [ref=e141]
+        - generic [ref=e144]:
+          - generic [ref=e145]:
+            - button "View status View status" [disabled] [ref=e146]:
+              - generic [ref=e147]:
+                - generic:
+                  - generic:
+                    - img
+                    - generic: Loading
+            - generic [ref=e149]: Loading merge status
+          - button "Code" [ref=e150] [cursor=pointer]:
+            - generic [ref=e151]:
+              - generic [ref=e152]: Code
+              - generic:
+                - img
+        - generic [ref=e154]:
+          - generic [ref=e155]:
+            - img "Pull request" [ref=e156]
+            - text: Open
+          - generic [ref=e159]:
+            - link "dugshub" [ref=e160] [cursor=pointer]:
+              - /url: /dugshub
+            - text: wants to merge 7 commits into
+            - link "main" [ref=e161] [cursor=pointer]:
+              - /url: /pattern-stack/stack-bench/tree/main
+            - generic [ref=e162]: from
+            - generic [ref=e163]:
+              - link "dug/browser-pilot-config" [ref=e164] [cursor=pointer]:
+                - /url: /pattern-stack/stack-bench/tree/dug/browser-pilot-config
+              - button "Copy head branch name to clipboard" [ref=e165] [cursor=pointer]:
+                - img [ref=e166]
+        - generic [ref=e169]:
+          - generic [ref=e171]:
+            - generic [ref=e172]: "+506"
+            - generic [ref=e173]: "-52"
+            - generic [ref=e174]: "Lines changed: 506 additions & 52 deletions"
+          - navigation "Pull request navigation tabs" [ref=e183]:
+            - tablist [ref=e184]:
+              - tab "Conversation" [selected] [ref=e185] [cursor=pointer]:
+                - img [ref=e186]
+                - text: Conversation
+              - tab "Commits (7)" [ref=e188] [cursor=pointer]:
+                - img [ref=e189]
+                - text: Commits
+                - generic [ref=e191]: "7"
+                - generic [ref=e192]: (7)
+              - tab "Checks" [ref=e193] [cursor=pointer]:
+                - img [ref=e194]
+                - text: Checks
+              - tab "Files changed" [ref=e196] [cursor=pointer]:
+                - img [ref=e197]
+                - text: Files changed
+      - generic [ref=e203]:
+        - generic [ref=e205]:
+          - heading "Conversation" [level=2] [ref=e206]
+          - generic [ref=e207]:
+            - generic [ref=e208]:
+              - generic [ref=e210]:
+                - link "@dugshub" [ref=e211] [cursor=pointer]:
+                  - /url: /dugshub
+                  - img "@dugshub" [ref=e212]
+                - generic [ref=e214]:
+                  - generic [ref=e215]:
+                    - group [ref=e218]:
+                      - button "Show options" [ref=e219] [cursor=pointer]:
+                        - img "Show options" [ref=e222]
+                    - heading "dugshub commented Mar 22, 202610 minutes ago" [level=3] [ref=e224]:
+                      - generic [ref=e225]:
+                        - strong [ref=e226]:
+                          - link "dugshub" [ref=e227] [cursor=pointer]:
+                            - /url: /dugshub
+                        - text: commented
+                        - link "Mar 22, 202610 minutes ago" [ref=e228] [cursor=pointer]:
+                          - /url: "#issue-4116452959"
+                  - generic [ref=e232]:
+                    - heading "Summary" [level=2] [ref=e233]
+                    - list [ref=e234]:
+                      - listitem [ref=e235]:
+                        - text: "Configure browser-pilot agent: sonnet model, Playwright MCP with"
+                        - code [ref=e236]: "--isolated"
+                        - text: ", screenshot viewport settings"
+                      - listitem [ref=e237]:
+                        - text: Add
+                        - code [ref=e238]: .mcp.json
+                        - text: with playwright, chrome-devtools, and lighthouse MCP servers
+                      - listitem [ref=e239]:
+                        - text: "Add screenshot conventions: dated session subfolders,"
+                        - code [ref=e240]: NN-kebab-description.png
+                        - text: naming
+                      - listitem [ref=e241]:
+                        - text: Consolidate browser skill with
+                        - code [ref=e242]: /verify
+                        - text: and
+                        - code [ref=e243]: /browse
+                        - text: commands
+                      - listitem [ref=e244]:
+                        - text: Gitignore
+                        - code [ref=e245]: .playwright-mcp/
+                        - text: cache directory
+                      - listitem [ref=e246]:
+                        - text: Agent must
+                        - code [ref=e247]: browser_resize
+                        - text: to 1280x720 before taking screenshots (Playwright default viewport is smaller)
+                    - heading "Screenshot" [level=2] [ref=e248]
+                    - heading "Test plan" [level=2] [ref=e249]
+                    - list [ref=e250]:
+                      - listitem [ref=e251]:
+                        - img [ref=e253]
+                        - checkbox "Completed task" [checked] [ref=e255]
+                        - text: Verified sonnet browser-pilot takes screenshots at 1280x720 in 9 tool calls / 55s
+                      - listitem [ref=e256]:
+                        - img [ref=e258]
+                        - checkbox "Completed task" [checked] [ref=e260]
+                        - text: Verified haiku is too slow (99 tool calls / 6 min) — sonnet is the right model
+                      - listitem [ref=e261]:
+                        - img [ref=e263]
+                        - checkbox "Incomplete task" [ref=e265]
+                        - text: Test
+                        - code [ref=e266]: gh-attach
+                        - text: image upload to this PR
+                    - paragraph [ref=e267]:
+                      - text: 🤖 Generated with
+                      - link "Claude Code" [ref=e268] [cursor=pointer]:
+                        - /url: https://claude.com/claude-code
+                  - group [ref=e272]:
+                    - generic "Add or remove reactions" [ref=e273] [cursor=pointer]:
+                      - img [ref=e274]
+              - generic [ref=e276]:
+                - generic [ref=e278]:
+                  - generic [ref=e279]:
+                    - img [ref=e281]
+                    - generic [ref=e283]:
+                      - text: Dug and others added 7 commits
+                      - link "March 22, 2026 11:351 hour ago" [ref=e284] [cursor=pointer]:
+                        - /url: "#commits-pushed-e83a79a"
+                  - generic [ref=e285]:
+                    - generic [ref=e286]:
+                      - img [ref=e288]
+                      - generic [ref=e293]:
+                        - link "@claude" [ref=e296] [cursor=pointer]:
+                          - /url: /claude
+                          - img "@claude" [ref=e297]
+                        - generic [ref=e298]:
+                          - code [ref=e299]:
+                            - 'link "docs: add proposals directory and CLI agent integration proposal" [ref=e300] [cursor=pointer]':
+                              - /url: /pattern-stack/stack-bench/pull/74/commits/e83a79a353d543549f7fea6dcbe5072209115870
+                          - button "…" [ref=e302] [cursor=pointer]
+                        - code [ref=e310]:
+                          - link "e83a79a" [ref=e311] [cursor=pointer]:
+                            - /url: /pattern-stack/stack-bench/pull/74/commits/e83a79a353d543549f7fea6dcbe5072209115870
+                    - generic [ref=e312]:
+                      - img [ref=e314]
+                      - generic [ref=e319]:
+                        - link "@claude" [ref=e322] [cursor=pointer]:
+                          - /url: /claude
+                          - img "@claude" [ref=e323]
+                        - generic [ref=e324]:
+                          - code [ref=e325]:
+                            - 'link "chore: tune browser-pilot agent config" [ref=e326] [cursor=pointer]':
+                              - /url: /pattern-stack/stack-bench/pull/74/commits/1e71d2c24bdb1f239796d72b2c050e0f78fa5be4
+                          - button "…" [ref=e328] [cursor=pointer]
+                        - code [ref=e336]:
+                          - link "1e71d2c" [ref=e337] [cursor=pointer]:
+                            - /url: /pattern-stack/stack-bench/pull/74/commits/1e71d2c24bdb1f239796d72b2c050e0f78fa5be4
+                    - generic [ref=e338]:
+                      - img [ref=e340]
+                      - generic [ref=e345]:
+                        - link "@claude" [ref=e348] [cursor=pointer]:
+                          - /url: /claude
+                          - img "@claude" [ref=e349]
+                        - generic [ref=e350]:
+                          - code [ref=e351]:
+                            - 'link "chore: add MCP config and screenshot conventions" [ref=e352] [cursor=pointer]':
+                              - /url: /pattern-stack/stack-bench/pull/74/commits/941779e416bd96998b61beadfb0ab32718a4490c
+                          - button "…" [ref=e354] [cursor=pointer]
+                        - code [ref=e362]:
+                          - link "941779e" [ref=e363] [cursor=pointer]:
+                            - /url: /pattern-stack/stack-bench/pull/74/commits/941779e416bd96998b61beadfb0ab32718a4490c
+                    - generic [ref=e364]:
+                      - img [ref=e366]
+                      - generic [ref=e371]:
+                        - link "@claude" [ref=e374] [cursor=pointer]:
+                          - /url: /claude
+                          - img "@claude" [ref=e375]
+                        - generic [ref=e376]:
+                          - code [ref=e377]:
+                            - 'link "chore: gitignore .playwright-mcp/ cache directory" [ref=e378] [cursor=pointer]':
+                              - /url: /pattern-stack/stack-bench/pull/74/commits/755673a2d289326a0548317fd6c239bedcb79480
+                          - button "…" [ref=e380] [cursor=pointer]
+                        - code [ref=e388]:
+                          - link "755673a" [ref=e389] [cursor=pointer]:
+                            - /url: /pattern-stack/stack-bench/pull/74/commits/755673a2d289326a0548317fd6c239bedcb79480
+                    - generic [ref=e390]:
+                      - img [ref=e392]
+                      - generic [ref=e397]:
+                        - link "@claude" [ref=e400] [cursor=pointer]:
+                          - /url: /claude
+                          - img "@claude" [ref=e401]
+                        - generic [ref=e402]:
+                          - code [ref=e403]:
+                            - 'link "chore: add screenshot for PR description" [ref=e404] [cursor=pointer]':
+                              - /url: /pattern-stack/stack-bench/pull/74/commits/a985c2b154108815ee417c9e3bdea381f23551f1
+                          - button "…" [ref=e406] [cursor=pointer]
+                        - code [ref=e414]:
+                          - link "a985c2b" [ref=e415] [cursor=pointer]:
+                            - /url: /pattern-stack/stack-bench/pull/74/commits/a985c2b154108815ee417c9e3bdea381f23551f1
+                    - generic [ref=e416]:
+                      - img [ref=e418]
+                      - generic [ref=e423]:
+                        - link "@claude" [ref=e426] [cursor=pointer]:
+                          - /url: /claude
+                          - img "@claude" [ref=e427]
+                        - generic [ref=e428]:
+                          - code [ref=e429]:
+                            - 'link "feat: consolidate browser skill with /verify and /browse commands" [ref=e430] [cursor=pointer]':
+                              - /url: /pattern-stack/stack-bench/pull/74/commits/0b5ef8516e5a6f485c29629158cb60fd26876f1c
+                          - button "…" [ref=e432] [cursor=pointer]
+                        - code [ref=e440]:
+                          - link "0b5ef85" [ref=e441] [cursor=pointer]:
+                            - /url: /pattern-stack/stack-bench/pull/74/commits/0b5ef8516e5a6f485c29629158cb60fd26876f1c
+                    - generic [ref=e442]:
+                      - img [ref=e444]
+                      - generic [ref=e449]:
+                        - link "@claude" [ref=e452] [cursor=pointer]:
+                          - /url: /claude
+                          - img "@claude" [ref=e453]
+                        - generic [ref=e454]:
+                          - code [ref=e455]:
+                            - 'link "chore: switch browser-pilot back to sonnet model" [ref=e456] [cursor=pointer]':
+                              - /url: /pattern-stack/stack-bench/pull/74/commits/42459416adcf8f5f27be5cfb18bb211cc6c96da6
+                          - button "…" [ref=e458] [cursor=pointer]
+                        - code [ref=e466]:
+                          - link "4245941" [ref=e467] [cursor=pointer]:
+                            - /url: /pattern-stack/stack-bench/pull/74/commits/42459416adcf8f5f27be5cfb18bb211cc6c96da6
+                - generic [ref=e469]:
+                  - link "@dugshub" [ref=e471] [cursor=pointer]:
+                    - /url: /dugshub
+                    - img "@dugshub" [ref=e472]
+                  - generic [ref=e474]:
+                    - generic [ref=e475]:
+                      - generic [ref=e476]:
+                        - group [ref=e478]:
+                          - button "Show options" [ref=e479] [cursor=pointer]:
+                            - img "Show options" [ref=e482]
+                        - generic "You are the author of this pull request." [ref=e485]:
+                          - generic [ref=e486]: Author
+                      - heading "dugshub commented Mar 22, 202610 minutes ago •" [level=3] [ref=e487]:
+                        - generic [ref=e488]:
+                          - strong [ref=e489]:
+                            - link "dugshub" [ref=e490] [cursor=pointer]:
+                              - /url: /dugshub
+                          - text: commented
+                          - link "Mar 22, 202610 minutes ago" [ref=e491] [cursor=pointer]:
+                            - /url: "#issuecomment-4106543447"
+                          - generic [ref=e492]:
+                            - generic [ref=e493]: •
+                            - group [ref=e494]:
+                              - button "edited" [ref=e495] [cursor=pointer]:
+                                - generic [ref=e496]:
+                                  - text: edited
+                                  - img [ref=e497]
+                    - generic [ref=e499]:
+                      - table [ref=e501]:
+                        - rowgroup [ref=e502]:
+                          - row "01-initial-page.png" [ref=e503]:
+                            - cell "01-initial-page.png" [ref=e504]:
+                              - paragraph [ref=e505]:
+                                - link "01-initial-page.png" [ref=e506] [cursor=pointer]:
+                                  - /url: https://github.com/pattern-stack/stack-bench/releases/download/gh-attach-assets/01-initial-page.png
+                                  - img "01-initial-page.png" [ref=e507]
+                      - group [ref=e512]:
+                        - generic "Add or remove reactions" [ref=e513] [cursor=pointer]:
+                          - img [ref=e514]
+                - generic [ref=e517]:
+                  - link "@dugshub" [ref=e519] [cursor=pointer]:
+                    - /url: /dugshub
+                    - img "@dugshub" [ref=e520]
+                  - generic [ref=e522]:
+                    - generic [ref=e523]:
+                      - generic [ref=e524]:
+                        - group [ref=e526]:
+                          - button "Show options" [ref=e527] [cursor=pointer]:
+                            - img "Show options" [ref=e530]
+                        - generic "You are the author of this pull request." [ref=e533]:
+                          - generic [ref=e534]: Author
+                      - heading "dugshub commented Mar 22, 202610 minutes ago" [level=3] [ref=e535]:
+                        - generic [ref=e536]:
+                          - strong [ref=e537]:
+                            - link "dugshub" [ref=e538] [cursor=pointer]:
+                              - /url: /dugshub
+                          - text: commented
+                          - link "Mar 22, 202610 minutes ago" [ref=e539] [cursor=pointer]:
+                            - /url: "#issuecomment-4106543776"
+                    - generic [ref=e540]:
+                      - table [ref=e542]:
+                        - rowgroup [ref=e543]:
+                          - row "Browser mode test:" [ref=e544]:
+                            - cell "Browser mode test:" [ref=e545]:
+                              - paragraph [ref=e546]: "Browser mode test:"
+                      - group [ref=e551]:
+                        - generic "Add or remove reactions" [ref=e552] [cursor=pointer]:
+                          - img [ref=e553]
+                - generic [ref=e556]:
+                  - link "@dugshub" [ref=e558] [cursor=pointer]:
+                    - /url: /dugshub
+                    - img "@dugshub" [ref=e559]
+                  - generic [ref=e561]:
+                    - generic [ref=e562]:
+                      - generic [ref=e563]:
+                        - group [ref=e565]:
+                          - button "Show options" [ref=e566] [cursor=pointer]:
+                            - img "Show options" [ref=e569]
+                        - generic "You are the author of this pull request." [ref=e572]:
+                          - generic [ref=e573]: Author
+                      - heading "dugshub commented Mar 22, 20261 minute ago" [level=3] [ref=e574]:
+                        - generic [ref=e575]:
+                          - strong [ref=e576]:
+                            - link "dugshub" [ref=e577] [cursor=pointer]:
+                              - /url: /dugshub
+                          - text: commented
+                          - link "Mar 22, 20261 minute ago" [ref=e578] [cursor=pointer]:
+                            - /url: "#issuecomment-4106556410"
+                    - generic [ref=e579]:
+                      - table [ref=e581]:
+                        - rowgroup [ref=e582]:
+                          - row "Screenshot test via browser mode:" [ref=e583]:
+                            - cell "Screenshot test via browser mode:" [ref=e584]:
+                              - paragraph [ref=e585]: "Screenshot test via browser mode:"
+                      - group [ref=e590]:
+                        - generic "Add or remove reactions" [ref=e591] [cursor=pointer]:
+                          - img [ref=e592]
+                - generic [ref=e595]:
+                  - link "@dugshub" [ref=e597] [cursor=pointer]:
+                    - /url: /dugshub
+                    - img "@dugshub" [ref=e598]
+                  - generic [ref=e600]:
+                    - generic [ref=e601]:
+                      - generic [ref=e602]:
+                        - group [ref=e604]:
+                          - button "Show options" [ref=e605] [cursor=pointer]:
+                            - img "Show options" [ref=e608]
+                        - generic "You are the author of this pull request." [ref=e611]:
+                          - generic [ref=e612]: Author
+                      - heading "dugshub commented Mar 22, 20261 minute ago" [level=3] [ref=e613]:
+                        - generic [ref=e614]:
+                          - strong [ref=e615]:
+                            - link "dugshub" [ref=e616] [cursor=pointer]:
+                              - /url: /dugshub
+                          - text: commented
+                          - link "Mar 22, 20261 minute ago" [ref=e617] [cursor=pointer]:
+                            - /url: "#issuecomment-4106556663"
+                    - generic [ref=e618]:
+                      - table [ref=e620]:
+                        - rowgroup [ref=e621]:
+                          - row "No description provided." [ref=e622]:
+                            - cell "No description provided." [ref=e623]:
+                              - paragraph [ref=e624]:
+                                - emphasis [ref=e625]: No description provided.
+                      - group [ref=e630]:
+                        - generic "Add or remove reactions" [ref=e631] [cursor=pointer]:
+                          - img [ref=e632]
+                - generic [ref=e635]:
+                  - link "@dugshub" [ref=e637] [cursor=pointer]:
+                    - /url: /dugshub
+                    - img "@dugshub" [ref=e638]
+                  - generic [ref=e640]:
+                    - generic [ref=e641]:
+                      - generic [ref=e642]:
+                        - group [ref=e644]:
+                          - button "Show options" [ref=e645] [cursor=pointer]:
+                            - img "Show options" [ref=e648]
+                        - generic "You are the author of this pull request." [ref=e651]:
+                          - generic [ref=e652]: Author
+                      - heading "dugshub commented Mar 22, 2026now" [level=3] [ref=e653]:
+                        - generic [ref=e654]:
+                          - strong [ref=e655]:
+                            - link "dugshub" [ref=e656] [cursor=pointer]:
+                              - /url: /dugshub
+                          - text: commented
+                          - link "Mar 22, 2026now" [ref=e657] [cursor=pointer]:
+                            - /url: "#issuecomment-4106558751"
+                    - generic [ref=e658]:
+                      - table [ref=e660]:
+                        - rowgroup [ref=e661]:
+                          - row "Browser mode with saved session:" [ref=e662]:
+                            - cell "Browser mode with saved session:" [ref=e663]:
+                              - paragraph [ref=e664]: "Browser mode with saved session:"
+                      - group [ref=e669]:
+                        - generic "Add or remove reactions" [ref=e670] [cursor=pointer]:
+                          - img [ref=e671]
+            - generic [ref=e676]:
+              - img [ref=e677]
+              - generic [ref=e680]: Loading
+            - generic [ref=e683]:
+              - link "@dugshub" [ref=e685] [cursor=pointer]:
+                - /url: /dugshub
+                - img "@dugshub" [ref=e686]
+              - form "Add a comment" [ref=e688]:
+                - group [ref=e689]:
+                  - heading "Add a comment" [level=4] [ref=e692]
+                  - generic [ref=e693]: Comment
+                  - generic [ref=e694]:
+                    - generic [ref=e695]:
+                      - tablist "Add a comment" [ref=e696]:
+                        - tab "Write" [selected] [ref=e697] [cursor=pointer]
+                        - tab "Preview" [ref=e698] [cursor=pointer]
+                      - toolbar [ref=e699]:
+                        - generic [ref=e700]:
+                          - button "Heading" [ref=e702] [cursor=pointer]:
+                            - img
+                          - button "Bold" [ref=e704] [cursor=pointer]:
+                            - img
+                          - button "Italic" [ref=e706] [cursor=pointer]:
+                            - img
+                          - button "Quote" [ref=e708] [cursor=pointer]:
+                            - img
+                          - button "Code" [ref=e710] [cursor=pointer]:
+                            - img
+                          - button "Link" [ref=e712] [cursor=pointer]:
+                            - img
+                          - separator [ref=e713]
+                          - button "Numbered list" [ref=e715] [cursor=pointer]:
+                            - img
+                          - button "Unordered list" [ref=e717] [cursor=pointer]:
+                            - img
+                          - button "Task list" [ref=e719] [cursor=pointer]:
+                            - img
+                          - separator [ref=e720]
+                          - button "Attach files" [ref=e722] [cursor=pointer]:
+                            - img
+                          - button "Mention" [ref=e724] [cursor=pointer]:
+                            - img
+                          - button "Reference" [ref=e726] [cursor=pointer]:
+                            - img
+                          - button "Saved replies" [ref=e728] [cursor=pointer]:
+                            - img
+                          - button "Slash commands" [ref=e730] [cursor=pointer]:
+                            - img
+                    - tabpanel "Write" [ref=e731]:
+                      - generic [ref=e735]:
+                        - textbox "Comment" [ref=e736]:
+                          - /placeholder: " "
+                        - paragraph: Add your comment here...
+                      - generic [ref=e737]:
+                        - link "Markdown is supported" [ref=e739] [cursor=pointer]:
+                          - /url: https://docs.github.com/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax
+                          - generic [ref=e740]:
+                            - generic:
+                              - img
+                            - generic [ref=e741]: Markdown is supported
+                        - button "Paste, drop, or click to add files" [ref=e742] [cursor=pointer]:
+                          - generic [ref=e743]:
+                            - generic:
+                              - img
+                            - generic [ref=e744]: Paste, drop, or click to add files
+                - generic [ref=e747]:
+                  - button "Close pull request" [ref=e749] [cursor=pointer]:
+                    - img [ref=e750]
+                    - text: Close pull request
+                  - button "Comment" [disabled] [ref=e753]
+              - generic [ref=e754]:
+                - img [ref=e755]
+                - generic [ref=e757]:
+                  - text: Remember, contributions to this repository should follow our
+                  - link "GitHub Community Guidelines" [ref=e758] [cursor=pointer]:
+                    - /url: https://docs.github.com/articles/github-community-guidelines
+                  - text: .
+              - generic [ref=e759]:
+                - img [ref=e760]
+                - strong [ref=e762]: ProTip!
+                - text: Add comments to specific lines under
+                - link "Files changed" [ref=e763] [cursor=pointer]:
+                  - /url: /pattern-stack/stack-bench/pull/74/files
+                - text: .
+        - generic [ref=e767]:
+          - form "Select reviewers" [ref=e769]:
+            - group [ref=e770]:
+              - button "Reviewers" [ref=e771] [cursor=pointer]:
+                - img [ref=e772]
+                - text: Reviewers
+            - generic [ref=e775]:
+              - generic: Loading suggestions…
+            - generic [ref=e776]:
+              - generic [ref=e777]: Still in progress?
+              - group [ref=e778]:
+                - button "Convert to draft" [ref=e779] [cursor=pointer]
+          - form "Select assignees" [ref=e781]:
+            - group [ref=e782]:
+              - button "Assignees" [ref=e783] [cursor=pointer]:
+                - img [ref=e784]
+                - text: Assignees
+            - generic [ref=e786]:
+              - text: No one—
+              - button "assign yourself" [ref=e787] [cursor=pointer]
+          - generic [ref=e788]:
+            - group [ref=e789]:
+              - button "Labels" [ref=e790] [cursor=pointer]:
+                - img [ref=e791]
+                - text: Labels
+            - generic [ref=e793]: None yet
+          - form "Select projects" [ref=e795]:
+            - group [ref=e796]:
+              - button "Projects" [ref=e797] [cursor=pointer]:
+                - img [ref=e798]
+                - text: Projects
+            - text: None yet
+          - form "Select milestones" [ref=e801]:
+            - group [ref=e802]:
+              - button "Milestone" [ref=e803] [cursor=pointer]:
+                - img [ref=e804]
+                - text: Milestone
+            - text: No milestone
+          - form "Link issues" [ref=e811]:
+            - group [ref=e812]:
+              - button "Development" [ref=e813] [cursor=pointer]:
+                - img [ref=e814]
+                - text: Development
+            - paragraph [ref=e816]: Successfully merging this pull request may close these issues.
+            - paragraph [ref=e818]: None yet
+          - generic [ref=e820]:
+            - button "Notifications Customize" [ref=e823] [cursor=pointer]:
+              - generic [ref=e824]:
+                - generic [ref=e825]: Notifications
+                - generic [ref=e826]: Customize
+            - button "Unsubscribe" [ref=e828] [cursor=pointer]:
+              - generic [ref=e829]:
+                - generic:
+                  - img
+                - generic [ref=e830]: Unsubscribe
+            - paragraph [ref=e831]: You’re receiving notifications because you authored the thread.
+          - generic [ref=e833]:
+            - heading "1 participant" [level=3] [ref=e834]
+            - link "@dugshub" [ref=e836] [cursor=pointer]:
+              - /url: /dugshub
+              - img "@dugshub" [ref=e837]
+          - group [ref=e839]:
+            - button "Lock conversation" [ref=e840] [cursor=pointer]:
+              - img [ref=e841]
+              - strong [ref=e843]: Lock conversation
+  - contentinfo [ref=e844]:
+    - heading "Footer" [level=2] [ref=e845]
+    - generic [ref=e846]:
+      - generic [ref=e847]:
+        - link "GitHub Homepage" [ref=e848] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e849]
+        - generic [ref=e851]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e852]:
+        - heading "Footer navigation" [level=3] [ref=e853]
+        - list "Footer navigation" [ref=e854]:
+          - listitem [ref=e855]:
+            - link "Terms" [ref=e856] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e857]:
+            - link "Privacy" [ref=e858] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e859]:
+            - link "Security" [ref=e860] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e861]:
+            - link "Status" [ref=e862] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e863]:
+            - link "Community" [ref=e864] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e865]:
+            - link "Docs" [ref=e866] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e867]:
+            - link "Contact" [ref=e868] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e869]:
+            - button "Manage cookies" [ref=e871] [cursor=pointer]
+          - listitem [ref=e872]:
+            - button "Do not share my personal information" [ref=e874] [cursor=pointer]

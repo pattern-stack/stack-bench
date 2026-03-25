@@ -1,0 +1,332 @@
+- generic [ref=e2]:
+  - region
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner "Global Navigation Menu" [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - button "Open menu" [ref=e12] [cursor=pointer]:
+            - img [ref=e13]
+          - link "Homepage (g then d)" [ref=e15] [cursor=pointer]:
+            - /url: /
+            - img [ref=e16]
+        - generic [ref=e18]:
+          - navigation "Breadcrumbs" [ref=e19]:
+            - list [ref=e20]:
+              - listitem [ref=e21]:
+                - link "Dashboard" [ref=e22] [cursor=pointer]:
+                  - /url: https://github.com/
+                  - generic [ref=e23]: Dashboard
+          - button "Search or jump to…" [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]:
+              - generic:
+                - img
+              - generic [ref=e28]:
+                - generic:
+                  - text: Type
+                  - generic: /
+                  - text: to search
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - generic [ref=e32]:
+              - link "Chat with Copilot" [ref=e34] [cursor=pointer]:
+                - /url: /copilot
+                - img [ref=e35]
+              - button "Open Copilot…" [ref=e39] [cursor=pointer]:
+                - generic:
+                  - img
+            - button "Create new..." [ref=e41] [cursor=pointer]:
+              - generic [ref=e42]:
+                - generic:
+                  - img
+              - generic:
+                - img
+            - link "Issues (g then i)" [ref=e43] [cursor=pointer]:
+              - /url: /issues
+              - img [ref=e44]
+            - link "Pull requests (g then p)" [ref=e47] [cursor=pointer]:
+              - /url: /pulls
+              - img [ref=e48]
+            - link "Repositories" [ref=e50] [cursor=pointer]:
+              - /url: /repos
+              - img [ref=e51]
+          - link "You have unread notifications (g then n)" [ref=e53] [cursor=pointer]:
+            - /url: /notifications
+            - img [ref=e54]
+          - button "Open user navigation menu" [ref=e57] [cursor=pointer]:
+            - img "User avatar" [ref=e58]
+  - generic [ref=e62]:
+    - complementary "Account" [ref=e63]:
+      - generic [ref=e65]:
+        - generic [ref=e68]:
+          - img "@dugshub" [ref=e69]
+          - button "Go to dugshub dashboard" [ref=e72] [cursor=pointer]:
+            - generic [ref=e74]: dugshub
+            - generic:
+              - img
+        - navigation "Repositories" [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - heading "Top repositories" [level=2] [ref=e81]
+              - link "New" [ref=e82] [cursor=pointer]:
+                - /url: /new
+                - generic [ref=e83]:
+                  - generic:
+                    - img
+                  - generic [ref=e84]: New
+            - search "Top repositories" [ref=e85]:
+              - textbox "Find a repository…" [ref=e86]
+            - list [ref=e87]:
+              - listitem [ref=e88]:
+                - generic [ref=e89]:
+                  - link "Repository" [ref=e90] [cursor=pointer]:
+                    - /url: /pattern-stack/backend-patterns
+                    - img "Repository" [ref=e91]
+                  - link "pattern-stack/backend-patterns" [ref=e93] [cursor=pointer]:
+                    - /url: /pattern-stack/backend-patterns
+              - listitem [ref=e94]:
+                - generic [ref=e95]:
+                  - link "Repository" [ref=e96] [cursor=pointer]:
+                    - /url: /Tempo-Systems/dealbrain
+                    - img "Repository" [ref=e97]
+                  - link "Tempo-Systems/dealbrain" [ref=e99] [cursor=pointer]:
+                    - /url: /Tempo-Systems/dealbrain
+              - listitem [ref=e100]:
+                - generic [ref=e101]:
+                  - link "Repository" [ref=e102] [cursor=pointer]:
+                    - /url: /pattern-stack/sales-patterns
+                    - img "Repository" [ref=e103]
+                  - link "pattern-stack/sales-patterns" [ref=e105] [cursor=pointer]:
+                    - /url: /pattern-stack/sales-patterns
+              - listitem [ref=e106]:
+                - generic [ref=e107]:
+                  - link "Repository" [ref=e108] [cursor=pointer]:
+                    - /url: /dugshub/stack
+                    - img "Repository" [ref=e109]
+                  - link "dugshub/stack" [ref=e111] [cursor=pointer]:
+                    - /url: /dugshub/stack
+              - listitem [ref=e112]:
+                - generic [ref=e113]:
+                  - link "Repository" [ref=e114] [cursor=pointer]:
+                    - /url: /pattern-stack/stack-bench
+                    - img "Repository" [ref=e115]
+                  - link "pattern-stack/stack-bench" [ref=e117] [cursor=pointer]:
+                    - /url: /pattern-stack/stack-bench
+              - listitem [ref=e118]:
+                - generic [ref=e119]:
+                  - link "Repository" [ref=e120] [cursor=pointer]:
+                    - /url: /dugshub/FantasyHoops
+                    - img "Repository" [ref=e121]
+                  - link "dugshub/FantasyHoops" [ref=e123] [cursor=pointer]:
+                    - /url: /dugshub/FantasyHoops
+              - listitem [ref=e124]:
+                - generic [ref=e125]:
+                  - link "Repository" [ref=e126] [cursor=pointer]:
+                    - /url: /pattern-stack/frontend-patterns
+                    - img "Repository" [ref=e127]
+                  - link "pattern-stack/frontend-patterns" [ref=e129] [cursor=pointer]:
+                    - /url: /pattern-stack/frontend-patterns
+            - button "Show more" [ref=e131] [cursor=pointer]
+    - generic [ref=e134]:
+      - generic [ref=e135]:
+        - main [ref=e136]:
+          - generic [ref=e138]:
+            - heading "Dashboard" [level=1] [ref=e139]
+            - heading "Home" [level=2] [ref=e141]
+            - generic [ref=e142]:
+              - generic [ref=e146]:
+                - generic [ref=e150]:
+                  - textbox "Ask anything" [ref=e153]
+                  - generic [ref=e154]:
+                    - generic [ref=e156]:
+                      - button "Ask" [ref=e157] [cursor=pointer]:
+                        - generic [ref=e158]:
+                          - generic:
+                            - img
+                          - generic [ref=e159]: Ask
+                        - generic:
+                          - img
+                      - generic "New Agent mode" [ref=e161]:
+                        - heading "Agent mode New" [level=2] [ref=e162]:
+                          - text: Agent mode
+                          - generic [ref=e163]: New
+                        - paragraph [ref=e164]:
+                          - text: Agents now support a broader set of functionality, like helping you create an implementation plan or conducting deep research on a codebase.
+                          - link "Learn more about Copilot coding agent" [ref=e165] [cursor=pointer]:
+                            - /url: https://docs.github.com/early-access/github/articles/cca-march-update
+                        - button "Got it!" [ref=e166] [cursor=pointer]:
+                          - generic [ref=e168]: Got it!
+                    - generic [ref=e169]:
+                      - button "Select repositories to attach to conversation" [ref=e170] [cursor=pointer]:
+                        - generic [ref=e171]:
+                          - generic:
+                            - img
+                          - generic "All repositories" [ref=e173]
+                        - generic:
+                          - img
+                      - button "Add files, and spaces" [ref=e174] [cursor=pointer]:
+                        - img [ref=e175]
+                    - button "Send now (enter)" [ref=e179] [cursor=pointer]:
+                      - img [ref=e180]
+                - heading "Chat Commands" [level=2] [ref=e182]
+                - list [ref=e184]:
+                  - listitem [ref=e185]:
+                    - button "Agent" [ref=e186] [cursor=pointer]:
+                      - img [ref=e187]
+                      - generic [ref=e190]: Agent
+                  - listitem [ref=e191]:
+                    - button "Create issue" [ref=e192] [cursor=pointer]:
+                      - img [ref=e193]
+                      - generic [ref=e195]: Create issue
+                  - listitem [ref=e196]:
+                    - button "Write code" [ref=e197] [cursor=pointer]:
+                      - img [ref=e200]
+                      - generic [ref=e202]:
+                        - text: Write code
+                        - img [ref=e204]
+                  - listitem [ref=e206]:
+                    - button "Git" [ref=e207] [cursor=pointer]:
+                      - img [ref=e210]
+                      - generic [ref=e212]:
+                        - text: Git
+                        - img [ref=e214]
+                  - listitem [ref=e216]:
+                    - button "Pull requests" [ref=e217] [cursor=pointer]:
+                      - img [ref=e220]
+                      - generic [ref=e222]:
+                        - text: Pull requests
+                        - img [ref=e224]
+              - generic [ref=e226]:
+                - generic [ref=e227]:
+                  - heading "Feed" [level=2] [ref=e228]
+                  - group [ref=e231]:
+                    - button "Filter" [ref=e232] [cursor=pointer]:
+                      - img [ref=e233]
+                      - text: Filter
+                - article [ref=e238]:
+                  - generic [ref=e240]:
+                    - generic [ref=e242]:
+                      - img [ref=e244]
+                      - heading "Trending repositories" [level=3] [ref=e246]
+                      - generic [ref=e247]: ·
+                      - link "See more" [ref=e248] [cursor=pointer]:
+                        - /url: https://github.com/trending
+                    - generic [ref=e249]:
+                      - region "repository body 0-0" [ref=e252]:
+                        - generic [ref=e253]:
+                          - generic [ref=e254]:
+                            - generic [ref=e255]:
+                              - link "@FujiwaraChoki profile" [ref=e256] [cursor=pointer]:
+                                - /url: /FujiwaraChoki
+                                - img "@FujiwaraChoki profile" [ref=e257]
+                              - link "FujiwaraChoki/MoneyPrinterV2" [ref=e258] [cursor=pointer]:
+                                - /url: /FujiwaraChoki/MoneyPrinterV2
+                            - generic [ref=e259]:
+                              - generic [ref=e260]: Automate the process of making money online.
+                              - region "Repo Details 0-0" [ref=e262]:
+                                - generic [ref=e264]: Python
+                                - link "19010 stargazers" [ref=e266] [cursor=pointer]:
+                                  - /url: /FujiwaraChoki/MoneyPrinterV2/stargazers
+                                  - img [ref=e267]
+                                  - text: 19k
+                          - generic [ref=e271]:
+                            - button "Star this repository" [ref=e273] [cursor=pointer]:
+                              - img [ref=e274]
+                              - text: Star
+                            - group [ref=e276]:
+                              - button "Add this repository to a list" [ref=e277] [cursor=pointer]:
+                                - img [ref=e278]
+                      - article [ref=e281]:
+                        - generic [ref=e283]:
+                          - separator [ref=e284]
+                          - region "repository body 0-1" [ref=e288]:
+                            - generic [ref=e289]:
+                              - generic [ref=e290]:
+                                - generic [ref=e291]:
+                                  - link "@Lum1104 profile" [ref=e292] [cursor=pointer]:
+                                    - /url: /Lum1104
+                                    - img "@Lum1104 profile" [ref=e293]
+                                  - link "Lum1104/Understand-Anything" [ref=e294] [cursor=pointer]:
+                                    - /url: /Lum1104/Understand-Anything
+                                - generic [ref=e295]:
+                                  - generic [ref=e296]: Claude Code skills that turn any codebase into an interactive knowledge graph you can explore, search, and ask questions about (Multi-platform e.g., Codex are supported).
+                                  - region "Repo Details 0-1" [ref=e298]:
+                                    - generic [ref=e300]: TypeScript
+                                    - link "3523 stargazers" [ref=e302] [cursor=pointer]:
+                                      - /url: /Lum1104/Understand-Anything/stargazers
+                                      - img [ref=e303]
+                                      - text: 3.5k
+                              - generic [ref=e307]:
+                                - button "Star this repository" [ref=e309] [cursor=pointer]:
+                                  - img [ref=e310]
+                                  - text: Star
+                                - group [ref=e312]:
+                                  - button "Add this repository to a list" [ref=e313] [cursor=pointer]:
+                                    - img [ref=e314]
+        - contentinfo [ref=e316]:
+          - heading "Footer" [level=2] [ref=e317]
+          - generic [ref=e318]:
+            - generic [ref=e319]:
+              - link "GitHub Homepage" [ref=e320] [cursor=pointer]:
+                - /url: https://github.com
+                - img [ref=e321]
+              - generic [ref=e323]: © 2026 GitHub, Inc.
+            - navigation "Footer" [ref=e324]:
+              - heading "Footer navigation" [level=3] [ref=e325]
+              - list "Footer navigation" [ref=e326]:
+                - listitem [ref=e327]:
+                  - link "Terms" [ref=e328] [cursor=pointer]:
+                    - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+                - listitem [ref=e329]:
+                  - link "Privacy" [ref=e330] [cursor=pointer]:
+                    - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+                - listitem [ref=e331]:
+                  - link "Security" [ref=e332] [cursor=pointer]:
+                    - /url: https://github.com/security
+                - listitem [ref=e333]:
+                  - link "Status" [ref=e334] [cursor=pointer]:
+                    - /url: https://www.githubstatus.com/
+                - listitem [ref=e335]:
+                  - link "Community" [ref=e336] [cursor=pointer]:
+                    - /url: https://github.community/
+                - listitem [ref=e337]:
+                  - link "Docs" [ref=e338] [cursor=pointer]:
+                    - /url: https://docs.github.com/
+                - listitem [ref=e339]:
+                  - link "Contact" [ref=e340] [cursor=pointer]:
+                    - /url: https://support.github.com?tags=dotcom-footer
+                - listitem [ref=e341]:
+                  - button "Manage cookies" [ref=e343] [cursor=pointer]
+                - listitem [ref=e344]:
+                  - button "Do not share my personal information" [ref=e346] [cursor=pointer]
+      - complementary "Explore" [ref=e347]:
+        - generic [ref=e348]:
+          - heading "Latest from our changelog" [level=2] [ref=e349]
+          - list [ref=e350]:
+            - listitem [ref=e351]:
+              - img [ref=e353]
+              - generic [ref=e355]:
+                - generic [ref=e356]: Mar 20, 20262 days ago
+                - link "Copilot usage metrics now resolve auto model selection to actual models" [ref=e357] [cursor=pointer]:
+                  - /url: https://github.blog/changelog/2026-03-20-copilot-usage-metrics-now-resolve-auto-model-selection-to-actual-models
+            - listitem [ref=e358]:
+              - img [ref=e360]
+              - generic [ref=e362]:
+                - generic [ref=e363]: Mar 20, 20262 days ago
+                - link "Trace any Copilot coding agent commit to its session logs" [ref=e364] [cursor=pointer]:
+                  - /url: https://github.blog/changelog/2026-03-20-trace-any-copilot-coding-agent-commit-to-its-session-logs
+            - listitem [ref=e365]:
+              - img [ref=e367]
+              - generic [ref=e369]:
+                - generic [ref=e370]: Mar 20, 20262 days ago
+                - link "Monitor Copilot coding agent logs live in Raycast" [ref=e371] [cursor=pointer]:
+                  - /url: https://github.blog/changelog/2026-03-20-monitor-copilot-coding-agent-logs-live-in-raycast
+            - listitem [ref=e372]:
+              - img [ref=e374]
+              - generic [ref=e376]:
+                - generic [ref=e377]: Mar 20, 20262 days ago
+                - link "A smoother navigation experience in GitHub Mobile for Android" [ref=e378] [cursor=pointer]:
+                  - /url: https://github.blog/changelog/2026-03-20-a-smoother-navigation-experience-in-github-mobile-for-android
+          - link "View changelog →" [ref=e380] [cursor=pointer]:
+            - /url: https://github.blog/changelog

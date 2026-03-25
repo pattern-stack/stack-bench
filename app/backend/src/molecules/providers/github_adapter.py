@@ -436,9 +436,7 @@ class GitHubAdapter:
         await self._cache.set(cache_key, result.model_dump(), ttl=_CACHE_TTL, namespace=_CACHE_NS)
         return result
 
-    async def hydrate_stack(
-        self, owner: str, repo: str, branches: list[tuple[str, str, str]]
-    ) -> None:
+    async def hydrate_stack(self, owner: str, repo: str, branches: list[tuple[str, str, str]]) -> None:
         """Pre-load cache for an entire stack's diffs.
 
         Args:
