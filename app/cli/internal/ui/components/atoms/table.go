@@ -52,6 +52,7 @@ func Table(ctx RenderContext, data TableData) string {
 		Rows(data.Rows...).
 		Border(lipgloss.RoundedBorder()).
 		BorderStyle(borderStyle).
+		BorderRow(true).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			var s lipgloss.Style
 			if row == table.HeaderRow {
@@ -59,7 +60,7 @@ func Table(ctx RenderContext, data TableData) string {
 			} else {
 				s = cellStyle
 			}
-			s = s.Padding(0, 1)
+			s = s.PaddingLeft(1).PaddingRight(1)
 
 			// Apply column alignment if available.
 			if col < len(colAligns) {
