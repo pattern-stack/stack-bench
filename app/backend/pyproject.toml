@@ -18,6 +18,7 @@ dependencies = [
     "pytest-benchmark",
     "factory-boy",
     "faker",
+    "testcontainers[postgres]",
     "ruff",
     "mypy",
 ]

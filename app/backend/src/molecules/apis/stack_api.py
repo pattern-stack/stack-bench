@@ -8,11 +8,6 @@ from features.review_comments.schemas.output import ReviewCommentResponse
 from features.review_comments.service import ReviewCommentService
 from features.stacks.schemas.output import StackResponse
 from molecules.entities.stack_entity import StackEntity
-from molecules.events import (
-    PULL_REQUEST_MERGED,
-    REVIEW_COMMENT_CREATED,
-    REVIEW_COMMENT_UPDATED,
-)
 from molecules.providers.github_adapter import parse_owner_repo
 
 if TYPE_CHECKING:

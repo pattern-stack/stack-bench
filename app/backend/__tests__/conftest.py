@@ -23,6 +23,21 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
+
+def _postgres_reachable(url: str) -> bool:
+    """Check if Postgres is reachable by probing the port."""
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url.replace("+asyncpg", ""))
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        with socket.create_connection((host, port), timeout=1):
+            return True
+    except (OSError, TimeoutError):
+        return False
+
+
 # Import all models so they're registered
 import features  # noqa: E402, F401
 

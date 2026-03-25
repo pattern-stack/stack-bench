@@ -86,7 +86,7 @@ class TestExchangeCode:
 # --- Connection storage ---
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 class TestStoreGitHubConnection:
     async def test_creates_new_connection(self, db, oauth_api, encryption_key):
         user = User(
@@ -161,7 +161,7 @@ class TestStoreGitHubConnection:
 # --- Token retrieval ---
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 class TestGetUserGitHubToken:
     async def test_valid_token_returned(self, db, oauth_api, encryption_key):
         user = User(
@@ -207,7 +207,7 @@ class TestGetUserGitHubToken:
 # --- User linking ---
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 class TestFindOrCreateUser:
     async def test_creates_new_user(self, db, oauth_api):
         github_user = {"id": 11111, "login": "newghuser", "name": "New GitHub User"}
