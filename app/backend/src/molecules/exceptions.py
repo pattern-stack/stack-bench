@@ -42,3 +42,44 @@ class StackCycleError(MoleculeError):
         super().__init__(f"Setting base_branch_id={base_branch_id} on stack {stack_id} would create a cycle")
         self.stack_id = stack_id
         self.base_branch_id = base_branch_id
+
+
+# --- Task management errors ---
+
+
+class TaskNotFoundError(MoleculeError):
+    def __init__(self, task_id: UUID) -> None:
+        super().__init__(f"Task {task_id} not found")
+        self.task_id = task_id
+
+
+class TaskProjectNotFoundError(MoleculeError):
+    def __init__(self, project_id: UUID) -> None:
+        super().__init__(f"TaskProject {project_id} not found")
+        self.project_id = project_id
+
+
+class SprintNotFoundError(MoleculeError):
+    def __init__(self, sprint_id: UUID) -> None:
+        super().__init__(f"Sprint {sprint_id} not found")
+        self.sprint_id = sprint_id
+
+
+class TaskHasBlockersError(MoleculeError):
+    def __init__(self, task_id: UUID, blocker_ids: list[UUID]) -> None:
+        super().__init__(f"Task {task_id} has open blockers: {blocker_ids}")
+        self.task_id = task_id
+        self.blocker_ids = blocker_ids
+
+
+class RelationCycleError(MoleculeError):
+    def __init__(self, source_id: UUID, target_id: UUID, relation_type: str) -> None:
+        super().__init__(f"Creating {relation_type} relation from {source_id} to {target_id} would create a cycle")
+        self.source_id = source_id
+        self.target_id = target_id
+        self.relation_type = relation_type
+
+
+class SyncNotConfiguredError(MoleculeError):
+    def __init__(self) -> None:
+        super().__init__("Sync is not configured — no adapter was provided")
