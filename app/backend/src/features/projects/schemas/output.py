@@ -14,7 +14,8 @@ class ProjectResponse(BaseModel):
     state: str
     created_at: datetime
     updated_at: datetime
-    local_path: str
+    owner_id: UUID
+    local_path: str | None = None
     github_repo: str
 
     model_config = {"from_attributes": True}

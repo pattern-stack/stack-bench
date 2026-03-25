@@ -17,8 +17,11 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy built assets
+# Copy built assets and nginx config template
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY app/frontend/nginx.conf /etc/nginx/templates/default.conf.template
+
+ENV BACKEND_URL=http://localhost:8000
 
 EXPOSE 80
 

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pattern_stack.atoms.patterns import EventPattern, Field, StatePhase
 
 
@@ -24,5 +26,6 @@ class Project(EventPattern):
     name = Field(str, required=True, max_length=200, unique=True, index=True)
     description = Field(str, nullable=True)
     metadata_ = Field(dict, default=dict)
-    local_path = Field(str, required=True, max_length=500)
+    owner_id = Field(UUID, foreign_key="users.id", required=True, index=True)
+    local_path = Field(str, nullable=True, max_length=500)
     github_repo = Field(str, required=True, max_length=500, index=True)

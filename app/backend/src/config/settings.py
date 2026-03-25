@@ -21,7 +21,7 @@ class AppSettings(BaseSettings):
     ENCRYPTION_KEY: str = Field(default="")  # Fernet key for Connection config encryption
 
     # Frontend URL (for OAuth redirects)
-    FRONTEND_URL: str = Field(default="http://localhost:5173")
+    FRONTEND_URL: str = Field(default="http://localhost:3500")
 
     # GitHub App OAuth
     GITHUB_APP_ID: str = Field(default="3169724")

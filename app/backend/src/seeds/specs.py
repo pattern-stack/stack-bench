@@ -91,11 +91,16 @@ class ProjectSeed(SeedSpec):
         from features.projects.service import ProjectService
 
         service = ProjectService()
+        # Use a placeholder owner_id for seeds; real onboarding sets the actual user
+        from uuid import UUID
+
+        placeholder_owner = UUID("00000000-0000-0000-0000-000000000000")
         project = await service.create(
             ctx.db,
             ProjectCreate(
                 name=self.name,
                 description=self.description,
+                owner_id=placeholder_owner,
                 local_path="/tmp/seeds",
                 github_repo="https://github.com/example/seed-project",
             ),

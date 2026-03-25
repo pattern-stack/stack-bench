@@ -1,0 +1,407 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useGitHubConnection } from "@/hooks/useGitHubConnection";
+import { useOnboarding } from "@/hooks/useOnboarding";
+
+type Step = "connect" | "org" | "repo";
+
+export function OnboardingPage() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState<Step>("connect");
+  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
+  const [repoFilter, setRepoFilter] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  const github = useGitHubConnection();
+  const { status, orgs, repos, complete, invalidateStatus } =
+    useOnboarding(selectedOrg);
+
+  // Auto-advance from connect step when GitHub is connected
+  if (step === "connect" && status.data?.has_github && !connecting) {
+    setStep("org");
+  }
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    setConnectError(null);
+    try {
+      await github.connect();
+      invalidateStatus();
+    } catch (err) {
+      setConnectError(
+        err instanceof Error ? err.message : "Failed to connect GitHub"
+      );
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleSelectOrg = (login: string) => {
+    setSelectedOrg(login);
+    setRepoFilter("");
+    setStep("repo");
+  };
+
+  const handleSelectRepo = async (
+    fullName: string,
+    defaultBranch: string
+  ) => {
+    try {
+      await complete.mutateAsync({
+        repo_full_name: fullName,
+        default_branch: defaultBranch,
+      });
+      navigate("/", { replace: true });
+    } catch {
+      // Error is available via complete.error
+    }
+  };
+
+  const filteredRepos = (repos.data ?? []).filter(
+    (r) =>
+      r.name.toLowerCase().includes(repoFilter.toLowerCase()) ||
+      (r.description ?? "").toLowerCase().includes(repoFilter.toLowerCase())
+  );
+
+  return (
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>Stack Bench</h1>
+        <p style={styles.subtitle}>Set up your workspace</p>
+
+        {/* Progress indicator */}
+        <div style={styles.steps}>
+          <StepDot active={step === "connect"} done={step !== "connect"} label="1" />
+          <div style={styles.stepLine} />
+          <StepDot active={step === "org"} done={step === "repo"} label="2" />
+          <div style={styles.stepLine} />
+          <StepDot active={step === "repo"} done={false} label="3" />
+        </div>
+
+        {/* Step 1: Connect GitHub */}
+        {step === "connect" && (
+          <div style={styles.stepContent}>
+            <h2 style={styles.stepTitle}>Connect your GitHub account</h2>
+            <p style={styles.stepDesc}>
+              Stack Bench needs access to your repositories to manage stacked
+              PRs.
+            </p>
+            {connectError && <div style={styles.error}>{connectError}</div>}
+            <button
+              onClick={handleConnect}
+              disabled={connecting}
+              style={styles.button}
+            >
+              {connecting ? "Connecting..." : "Connect GitHub"}
+            </button>
+          </div>
+        )}
+
+        {/* Step 2: Select Org */}
+        {step === "org" && (
+          <div style={styles.stepContent}>
+            <h2 style={styles.stepTitle}>Select an organization</h2>
+            <p style={styles.stepDesc}>
+              Choose where your repository lives.
+            </p>
+            {orgs.isLoading && (
+              <p style={styles.loading}>Loading organizations...</p>
+            )}
+            {orgs.data && (
+              <div style={styles.list}>
+                {orgs.data.map((org) => (
+                  <button
+                    key={org.login}
+                    onClick={() => handleSelectOrg(org.login)}
+                    style={styles.listItem}
+                  >
+                    <img
+                      src={org.avatar_url}
+                      alt={org.login}
+                      style={styles.avatar}
+                    />
+                    <div>
+                      <div style={styles.itemName}>{org.login}</div>
+                      {org.description && (
+                        <div style={styles.itemDesc}>{org.description}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 3: Select Repo */}
+        {step === "repo" && (
+          <div style={styles.stepContent}>
+            <div style={styles.stepHeader}>
+              <button
+                onClick={() => {
+                  setStep("org");
+                  setSelectedOrg(null);
+                }}
+                style={styles.backButton}
+              >
+                Back
+              </button>
+              <h2 style={styles.stepTitle}>Select a repository</h2>
+            </div>
+            <p style={styles.stepDesc}>
+              Choose the repo for your first project.
+            </p>
+            <input
+              type="text"
+              value={repoFilter}
+              onChange={(e) => setRepoFilter(e.target.value)}
+              placeholder="Filter repositories..."
+              style={styles.input}
+            />
+            {repos.isLoading && (
+              <p style={styles.loading}>Loading repositories...</p>
+            )}
+            {complete.error && (
+              <div style={styles.error}>
+                {(complete.error as { detail?: string })?.detail ??
+                  "Failed to create project"}
+              </div>
+            )}
+            {repos.data && (
+              <div style={styles.list}>
+                {filteredRepos.map((repo) => (
+                  <button
+                    key={repo.full_name}
+                    onClick={() =>
+                      handleSelectRepo(repo.full_name, repo.default_branch)
+                    }
+                    disabled={complete.isPending}
+                    style={styles.listItem}
+                  >
+                    <div style={styles.repoIcon}>
+                      {repo.private ? "L" : "P"}
+                    </div>
+                    <div>
+                      <div style={styles.itemName}>{repo.name}</div>
+                      {repo.description && (
+                        <div style={styles.itemDesc}>{repo.description}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+                {filteredRepos.length === 0 && (
+                  <p style={styles.empty}>No repositories match your filter.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StepDot({
+  active,
+  done,
+  label,
+}: {
+  active: boolean;
+  done: boolean;
+  label: string;
+}) {
+  return (
+    <div
+      style={{
+        ...styles.stepDot,
+        background: active
+          ? "var(--accent)"
+          : done
+            ? "var(--green)"
+            : "var(--bg-inset)",
+        color: active || done ? "#fff" : "var(--fg-muted)",
+      }}
+    >
+      {done ? "\u2713" : label}
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: "100vh",
+    background: "var(--bg-canvas)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "var(--font-sans)",
+  },
+  card: {
+    background: "var(--bg-surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "2.5rem 2rem",
+    width: "100%",
+    maxWidth: 480,
+  },
+  title: {
+    color: "var(--fg-default)",
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    margin: 0,
+    textAlign: "center" as const,
+  },
+  subtitle: {
+    color: "var(--fg-muted)",
+    fontSize: "0.875rem",
+    marginTop: "0.25rem",
+    marginBottom: "1.5rem",
+    textAlign: "center" as const,
+  },
+  steps: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 0,
+    marginBottom: "1.5rem",
+  },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    flexShrink: 0,
+  },
+  stepLine: {
+    width: 40,
+    height: 2,
+    background: "var(--border)",
+  },
+  stepContent: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.75rem",
+  },
+  stepHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  stepTitle: {
+    color: "var(--fg-default)",
+    fontSize: "1rem",
+    fontWeight: 600,
+    margin: 0,
+  },
+  stepDesc: {
+    color: "var(--fg-muted)",
+    fontSize: "0.8125rem",
+    margin: 0,
+  },
+  button: {
+    background: "var(--accent)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "0.5rem 1rem",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    cursor: "pointer",
+    fontFamily: "var(--font-sans)",
+    marginTop: "0.25rem",
+  },
+  backButton: {
+    background: "none",
+    color: "var(--fg-muted)",
+    border: "1px solid var(--border)",
+    borderRadius: 6,
+    padding: "0.25rem 0.75rem",
+    fontSize: "0.75rem",
+    cursor: "pointer",
+    fontFamily: "var(--font-sans)",
+    flexShrink: 0,
+  },
+  input: {
+    background: "var(--bg-inset)",
+    border: "1px solid var(--border)",
+    borderRadius: 6,
+    padding: "0.5rem 0.75rem",
+    color: "var(--fg-default)",
+    fontSize: "0.875rem",
+    fontFamily: "var(--font-sans)",
+    outline: "none",
+  },
+  list: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.25rem",
+    maxHeight: 320,
+    overflowY: "auto" as const,
+  },
+  listItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    padding: "0.625rem 0.75rem",
+    background: "var(--bg-inset)",
+    border: "1px solid var(--border)",
+    borderRadius: 6,
+    cursor: "pointer",
+    textAlign: "left" as const,
+    fontFamily: "var(--font-sans)",
+    width: "100%",
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    flexShrink: 0,
+  },
+  repoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    background: "var(--bg-surface)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    color: "var(--fg-muted)",
+    flexShrink: 0,
+  },
+  itemName: {
+    color: "var(--fg-default)",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+  },
+  itemDesc: {
+    color: "var(--fg-muted)",
+    fontSize: "0.75rem",
+    marginTop: "0.125rem",
+  },
+  loading: {
+    color: "var(--fg-muted)",
+    fontSize: "0.8125rem",
+    textAlign: "center" as const,
+  },
+  empty: {
+    color: "var(--fg-muted)",
+    fontSize: "0.8125rem",
+    textAlign: "center" as const,
+    padding: "1rem 0",
+  },
+  error: {
+    background: "var(--red-bg)",
+    color: "var(--red)",
+    border: "1px solid var(--red)",
+    borderRadius: 6,
+    padding: "0.5rem 0.75rem",
+    fontSize: "0.8125rem",
+  },
+};

@@ -1,5 +1,6 @@
 import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -69,31 +70,49 @@ def test_project_full_lifecycle() -> None:
 @pytest.mark.unit
 def test_project_create_schema(temp_git_dir) -> None:
     """Verify create schema with minimal data."""
+    owner = uuid4()
     data = ProjectCreate(
         name="my-project",
+        owner_id=owner,
         local_path=temp_git_dir,
         github_repo="https://github.com/user/repo",
     )
     assert data.name == "my-project"
     assert data.description is None
     assert data.metadata_ is None
+    assert data.owner_id == owner
     assert data.local_path == temp_git_dir
     assert data.github_repo == "https://github.com/user/repo"
 
 
 @pytest.mark.unit
+def test_project_create_schema_no_local_path() -> None:
+    """Verify create schema allows None local_path (remote-first)."""
+    owner = uuid4()
+    data = ProjectCreate(
+        name="my-project",
+        owner_id=owner,
+        github_repo="https://github.com/user/repo",
+    )
+    assert data.local_path is None
+
+
+@pytest.mark.unit
 def test_project_create_schema_full(temp_git_dir) -> None:
     """Verify create schema with all fields."""
+    owner = uuid4()
     data = ProjectCreate(
         name="my-project",
         description="A test project",
         metadata_={"key": "value"},
+        owner_id=owner,
         local_path=temp_git_dir,
         github_repo="https://github.com/user/repo",
     )
     assert data.name == "my-project"
     assert data.description == "A test project"
     assert data.metadata_ == {"key": "value"}
+    assert data.owner_id == owner
     assert data.local_path == temp_git_dir
     assert data.github_repo == "https://github.com/user/repo"
 
@@ -149,17 +168,17 @@ def test_project_model_has_github_repo_field() -> None:
 
 
 @pytest.mark.unit
-def test_project_create_requires_local_path(temp_git_dir) -> None:
-    """Verify ProjectCreate requires local_path."""
+def test_project_create_requires_owner_id(temp_git_dir) -> None:
+    """Verify ProjectCreate requires owner_id."""
     with pytest.raises(ValidationError):
-        ProjectCreate(name="x", github_repo="https://github.com/user/repo")
+        ProjectCreate(name="x", local_path=temp_git_dir, github_repo="https://github.com/user/repo")
 
 
 @pytest.mark.unit
 def test_project_create_requires_github_repo(temp_git_dir) -> None:
     """Verify ProjectCreate requires github_repo."""
     with pytest.raises(ValidationError):
-        ProjectCreate(name="x", local_path=temp_git_dir)
+        ProjectCreate(name="x", owner_id=uuid4(), local_path=temp_git_dir)
 
 
 @pytest.mark.unit
@@ -168,6 +187,7 @@ def test_project_create_validates_local_path_exists() -> None:
     with pytest.raises(ValidationError) as exc_info:
         ProjectCreate(
             name="x",
+            owner_id=uuid4(),
             local_path="/nonexistent/path",
             github_repo="https://github.com/user/repo",
         )
@@ -184,6 +204,7 @@ def test_project_create_validates_local_path_is_directory(temp_git_dir) -> None:
     with pytest.raises(ValidationError) as exc_info:
         ProjectCreate(
             name="x",
+            owner_id=uuid4(),
             local_path=str(file_path),
             github_repo="https://github.com/user/repo",
         )
@@ -196,6 +217,7 @@ def test_project_create_validates_github_repo_format(temp_git_dir) -> None:
     with pytest.raises(ValidationError) as exc_info:
         ProjectCreate(
             name="x",
+            owner_id=uuid4(),
             local_path=temp_git_dir,
             github_repo="invalid",
         )
@@ -208,6 +230,7 @@ def test_project_create_rejects_non_https_github_repo(temp_git_dir) -> None:
     with pytest.raises(ValidationError) as exc_info:
         ProjectCreate(
             name="x",
+            owner_id=uuid4(),
             local_path=temp_git_dir,
             github_repo="http://github.com/user/repo",
         )
@@ -219,6 +242,7 @@ def test_project_create_with_valid_paths(temp_git_dir) -> None:
     """Verify ProjectCreate succeeds with valid local_path and github_repo."""
     data = ProjectCreate(
         name="x",
+        owner_id=uuid4(),
         local_path=temp_git_dir,
         github_repo="https://github.com/user/repo",
     )
@@ -243,22 +267,12 @@ def test_project_update_allows_partial_github_repo() -> None:
 
 
 @pytest.mark.unit
-def test_project_create_rejects_empty_local_path() -> None:
-    """Verify ProjectCreate rejects empty local_path."""
-    with pytest.raises(ValidationError):
-        ProjectCreate(
-            name="x",
-            local_path="",
-            github_repo="https://github.com/user/repo",
-        )
-
-
-@pytest.mark.unit
 def test_project_create_rejects_empty_github_repo(temp_git_dir) -> None:
     """Verify ProjectCreate rejects empty github_repo."""
     with pytest.raises(ValidationError):
         ProjectCreate(
             name="x",
+            owner_id=uuid4(),
             local_path=temp_git_dir,
             github_repo="",
         )
