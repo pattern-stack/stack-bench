@@ -12,8 +12,6 @@ from molecules.events import (
     PULL_REQUEST_MERGED,
     REVIEW_COMMENT_CREATED,
     REVIEW_COMMENT_UPDATED,
-    DomainEvent,
-    publish,
 )
 from molecules.providers.github_adapter import parse_owner_repo
 

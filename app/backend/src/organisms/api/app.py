@@ -7,7 +7,6 @@ from pattern_stack.atoms.config import settings as ps_settings
 from pattern_stack.features.auth.exceptions import AuthError
 from pattern_stack.organisms.api.auth_router import create_auth_router
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from starlette.middleware.cors import CORSMiddleware
 
 from config.settings import get_settings
 from molecules.events.setup import setup_event_handlers, teardown_event_handlers
