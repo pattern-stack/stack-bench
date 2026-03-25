@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -16,9 +18,19 @@ import (
 	"github.com/dugshub/stack-bench/app/cli/internal/service"
 )
 
+//go:embed fixtures/demo.json
+var embeddedDemoScript []byte
+
 func main() {
 	noBackend := flag.Bool("no-backend", false, "skip auto-starting the backend server")
+	demoMode := flag.Bool("demo", false, "run in demo mode with scripted conversation replay")
+	demoScript := flag.String("demo-script", "", "path to demo script JSON (default: built-in fixture)")
 	flag.Parse()
+
+	if *demoMode {
+		runDemo(*demoScript)
+		return
+	}
 
 	var client api.Client
 	var mgr *service.ServiceManager
@@ -67,6 +79,33 @@ func main() {
 		if mgr != nil {
 			mgr.StopAll()
 		}
+		os.Exit(1)
+	}
+}
+
+func runDemo(scriptPath string) {
+	var data []byte
+	if scriptPath != "" {
+		var err error
+		data, err = os.ReadFile(scriptPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading demo script: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		data = embeddedDemoScript
+	}
+
+	var script []api.DemoMessage
+	if err := json.Unmarshal(data, &script); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing demo script: %v\n", err)
+		os.Exit(1)
+	}
+
+	model := app.NewDemo(script)
+	p := tea.NewProgram(model)
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

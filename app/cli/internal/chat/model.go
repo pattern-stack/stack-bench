@@ -4,20 +4,25 @@ import (
 	"context"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/api"
 	"github.com/dugshub/stack-bench/app/cli/internal/command"
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/autocomplete"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
-// Role identifies the sender of a chat message.
-type Role int
+// Role is an alias for atoms.Role, the canonical role type in the component system.
+type Role = atoms.Role
 
+// Role constants re-exported from atoms for backward compatibility within the chat package.
 const (
-	RoleUser Role = iota
-	RoleAssistant
-	RoleSystem
+	RoleUser      = atoms.RoleUser
+	RoleAssistant = atoms.RoleAssistant
+	RoleSystem    = atoms.RoleSystem
 )
 
 // Message is a single chat message.
@@ -43,25 +48,81 @@ type Model struct {
 	streamCh       <-chan api.StreamChunk
 	registry       *command.Registry
 	autocomplete   autocomplete.Model
+	viewport       viewport.Model
 	ExchangeCount  int
 	IsBranch       bool
 }
 
+// chatScrollKeyMap returns a KeyMap that avoids conflicts with text input.
+// Only special keys (pgup/pgdown, shift+arrows) are bound; letter keys
+// like j/k/f/b/d/u that the default keymap uses are omitted so they can
+// be typed normally.
+func chatScrollKeyMap() viewport.KeyMap {
+	return viewport.KeyMap{
+		PageDown: key.NewBinding(
+			key.WithKeys("pgdown"),
+			key.WithHelp("pgdn", "page down"),
+		),
+		PageUp: key.NewBinding(
+			key.WithKeys("pgup"),
+			key.WithHelp("pgup", "page up"),
+		),
+		HalfPageUp: key.NewBinding(
+			key.WithKeys("ctrl+u"),
+			key.WithHelp("ctrl+u", "½ page up"),
+		),
+		HalfPageDown: key.NewBinding(
+			key.WithKeys("ctrl+d"),
+			key.WithHelp("ctrl+d", "½ page down"),
+		),
+		Up: key.NewBinding(
+			key.WithKeys("shift+up"),
+			key.WithHelp("shift+↑", "scroll up"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("shift+down"),
+			key.WithHelp("shift+↓", "scroll down"),
+		),
+		Left:  key.NewBinding(), // disabled
+		Right: key.NewBinding(), // disabled
+	}
+}
+
 // New creates a fresh chat model.
 func New(client api.Client, agentName string, registry *command.Registry) Model {
+	vp := viewport.New()
+	vp.SoftWrap = true
+	vp.MouseWheelEnabled = true
+	vp.KeyMap = chatScrollKeyMap()
+	vp.FillHeight = true
+
 	return Model{
 		client:       client,
 		agentName:    agentName,
 		registry:     registry,
 		autocomplete: autocomplete.New(registry),
+		viewport:     vp,
 	}
 }
+
+// Chat chrome heights (status line = 1 line, input = sep + text).
+const (
+	statusLineHeight = 1 // streaming/scroll indicator (no separator)
+	inputHeight      = 2 // separator + "you: _"
+	chatChrome       = statusLineHeight + inputHeight + 2 // +2 newlines between sections
+)
 
 // SetSize updates the viewport dimensions.
 func (m *Model) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 	m.autocomplete.SetWidth(w)
+	m.viewport.SetWidth(w)
+	vpHeight := h - chatChrome
+	if vpHeight < 1 {
+		vpHeight = 1
+	}
+	m.viewport.SetHeight(vpHeight)
 }
 
 // SetConversationID sets the conversation identifier.
@@ -88,6 +149,40 @@ func (m *Model) ClearInput() {
 // AppendMessage adds a message to the chat history.
 func (m *Model) AppendMessage(msg Message) {
 	m.messages = append(m.messages, msg)
+	m.rebuildViewportContent()
+}
+
+// rebuildViewportContent re-renders all messages into the viewport.
+// It preserves scroll position when the user has scrolled up, and
+// auto-scrolls to the bottom otherwise.
+func (m *Model) rebuildViewportContent() {
+	wasAtBottom := m.viewport.AtBottom()
+
+	if len(m.messages) == 0 {
+		ctx := atoms.DefaultContext(m.width)
+		empty := atoms.TextBlock(ctx, atoms.TextBlockData{
+			Text:  "  No messages yet. Type below to start a conversation.",
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		})
+		m.viewport.SetContent(empty)
+		return
+	}
+
+	var rendered []string
+	for _, msg := range m.messages {
+		rendered = append(rendered, renderMessage(msg, m.width))
+	}
+
+	m.viewport.SetContent(strings.Join(rendered, "\n"))
+
+	if wasAtBottom {
+		m.viewport.GotoBottom()
+	}
+}
+
+// SetInput pre-fills the input buffer (used by demo mode).
+func (m *Model) SetInput(text string) {
+	m.input = text
 }
 
 // Update handles key input and streaming response messages.
@@ -95,10 +190,16 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
+	case tea.MouseWheelMsg:
+		// Delegate mouse wheel events to the viewport for scrolling.
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
+		return *m, cmd
 	case ResponseMsg:
 		return m.handleResponse(msg)
 	case command.ClearMsg:
 		m.messages = nil
+		m.rebuildViewportContent()
 		return *m, nil
 	case command.ShowHelpMsg:
 		m.showHelp(msg.Commands)
@@ -107,7 +208,30 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return *m, nil
 }
 
+// isScrollKey returns true if the key press should be handled by the viewport
+// for scrolling rather than passed to the text input.
+func isScrollKey(msg tea.KeyPressMsg) bool {
+	switch msg.String() {
+	case "pgup", "pgdown", "shift+up", "shift+down", "ctrl+u", "ctrl+d":
+		return true
+	}
+	return false
+}
+
 func (m *Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	// Scroll keys go to the viewport even while streaming.
+	// ctrl+u/ctrl+d are dual-purpose: they scroll when the input is empty
+	// (or when streaming), but act as input editing keys otherwise.
+	k := msg.String()
+	isCtrlUD := k == "ctrl+u" || k == "ctrl+d"
+	if isScrollKey(msg) {
+		if !isCtrlUD || m.streaming || m.input == "" {
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+			return *m, cmd
+		}
+	}
+
 	if m.streaming {
 		return *m, nil
 	}
@@ -197,6 +321,7 @@ func (m *Model) submit() (Model, tea.Cmd) {
 				Role:    RoleSystem,
 				Content: "Unknown command: " + text + ". Type /help for available commands.",
 			})
+			m.rebuildViewportContent()
 			return *m, nil
 		}
 		if def.Handler != nil {
@@ -208,6 +333,7 @@ func (m *Model) submit() (Model, tea.Cmd) {
 	// Regular message
 	m.messages = append(m.messages, Message{Role: RoleUser, Content: text})
 	m.streaming = true
+	m.rebuildViewportContent()
 
 	client := m.client
 	convID := m.conversationID
@@ -218,6 +344,7 @@ func (m *Model) submit() (Model, tea.Cmd) {
 			Role:    RoleAssistant,
 			Content: "Error: " + err.Error(),
 		})
+		m.rebuildViewportContent()
 		return *m, nil
 	}
 	m.streamCh = ch
@@ -234,6 +361,7 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 			Role:    RoleAssistant,
 			Content: "Error: " + chunk.Error.Error(),
 		})
+		m.rebuildViewportContent()
 		return *m, nil
 	}
 
@@ -243,11 +371,13 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 		} else {
 			m.messages = append(m.messages, Message{Role: RoleAssistant, Content: chunk.Content})
 		}
+		m.rebuildViewportContent()
 	}
 
 	if chunk.Done {
 		m.streaming = false
 		m.streamCh = nil
+		m.rebuildViewportContent()
 		return *m, nil
 	}
 
@@ -268,6 +398,7 @@ func (m *Model) showHelp(commands []command.Def) {
 		Role:    RoleSystem,
 		Content: strings.Join(lines, "\n"),
 	})
+	m.rebuildViewportContent()
 }
 
 func prefixAll(strs []string, prefix string) []string {

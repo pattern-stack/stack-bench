@@ -105,34 +105,28 @@ func RenderMarkdown(text string, width int) string {
 func renderLine(line string, width int) string {
 	trimmed := strings.TrimSpace(line)
 
-	// Headers
-	if strings.HasPrefix(trimmed, "### ") {
-		return mdH3.Render(trimmed[4:])
-	}
-	if strings.HasPrefix(trimmed, "## ") {
-		return mdH2.Render(trimmed[3:])
-	}
-	if strings.HasPrefix(trimmed, "# ") {
-		return mdH1.Render(trimmed[2:])
-	}
-
-	// Unordered list items
-	if strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") {
-		bullet := mdListBullet.Render("•")
-		content := renderInline(trimmed[2:])
-		return "  " + bullet + " " + content
-	}
-
-	// Ordered list items
-	if idx := indexOfOrderedPrefix(trimmed); idx > 0 {
-		num := trimmed[:idx]
-		bullet := mdListBullet.Render(num)
-		content := renderInline(trimmed[idx:])
-		return "  " + bullet + content
+	var rendered string
+	switch {
+	case strings.HasPrefix(trimmed, "### "):
+		rendered = mdH3.Render(trimmed[4:])
+	case strings.HasPrefix(trimmed, "## "):
+		rendered = mdH2.Render(trimmed[3:])
+	case strings.HasPrefix(trimmed, "# "):
+		rendered = mdH1.Render(trimmed[2:])
+	case strings.HasPrefix(trimmed, "- "), strings.HasPrefix(trimmed, "* "):
+		rendered = "  " + mdListBullet.Render("•") + " " + renderInline(trimmed[2:])
+	default:
+		if idx := indexOfOrderedPrefix(trimmed); idx > 0 {
+			rendered = "  " + mdListBullet.Render(trimmed[:idx]) + renderInline(trimmed[idx:])
+		} else {
+			rendered = renderInline(line)
+		}
 	}
 
-	// Regular line with inline formatting
-	return renderInline(line)
+	if width > 0 {
+		rendered = lipgloss.NewStyle().Width(width).Render(rendered)
+	}
+	return rendered
 }
 
 // indexOfOrderedPrefix returns the length of an ordered list prefix like "1. "

@@ -12,7 +12,9 @@ import (
 	"github.com/dugshub/stack-bench/app/cli/internal/chat"
 	"github.com/dugshub/stack-bench/app/cli/internal/command"
 	"github.com/dugshub/stack-bench/app/cli/internal/service"
-	"github.com/dugshub/stack-bench/app/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/molecules"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 // Phase represents the current phase of the app lifecycle.
@@ -53,6 +55,10 @@ type Model struct {
 
 	// Runtime health
 	healthStatuses map[string]service.ServiceStatus
+
+	// Demo mode
+	demo       bool
+	demoRunner *DemoRunner
 }
 
 // New creates the initial app model.
@@ -88,7 +94,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.chat.SetSize(m.width, m.height-2)
+		m.chat.SetSize(m.width, m.height-5)
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -102,6 +108,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.agents = msg.Agents
+		if m.demo {
+			return m.handleDemoAgentsLoaded()
+		}
 		return m, nil
 
 	case ConversationCreatedMsg:
@@ -111,7 +120,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.chat.SetConversationID(msg.ConversationID)
 		m.phase = PhaseChat
+		if m.demo {
+			m.prefillNextInput()
+		}
 		return m, nil
+
+	case chat.ResponseMsg:
+		newChat, cmd := m.chat.Update(msg)
+		m.chat = newChat
+		// In demo mode, prefill next input after streaming completes
+		if m.demo && msg.Chunk.Done {
+			m.prefillNextInput()
+		}
+		return m, cmd
 
 	case command.SwitchAgentMsg:
 		m.phase = PhaseSelectAgent
@@ -156,7 +177,7 @@ func (m Model) updateAgentSelect(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.agents) > 0 {
 			agent := m.agents[m.agentCursor]
 			m.chat = chat.New(m.client, agent.Name, m.registry)
-			m.chat.SetSize(m.width, m.height-2)
+			m.chat.SetSize(m.width, m.height-5)
 
 			client := m.client
 			agentID := agent.ID
@@ -197,46 +218,67 @@ func (m Model) View() tea.View {
 		case PhaseSelectAgent:
 			body = m.viewAgentSelect()
 		case PhaseChat:
-			body = m.chat.View()
+			body = m.chat.RenderHeader() + "\n" + m.chat.View()
 		}
-		body += "\n" + m.renderStatus()
+		body += "\n" + m.renderLegend()
 	}
 
 	v := tea.NewView(body)
 	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
 	return v
 }
 
 func (m Model) viewAgentSelect() string {
+	ctx := atoms.DefaultContext(m.width)
+	// Use a zero-width context for inline text rendering (no width padding)
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+
 	var lines []string
 
-	title := ui.Bold.Render(" STACK BENCH")
-	lines = append(lines, title)
-	lines = append(lines, ui.Dim.Render(strings.Repeat("─", m.width)))
+	header := molecules.Header(ctx, molecules.HeaderData{
+		Title: "STACK BENCH",
+	})
+	lines = append(lines, header)
 	lines = append(lines, "")
 
 	if m.loadErr != nil {
-		lines = append(lines, ui.Red.Render(fmt.Sprintf("  Error: %v", m.loadErr)))
-		lines = append(lines, "")
-		lines = append(lines, ui.Dim.Render("  Press q to quit."))
+		errBlock := molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
+			Message:     fmt.Sprintf("%v", m.loadErr),
+			Suggestions: []string{"Press q to quit."},
+		})
+		lines = append(lines, "  "+errBlock)
 	} else if len(m.agents) == 0 {
-		lines = append(lines, ui.Dim.Render("  Loading agents..."))
+		lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text:  "Loading agents...",
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		}))
 	} else {
-		lines = append(lines, ui.Fg.Render("  Select an agent to start a conversation:"))
+		lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text: "Select an agent to start a conversation:",
+		}))
 		lines = append(lines, "")
 
 		for i, agent := range m.agents {
 			cursor := "  "
 			if i == m.agentCursor {
-				cursor = ui.Accent.Render("> ")
+				cursor = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent}) + " "
 			}
 
-			name := ui.Fg.Render(agent.Name)
+			name := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text: agent.Name,
+			})
 			if i == m.agentCursor {
-				name = ui.Bold.Render(agent.Name)
+				name = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+					Text:  agent.Name,
+					Style: theme.Style{Emphasis: theme.Strong},
+				})
 			}
 
-			role := ui.Dim.Render(agent.Role)
+			role := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  agent.Role,
+				Style: theme.Style{Hierarchy: theme.Tertiary},
+			})
 			lines = append(lines, fmt.Sprintf("  %s%s  %s", cursor, name, role))
 		}
 	}
@@ -251,40 +293,41 @@ func (m Model) viewAgentSelect() string {
 	)
 }
 
-func (m Model) renderStatus() string {
+func (m Model) renderLegend() string {
+	ctx := atoms.DefaultContext(m.width)
+
 	var hint string
 	switch m.phase {
 	case PhaseSelectAgent:
 		hint = "j/k: navigate  enter: select  q: quit"
 	case PhaseChat:
-		hint = "enter: send  esc: back to agents  ctrl+c: quit"
+		hint = "enter: send  pgup/pgdn: scroll  esc: back  ctrl+c: quit"
 	}
 
-	// Health indicator
-	var healthIndicator string
+	// Map service health to molecule HealthState
+	var health molecules.HealthState
+	var serviceName string
 	if m.manager != nil {
+		serviceName = "backend"
 		status, ok := m.healthStatuses["backend"]
 		if !ok {
 			status = service.StatusStarting
 		}
 		switch status {
 		case service.StatusHealthy:
-			healthIndicator = ui.Green.Render("●") + ui.Dim.Render(" backend")
+			health = molecules.HealthHealthy
 		case service.StatusUnhealthy:
-			healthIndicator = ui.Red.Render("●") + ui.Dim.Render(" backend")
+			health = molecules.HealthUnhealthy
 		case service.StatusStarting:
-			healthIndicator = ui.Dim.Render("○ backend")
+			health = molecules.HealthStarting
 		default:
-			healthIndicator = ui.Dim.Render("○ backend")
+			health = molecules.HealthUnknown
 		}
 	}
 
-	sep := ui.Dim.Render(strings.Repeat("─", m.width))
-
-	left := ui.Dim.Render(" " + hint)
-	if healthIndicator != "" {
-		fill := max(0, m.width-lipgloss.Width(left)-lipgloss.Width(healthIndicator)-1)
-		return sep + "\n" + left + strings.Repeat(" ", fill) + healthIndicator
-	}
-	return sep + "\n" + left
+	return molecules.StatusBar(ctx, molecules.StatusBarData{
+		Hints:       " " + hint,
+		ServiceName: serviceName,
+		Health:      health,
+	})
 }

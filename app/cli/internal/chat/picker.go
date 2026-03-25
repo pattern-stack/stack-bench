@@ -8,7 +8,9 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/api"
-	"github.com/dugshub/stack-bench/app/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/molecules"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 // PickerAction describes what the user chose to do with a conversation.
@@ -122,47 +124,74 @@ func (m PickerModel) View() string {
 		return ""
 	}
 
+	ctx := atoms.DefaultContext(m.width)
+	// Use a zero-width context for inline text rendering (no width padding)
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+
 	var lines []string
 
-	header := " " + ui.Bold.Render("CONVERSATIONS") +
-		ui.Dim.Render(" — ") +
-		ui.Accent.Render(m.agentName)
+	header := molecules.Header(ctx, molecules.HeaderData{
+		Title: "CONVERSATIONS",
+		Badges: []atoms.BadgeData{
+			{
+				Label:   m.agentName,
+				Style:   theme.Style{Category: theme.CatAgent},
+				Variant: atoms.BadgeOutline,
+			},
+		},
+	})
 	lines = append(lines, header)
-	lines = append(lines, ui.Dim.Render(strings.Repeat("─", m.width)))
 	lines = append(lines, "")
 
 	if m.loadErr != nil {
-		lines = append(lines, ui.Red.Render(fmt.Sprintf("  Error: %v", m.loadErr)))
+		errBlock := molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
+			Message: fmt.Sprintf("%v", m.loadErr),
+		})
+		lines = append(lines, "  "+errBlock)
 	} else if m.loading {
-		lines = append(lines, ui.Dim.Render("  Loading conversations..."))
+		lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text:  "Loading conversations...",
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		}))
 	} else {
 		// "New conversation" option
 		newCursor := "  "
-		newLabel := ui.Fg.Render("+ New conversation")
+		newLabel := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text: "+ New conversation",
+		})
 		if m.cursor == 0 {
-			newCursor = ui.Accent.Render("> ")
-			newLabel = ui.Bold.Render("+ New conversation")
+			newCursor = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent}) + " "
+			newLabel = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  "+ New conversation",
+				Style: theme.Style{Emphasis: theme.Strong},
+			})
 		}
 		lines = append(lines, fmt.Sprintf("  %s%s", newCursor, newLabel))
 		lines = append(lines, "")
 
 		if len(m.conversations) > 0 {
-			lines = append(lines, ui.Dim.Render("  Past conversations:"))
+			lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  "Past conversations:",
+				Style: theme.Style{Hierarchy: theme.Tertiary},
+			}))
 			lines = append(lines, "")
 
 			for i, conv := range m.conversations {
 				idx := i + 1 // offset by 1 for the "new" option
 				cursor := "  "
 				if m.cursor == idx {
-					cursor = ui.Accent.Render("> ")
+					cursor = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent}) + " "
 				}
 
 				// Format: state, exchange count, time
-				label := conv.AgentName
+				label := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+					Text: conv.AgentName,
+				})
 				if m.cursor == idx {
-					label = ui.Bold.Render(label)
-				} else {
-					label = ui.Fg.Render(label)
+					label = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+						Text:  conv.AgentName,
+						Style: theme.Style{Emphasis: theme.Strong},
+					})
 				}
 
 				meta := fmt.Sprintf("%s  %d exchanges  %s",
@@ -171,17 +200,29 @@ func (m PickerModel) View() string {
 					conv.UpdatedAt.Format("Jan 2 15:04"),
 				)
 
+				metaText := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+					Text:  meta,
+					Style: theme.Style{Hierarchy: theme.Tertiary},
+				})
+
 				branch := ""
 				if conv.BranchedFromID != nil {
-					branch = " " + ui.Accent.Render("[branch]")
+					branch = " " + atoms.Badge(inlineCtx, atoms.BadgeData{
+						Label:   "branch",
+						Style:   theme.Style{Category: theme.CatAgent},
+						Variant: atoms.BadgeOutline,
+					})
 				}
 
 				lines = append(lines,
-					fmt.Sprintf("  %s%s  %s%s", cursor, label, ui.Dim.Render(meta), branch),
+					fmt.Sprintf("  %s%s  %s%s", cursor, label, metaText, branch),
 				)
 			}
 		} else {
-			lines = append(lines, ui.Dim.Render("  No past conversations."))
+			lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  "No past conversations.",
+				Style: theme.Style{Hierarchy: theme.Tertiary},
+			}))
 		}
 	}
 
