@@ -1,6 +1,8 @@
 package theme
 
-import "charm.land/lipgloss/v2"
+import (
+	"charm.land/lipgloss/v2"
+)
 
 var (
 	active *Theme
