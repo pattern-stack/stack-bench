@@ -72,14 +72,20 @@ type SSEReasoningData struct {
 
 // SSEToolStartData is the JSON payload for tool start events.
 type SSEToolStartData struct {
-	ToolName string `json:"tool_name"`
-	Input    string `json:"input"`
+	ToolCallID  string `json:"tool_call_id"`
+	ToolName    string `json:"tool_name"`
+	Input       string `json:"input"`
+	DisplayType string `json:"display_type"`
 }
 
 // SSEToolEndData is the JSON payload for tool end events.
 type SSEToolEndData struct {
-	ToolName string `json:"tool_name"`
-	Output   string `json:"output"`
+	ToolCallID  string `json:"tool_call_id"`
+	ToolName    string `json:"tool_name"`
+	Output      string `json:"output"`
+	Error       string `json:"error"`
+	DisplayType string `json:"display_type"`
+	DurationMs  int    `json:"duration_ms"`
 }
 
 // SSEErrorData is the JSON payload for error / agent.error events.
@@ -116,14 +122,28 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{Content: d.ToolName, Type: ChunkToolStart}
+		return &StreamChunk{
+			Content:     d.ToolName,
+			Type:        ChunkToolStart,
+			ToolCallID:  d.ToolCallID,
+			ToolName:    d.ToolName,
+			DisplayType: d.DisplayType,
+			ToolInput:   d.Input,
+		}
 
 	case "agent.tool.end", "tool_end":
 		var d SSEToolEndData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{Content: d.Output, Type: ChunkToolEnd}
+		return &StreamChunk{
+			Content:     d.Output,
+			Type:        ChunkToolEnd,
+			ToolCallID:  d.ToolCallID,
+			ToolName:    d.ToolName,
+			DisplayType: d.DisplayType,
+			ToolError:   d.Error,
+		}
 
 	case "done":
 		return &StreamChunk{Done: true, Type: ChunkText}

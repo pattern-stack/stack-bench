@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from features.branches.schemas.output import BranchResponse
 from features.pull_requests.schemas.output import PullRequestResponse
@@ -15,6 +15,7 @@ from molecules.events import (
     DomainEvent,
     publish,
 )
+from molecules.providers.github_adapter import parse_owner_repo
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -70,23 +71,77 @@ class StackAPI:
         return StackResponse.model_validate(stack)
 
     async def get_stack_detail(self, stack_id: UUID) -> dict[str, object]:
-        """Get a stack with all branches and PRs."""
+        """Get a stack with all branches, PRs, and restack status."""
         data = await self.entity.get_stack_with_branches(stack_id)
         stack = data["stack"]
+        branch_list = data["branches"]
+
+        # Compute needs_restack per branch (only if github adapter is available)
+        restack_flags: list[bool] = [False] * len(branch_list)
+        if self.github is not None and len(branch_list) > 0:
+            restack_flags = await self._compute_restack_flags(stack, branch_list)
+
         branches = []
-        for bd in data["branches"]:
+        for i, bd in enumerate(branch_list):
             branch_resp = BranchResponse.model_validate(bd["branch"])
             pr_resp = PullRequestResponse.model_validate(bd["pull_request"]) if bd["pull_request"] else None
             branches.append(
                 {
                     "branch": branch_resp.model_dump(),
                     "pull_request": pr_resp.model_dump() if pr_resp else None,
+                    "needs_restack": restack_flags[i],
                 }
             )
         return {
             "stack": StackResponse.model_validate(stack).model_dump(),
             "branches": branches,
         }
+
+    async def _compute_restack_flags(self, stack: Any, branch_list: list[dict[str, Any]]) -> list[bool]:
+        """Compute needs_restack for each branch in a stack.
+
+        Uses asyncio.gather for parallel GitHub API calls.
+        Branches that are merged or have no remote never need restack.
+        """
+        import asyncio
+
+        assert self.github is not None
+        github = self.github
+
+        # Resolve owner/repo from the first branch's workspace
+        first_branch = branch_list[0]["branch"]
+        workspace = await self.entity.workspace_service.get(self.db, first_branch.workspace_id)
+        if workspace is None:
+            return [False] * len(branch_list)
+        owner, repo = parse_owner_repo(workspace.repo_url)
+
+        async def check_branch(index: int, bd: dict[str, Any]) -> bool:
+            branch = bd["branch"]
+            pr = bd.get("pull_request")
+
+            # Merged branches never need restack
+            if branch.state == "merged" or (pr is not None and pr.state == "merged"):
+                return False
+
+            head_ref = branch.head_sha if branch.head_sha else branch.name
+
+            # Determine base ref
+            if branch.position == 1:
+                base_ref = stack.trunk
+            else:
+                prev_branch = branch_list[index - 1]["branch"]
+                base_ref = prev_branch.name
+
+            try:
+                behind_count = await github.get_behind_count(owner, repo, base_ref, head_ref)
+                return behind_count > 0
+            except Exception:
+                # On API error, don't flag as needing restack (avoid false positives)
+                return False
+
+        tasks = [check_branch(i, bd) for i, bd in enumerate(branch_list)]
+        results = await asyncio.gather(*tasks)
+        return list(results)
 
     async def list_stacks(self, project_id: UUID) -> list[StackResponse]:
         """List all stacks for a project."""
@@ -138,11 +193,25 @@ class StackAPI:
         stack_id: UUID,
         workspace_id: UUID,
         branches_data: list[dict[str, object]],
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         """Sync stack state from client-provided branch and PR data."""
-        result: dict[str, object] = await self.entity.sync_stack(stack_id, workspace_id, branches_data)
+        result: dict[str, Any] = await self.entity.sync_stack(stack_id, workspace_id, branches_data)
         await self.db.commit()
-        return result
+
+        serialized_branches: list[dict[str, Any]] = []
+        for br in result["branches"]:
+            branch_resp = BranchResponse.model_validate(br["branch"]).model_dump()
+            pr_resp = (
+                PullRequestResponse.model_validate(br["pull_request"]).model_dump() if br["pull_request"] else None
+            )
+            serialized_branches.append({"branch": branch_resp, "pull_request": pr_resp})
+
+        return {
+            "stack_id": str(stack_id),
+            "branches": serialized_branches,
+            "synced_count": result["synced_count"],
+            "created_count": result["created_count"],
+        }
 
     # --- Git data (read-through via GitHubAdapter) ---
 
@@ -203,20 +272,6 @@ class StackAPI:
             branch.transition_to("merged")
             results.append({"branch": branch.name, "pr_number": pr.external_id, "merged": True})
 
-            await publish(
-                DomainEvent(
-                    topic=PULL_REQUEST_MERGED,
-                    entity_type="pull_request",
-                    entity_id=pr.id,
-                    source="user_action",
-                    payload={
-                        "branch_id": str(branch.id),
-                        "stack_id": str(stack_id),
-                        "external_id": pr.external_id,
-                    },
-                )
-            )
-
         await self.db.commit()
         return {"stack_id": str(stack_id), "merged": results}
 
@@ -227,20 +282,6 @@ class StackAPI:
         comment = await self._comment_svc.create(self.db, data)
         await self.db.commit()
         await self.db.refresh(comment)
-
-        await publish(
-            DomainEvent(
-                topic=REVIEW_COMMENT_CREATED,
-                entity_type="review_comment",
-                entity_id=comment.id,
-                source="user_action",
-                payload={
-                    "pull_request_id": str(data.pull_request_id),
-                    "branch_id": str(data.branch_id),
-                },
-            )
-        )
-
         return ReviewCommentResponse.model_validate(comment)
 
     async def list_comments(self, branch_id: UUID) -> list[ReviewCommentResponse]:
@@ -253,20 +294,6 @@ class StackAPI:
         comment = await self._comment_svc.update(self.db, comment_id, data)
         await self.db.commit()
         await self.db.refresh(comment)
-
-        await publish(
-            DomainEvent(
-                topic=REVIEW_COMMENT_UPDATED,
-                entity_type="review_comment",
-                entity_id=comment.id,
-                source="user_action",
-                payload={
-                    "comment_id": str(comment.id),
-                    "resolved": getattr(comment, "resolved", None),
-                },
-            )
-        )
-
         return ReviewCommentResponse.model_validate(comment)
 
     async def delete_comment(self, comment_id: UUID) -> None:

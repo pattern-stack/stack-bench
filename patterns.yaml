@@ -1,11 +1,4 @@
-# Pattern Stack Configuration
-# Project: stack-bench
-
 project: stack-bench
-
-# Port offset is auto-assigned from global registry
-# Override with: port_offset: 100
-
 services:
   postgres:
     enabled: true
@@ -13,13 +6,26 @@ services:
     enabled: false
   minio:
     enabled: false
-
 apps:
   backend:
-    command: "uv run uvicorn organisms.api.app:app --reload"
-    working_dir: "app/backend"
+    command: uv run uvicorn organisms.api.app:app --reload
+    working_dir: app/backend
     port: 8000
   frontend:
-    command: "npm run dev"
-    working_dir: "app/frontend"
+    command: npm run dev
+    working_dir: app/frontend
     port: 3000
+deploy:
+  platforms:
+  - gcp
+  state:
+    backend: gcs
+    bucket: stack-bench-tfstate
+    prefix: terraform/state
+  registry:
+    type: gcr
+    project: stack-bench
+    region: northamerica-northeast2
+  gcp:
+    project_id: stack-bench
+    region: northamerica-northeast2

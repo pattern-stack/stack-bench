@@ -1,5 +1,6 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from pattern_stack.features.auth.exceptions import AuthError
 
 from molecules.exceptions import (
     AgentNotFoundError,
@@ -27,6 +28,11 @@ async def molecule_exception_handler(request: Request, exc: MoleculeError) -> JS
         if isinstance(exc, exc_type):
             return JSONResponse(status_code=status_code, content={"detail": str(exc)})
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+async def auth_exception_handler(request: Request, exc: AuthError) -> JSONResponse:
+    """Handle pattern-stack auth exceptions."""
+    return JSONResponse(status_code=401, content={"detail": str(exc)})
 
 
 async def github_exception_handler(request: Request, exc: GitHubAPIError) -> JSONResponse:

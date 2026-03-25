@@ -53,3 +53,9 @@ export type { RestackBadgeProps } from "./RestackBadge";
 
 export { Skeleton } from "./Skeleton";
 export type { SkeletonProps } from "./Skeleton";
+
+export { MergeStepDot } from "./MergeStepDot";
+export type { MergeStepDotProps, MergeStepDotState } from "./MergeStepDot";
+
+export { BlockerBadge } from "./BlockerBadge";
+export type { BlockerBadgeProps, BlockerBadgeKind } from "./BlockerBadge";

@@ -55,6 +55,18 @@ class SyncStackRequest(BaseModel):
     branches: list[BranchSyncItem]
 
 
+class SyncBranchResult(BaseModel):
+    branch: dict[str, object]
+    pull_request: dict[str, object] | None
+
+
+class SyncStackResponse(BaseModel):
+    stack_id: str
+    synced_count: int
+    created_count: int
+    branches: list[SyncBranchResult]
+
+
 class CreateCommentRequest(BaseModel):
     pull_request_id: UUID
     path: str = Field(..., max_length=500)
@@ -110,7 +122,7 @@ async def delete_stack(stack_id: UUID, api: StackAPIDep) -> None:
 # --- Sync endpoint ---
 
 
-@router.post("/{stack_id}/sync")
+@router.post("/{stack_id}/sync", response_model=SyncStackResponse)
 async def sync_stack(stack_id: UUID, data: SyncStackRequest, api: StackAPIDep) -> dict[str, object]:
     """Sync stack state from client-provided branch and PR data.
 

@@ -12,7 +12,8 @@ import (
 	"github.com/dugshub/stack-bench/app/cli/internal/chat"
 	"github.com/dugshub/stack-bench/app/cli/internal/command"
 	"github.com/dugshub/stack-bench/app/cli/internal/service"
-	"github.com/dugshub/stack-bench/app/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 // Phase represents the current phase of the app lifecycle.
@@ -210,33 +211,33 @@ func (m Model) View() tea.View {
 func (m Model) viewAgentSelect() string {
 	var lines []string
 
-	title := ui.Bold.Render(" STACK BENCH")
+	title := theme.Bold().Render(" STACK BENCH")
 	lines = append(lines, title)
-	lines = append(lines, ui.Dim.Render(strings.Repeat("─", m.width)))
+	lines = append(lines, theme.Dim().Render(strings.Repeat("─", m.width)))
 	lines = append(lines, "")
 
 	if m.loadErr != nil {
-		lines = append(lines, ui.Red.Render(fmt.Sprintf("  Error: %v", m.loadErr)))
+		lines = append(lines, theme.Resolve(theme.Style{Status: theme.Error}).Render(fmt.Sprintf("  Error: %v", m.loadErr)))
 		lines = append(lines, "")
-		lines = append(lines, ui.Dim.Render("  Press q to quit."))
+		lines = append(lines, theme.Dim().Render("  Press q to quit."))
 	} else if len(m.agents) == 0 {
-		lines = append(lines, ui.Dim.Render("  Loading agents..."))
+		lines = append(lines, theme.Dim().Render("  Loading agents..."))
 	} else {
-		lines = append(lines, ui.Fg.Render("  Select an agent to start a conversation:"))
+		lines = append(lines, theme.Fg().Render("  Select an agent to start a conversation:"))
 		lines = append(lines, "")
 
 		for i, agent := range m.agents {
 			cursor := "  "
 			if i == m.agentCursor {
-				cursor = ui.Accent.Render("> ")
+				cursor = theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("> ")
 			}
 
-			name := ui.Fg.Render(agent.Name)
+			name := theme.Fg().Render(agent.Name)
 			if i == m.agentCursor {
-				name = ui.Bold.Render(agent.Name)
+				name = theme.Bold().Render(agent.Name)
 			}
 
-			role := ui.Dim.Render(agent.Role)
+			role := theme.Dim().Render(agent.Role)
 			lines = append(lines, fmt.Sprintf("  %s%s  %s", cursor, name, role))
 		}
 	}
@@ -260,28 +261,29 @@ func (m Model) renderStatus() string {
 		hint = "enter: send  esc: back to agents  ctrl+c: quit"
 	}
 
-	// Health indicator
+	// Health indicator (hidden in compact mode)
+	ctx := atoms.DefaultContext(m.width)
 	var healthIndicator string
-	if m.manager != nil {
+	if !ctx.Compact() && m.manager != nil {
 		status, ok := m.healthStatuses["backend"]
 		if !ok {
 			status = service.StatusStarting
 		}
 		switch status {
 		case service.StatusHealthy:
-			healthIndicator = ui.Green.Render("●") + ui.Dim.Render(" backend")
+			healthIndicator = theme.Resolve(theme.Style{Status: theme.Success}).Render("●") + theme.Dim().Render(" backend")
 		case service.StatusUnhealthy:
-			healthIndicator = ui.Red.Render("●") + ui.Dim.Render(" backend")
+			healthIndicator = theme.Resolve(theme.Style{Status: theme.Error}).Render("●") + theme.Dim().Render(" backend")
 		case service.StatusStarting:
-			healthIndicator = ui.Dim.Render("○ backend")
+			healthIndicator = theme.Dim().Render("○ backend")
 		default:
-			healthIndicator = ui.Dim.Render("○ backend")
+			healthIndicator = theme.Dim().Render("○ backend")
 		}
 	}
 
-	sep := ui.Dim.Render(strings.Repeat("─", m.width))
+	sep := theme.Dim().Render(strings.Repeat("─", m.width))
 
-	left := ui.Dim.Render(" " + hint)
+	left := theme.Dim().Render(" " + hint)
 	if healthIndicator != "" {
 		fill := max(0, m.width-lipgloss.Width(left)-lipgloss.Width(healthIndicator)-1)
 		return sep + "\n" + left + strings.Repeat(" ", fill) + healthIndicator

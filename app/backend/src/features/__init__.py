@@ -1,4 +1,5 @@
 # Model registry — import all feature models here for alembic discovery
+from pattern_stack.atoms.integrations.models import Connection  # noqa: F401
 from pattern_stack.features.users.models import User  # noqa: F401
 
 from features.agent_definitions.models import AgentDefinition  # noqa: F401

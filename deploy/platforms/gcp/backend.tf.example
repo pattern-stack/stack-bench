@@ -1,0 +1,6 @@
+terraform {
+  backend "gcs" {
+    bucket = "stack-bench-tfstate"
+    prefix = "terraform/state/${var.environment}"
+  }
+}

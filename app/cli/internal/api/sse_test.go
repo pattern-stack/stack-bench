@@ -204,6 +204,78 @@ func TestChunkFromSSE_InvalidJSON_ReturnsNil(t *testing.T) {
 	}
 }
 
+func TestChunkFromSSE_ToolStartFields(t *testing.T) {
+	for _, eventName := range []string{"agent.tool.start", "tool_start"} {
+		evt := SSEEvent{
+			Event: eventName,
+			Data:  `{"tool_call_id":"tc-123","tool_name":"read_file","input":"path=/foo","display_type":"code"}`,
+		}
+		chunk := ChunkFromSSE(evt)
+		if chunk == nil {
+			t.Fatalf("[%s] expected non-nil chunk", eventName)
+		}
+		if chunk.ToolCallID != "tc-123" {
+			t.Errorf("[%s] ToolCallID = %q, want %q", eventName, chunk.ToolCallID, "tc-123")
+		}
+		if chunk.ToolName != "read_file" {
+			t.Errorf("[%s] ToolName = %q, want %q", eventName, chunk.ToolName, "read_file")
+		}
+		if chunk.DisplayType != "code" {
+			t.Errorf("[%s] DisplayType = %q, want %q", eventName, chunk.DisplayType, "code")
+		}
+		if chunk.ToolInput != "path=/foo" {
+			t.Errorf("[%s] ToolInput = %q, want %q", eventName, chunk.ToolInput, "path=/foo")
+		}
+		// Content should be tool name for backward compat
+		if chunk.Content != "read_file" {
+			t.Errorf("[%s] Content = %q, want %q", eventName, chunk.Content, "read_file")
+		}
+	}
+}
+
+func TestChunkFromSSE_ToolEndFields(t *testing.T) {
+	for _, eventName := range []string{"agent.tool.end", "tool_end"} {
+		evt := SSEEvent{
+			Event: eventName,
+			Data:  `{"tool_call_id":"tc-456","tool_name":"bash","output":"exit 0","error":"timeout","display_type":"bash","duration_ms":1500}`,
+		}
+		chunk := ChunkFromSSE(evt)
+		if chunk == nil {
+			t.Fatalf("[%s] expected non-nil chunk", eventName)
+		}
+		if chunk.ToolCallID != "tc-456" {
+			t.Errorf("[%s] ToolCallID = %q, want %q", eventName, chunk.ToolCallID, "tc-456")
+		}
+		if chunk.ToolName != "bash" {
+			t.Errorf("[%s] ToolName = %q, want %q", eventName, chunk.ToolName, "bash")
+		}
+		if chunk.DisplayType != "bash" {
+			t.Errorf("[%s] DisplayType = %q, want %q", eventName, chunk.DisplayType, "bash")
+		}
+		if chunk.ToolError != "timeout" {
+			t.Errorf("[%s] ToolError = %q, want %q", eventName, chunk.ToolError, "timeout")
+		}
+		// Content should be output for backward compat
+		if chunk.Content != "exit 0" {
+			t.Errorf("[%s] Content = %q, want %q", eventName, chunk.Content, "exit 0")
+		}
+	}
+}
+
+func TestChunkFromSSE_ToolStartMissingDisplayType(t *testing.T) {
+	evt := SSEEvent{
+		Event: "agent.tool.start",
+		Data:  `{"tool_call_id":"tc-789","tool_name":"grep"}`,
+	}
+	chunk := ChunkFromSSE(evt)
+	if chunk == nil {
+		t.Fatal("expected non-nil chunk")
+	}
+	if chunk.DisplayType != "" {
+		t.Errorf("DisplayType = %q, want empty string for missing field", chunk.DisplayType)
+	}
+}
+
 func collect(ch <-chan SSEEvent) []SSEEvent {
 	var events []SSEEvent
 	for evt := range ch {

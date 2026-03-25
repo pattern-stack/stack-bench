@@ -5,6 +5,8 @@ import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
 import { FileContent } from "@/components/molecules/FileContent";
 import { PathBar } from "@/components/molecules/PathBar";
+import { LoginPage } from "@/components/organisms/LoginPage";
+import { useAuth } from "@/hooks/useAuth";
 import { useStackDetail } from "@/hooks/useStackDetail";
 import { useStackList } from "@/hooks/useStackList";
 import { useBranchDiff, branchDiffKeys } from "@/hooks/useBranchDiff";
@@ -44,12 +46,42 @@ function computeSummary(items: StackConnectorItem[]): StackSummary {
 }
 
 export function App() {
+  const { isAuthenticated, isLoading: authLoading, login, register, logout: _logout } = useAuth();
+
+  // Auth gate: show login page if not authenticated
+  if (!isAuthenticated && !authLoading) {
+    return (
+      <LoginPage
+        onLogin={async (email, password) => {
+          await login(email, password);
+        }}
+        onRegister={async (firstName, lastName, email, password) => {
+          await register(firstName, lastName, email, password);
+        }}
+      />
+    );
+  }
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--fg-default)] flex items-center justify-center">
+        <p className="text-[var(--fg-muted)] text-sm">Loading...</p>
+      </div>
+    );
+  }
+
+  return <AuthenticatedApp />;
+}
+
+function AuthenticatedApp() {
   const [selectedStackId, setSelectedStackId] = useState<string | undefined>(undefined);
   const { data, loading, error } = useStackDetail(selectedStackId);
   const [activeIndex, setActiveIndex] = useState(0);
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("diffs");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [activityEntries, setActivityEntries] = useState<ActivityLogEntry[]>(mockActivityEntries);
   const [forceExpanded, setForceExpanded] = useState<boolean | null>(null);
   const [floatingComments, setFloatingComments] = useState(true);
@@ -134,7 +166,7 @@ export function App() {
       deletions: diffResult?.total_deletions,
       prNumber: b.pull_request?.external_id ?? null,
       ciStatus: "none" as CIStatus,
-      needsRestack: false,
+      needsRestack: b.needs_restack ?? false,
     };
   });
 
@@ -181,23 +213,11 @@ export function App() {
       summary={summary}
       activityEntries={activityEntries}
       onSync={() => console.log("sync trunk")}
-      onMerge={async () => {
-        if (!stackId) return;
-        try {
-          const result = await apiClient.post<{ stack_id: string; merged: { branch: string; pr_number: number; merged: boolean }[] }>(`/api/v1/stacks/${stackId}/merge`);
-          const count = result.merged.length;
-          setActivityEntries((prev) => [
-            { id: crypto.randomUUID(), operation: "merge", description: `Merged ${count} PR${count !== 1 ? "s" : ""} in stack`, timestamp: new Date().toISOString() },
-            ...prev,
-          ]);
-        } catch (err) {
-          const desc = err instanceof Error ? err.message : "Merge failed";
-          setActivityEntries((prev) => [
-            { id: crypto.randomUUID(), operation: "merge", description: desc, timestamp: new Date().toISOString() },
-            ...prev,
-          ]);
-        }
-      }}
+      onMerge={() => setMergeOpen(true)}
+      mergeOpen={mergeOpen}
+      onMergeClose={() => setMergeOpen(false)}
+      stackId={stackId}
+      branches={data.branches}
       onClearActivity={() => setActivityEntries([])}
       fileCount={diffData?.files.length}
       additions={diffData?.total_additions}

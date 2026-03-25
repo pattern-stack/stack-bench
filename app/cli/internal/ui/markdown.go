@@ -217,7 +217,7 @@ func renderCodeBlock(lines []string, width int) string {
 	// Add left border for visual distinction
 	var out []string
 	for _, l := range strings.Split(styled, "\n") {
-		out = append(out, Dim.Render("│ ")+l)
+		out = append(out, theme.Dim().Render("│ ")+l)
 	}
 	return strings.Join(out, "\n")
 }

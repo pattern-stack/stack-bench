@@ -36,3 +36,18 @@ func Register(t *Theme) {
 func Resolve(s Style) lipgloss.Style {
 	return active.Resolve(s)
 }
+
+// Dim returns a style using the active theme's dim/muted color.
+func Dim() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(active.DimColor)
+}
+
+// Fg returns a style using the active theme's foreground color.
+func Fg() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(active.Foreground)
+}
+
+// Bold returns a bold style using the active theme's foreground color.
+func Bold() lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Foreground(active.Foreground)
+}

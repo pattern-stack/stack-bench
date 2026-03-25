@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import json
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 from uuid import uuid4
 
 import pytest
@@ -348,3 +353,180 @@ async def test_handle_error_with_created_state() -> None:
     assert transitions == ["active", "failed"]
     assert conv.error_message == "test error"
     db.flush.assert_awaited()
+
+
+# ---------------------------------------------------------------------------
+# display_type enrichment tests
+# ---------------------------------------------------------------------------
+
+
+class _ToolEventRunner:
+    """Minimal runner that yields specific tool events for testing display_type enrichment."""
+
+    def __init__(self, events: list) -> None:
+        self._events = events
+
+    async def run_stream(self, agent: Any, message: str, **kwargs: Any) -> AsyncIterator:
+        for event in self._events:
+            yield event
+
+
+def _make_tool_event_runner_context(events: list) -> tuple:
+    """Set up a ConversationRunner with mocks and a _ToolEventRunner."""
+    db = AsyncMock()
+    runner = ConversationRunner(db)
+
+    conv = _make_conversation()
+    runner.entity.get_conversation = AsyncMock(return_value=conv)
+    runner.entity.get_with_messages = AsyncMock(return_value={"conversation": conv, "messages": [], "tool_calls": []})
+    runner.entity.add_message = AsyncMock()
+    runner.entity.assembler.build_agent = AsyncMock(return_value=MagicMock())
+    runner.entity.tool_call_service.create = AsyncMock(return_value=MagicMock())
+    runner.entity.tool_call_service.update = AsyncMock()
+
+    tool_runner = _ToolEventRunner(events)
+    return runner, conv, tool_runner
+
+
+async def _collect_sse_events(runner: ConversationRunner, conv_id: Any, tool_runner: Any) -> list[str]:
+    """Consume runner.send() and return all SSE strings."""
+    events: list[str] = []
+    async for sse in runner.send(conv_id, "test", agent_runner=tool_runner):
+        events.append(sse)
+    return events
+
+
+def _parse_sse(sse_str: str) -> tuple[str, dict]:
+    """Parse an SSE string into (event_type, data_dict)."""
+    lines = sse_str.strip().split("\n")
+    event_type = ""
+    data_str = ""
+    for line in lines:
+        if line.startswith("event: "):
+            event_type = line[7:]
+        elif line.startswith("data: "):
+            data_str = line[6:]
+    return event_type, json.loads(data_str) if data_str else {}
+
+
+@pytest.mark.unit
+async def test_tool_start_event_includes_display_type() -> None:
+    """ToolCallStartEvent SSE should include display_type field."""
+    from agentic_patterns.core.systems.core.events import (
+        MessageCompleteEvent,
+        ToolCallStartEvent,
+    )
+
+    events = [
+        ToolCallStartEvent(tool_call_id="tc_1", tool_name="edit_file", arguments={"path": "test.py"}),
+        MessageCompleteEvent(content="Done", input_tokens=5, output_tokens=3),
+    ]
+    runner, conv, tool_runner = _make_tool_event_runner_context(events)
+
+    sse_events = await _collect_sse_events(runner, conv.id, tool_runner)
+    tool_start_events = [(et, d) for sse in sse_events for et, d in [_parse_sse(sse)] if et == "agent.tool.start"]
+
+    assert len(tool_start_events) == 1
+    _, data = tool_start_events[0]
+    assert data["display_type"] == "diff"
+
+
+@pytest.mark.unit
+async def test_tool_end_event_includes_display_type() -> None:
+    """ToolCallEndEvent SSE should include display_type field."""
+    from agentic_patterns.core.systems.core.events import (
+        MessageCompleteEvent,
+        ToolCallEndEvent,
+    )
+
+    events = [
+        ToolCallEndEvent(tool_call_id="tc_1", tool_name="edit_file", result="ok", duration_ms=50),
+        MessageCompleteEvent(content="Done", input_tokens=5, output_tokens=3),
+    ]
+    runner, conv, tool_runner = _make_tool_event_runner_context(events)
+
+    sse_events = await _collect_sse_events(runner, conv.id, tool_runner)
+    tool_end_events = [(et, d) for sse in sse_events for et, d in [_parse_sse(sse)] if et == "agent.tool.end"]
+
+    assert len(tool_end_events) == 1
+    _, data = tool_end_events[0]
+    assert data["display_type"] == "diff"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "tool_name,expected_display_type",
+    [
+        ("edit_file", "diff"),
+        ("write_file", "diff"),
+        ("apply_patch", "diff"),
+        ("read_file", "code"),
+        ("grep", "code"),
+        ("glob", "code"),
+        ("bash", "bash"),
+        ("execute_command", "bash"),
+    ],
+)
+async def test_display_type_mapping_known_tools(tool_name: str, expected_display_type: str) -> None:
+    """All known tools should map to the correct display_type."""
+    from agentic_patterns.core.systems.core.events import (
+        MessageCompleteEvent,
+        ToolCallStartEvent,
+    )
+
+    events = [
+        ToolCallStartEvent(tool_call_id="tc_1", tool_name=tool_name, arguments={}),
+        MessageCompleteEvent(content="Done", input_tokens=5, output_tokens=3),
+    ]
+    runner, conv, tool_runner = _make_tool_event_runner_context(events)
+
+    sse_events = await _collect_sse_events(runner, conv.id, tool_runner)
+    tool_events = [(et, d) for sse in sse_events for et, d in [_parse_sse(sse)] if et == "agent.tool.start"]
+
+    assert len(tool_events) == 1
+    _, data = tool_events[0]
+    assert data["display_type"] == expected_display_type
+
+
+@pytest.mark.unit
+async def test_display_type_defaults_to_generic() -> None:
+    """Unknown tool names should get display_type='generic'."""
+    from agentic_patterns.core.systems.core.events import (
+        MessageCompleteEvent,
+        ToolCallStartEvent,
+    )
+
+    events = [
+        ToolCallStartEvent(tool_call_id="tc_1", tool_name="custom_tool", arguments={}),
+        MessageCompleteEvent(content="Done", input_tokens=5, output_tokens=3),
+    ]
+    runner, conv, tool_runner = _make_tool_event_runner_context(events)
+
+    sse_events = await _collect_sse_events(runner, conv.id, tool_runner)
+    tool_events = [(et, d) for sse in sse_events for et, d in [_parse_sse(sse)] if et == "agent.tool.start"]
+
+    assert len(tool_events) == 1
+    _, data = tool_events[0]
+    assert data["display_type"] == "generic"
+
+
+@pytest.mark.unit
+async def test_non_tool_events_unchanged() -> None:
+    """Non-tool events (MessageChunkEvent, MessageCompleteEvent) should NOT have display_type."""
+    from agentic_patterns.core.systems.core.events import (
+        MessageChunkEvent,
+        MessageCompleteEvent,
+    )
+
+    events = [
+        MessageChunkEvent(delta="Hello"),
+        MessageCompleteEvent(content="Hello", input_tokens=5, output_tokens=3),
+    ]
+    runner, conv, tool_runner = _make_tool_event_runner_context(events)
+
+    sse_events = await _collect_sse_events(runner, conv.id, tool_runner)
+
+    for sse in sse_events:
+        et, data = _parse_sse(sse)
+        if et in ("agent.message.chunk", "agent.message.complete"):
+            assert "display_type" not in data, f"Non-tool event {et} should not have display_type"
