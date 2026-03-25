@@ -1,13 +1,13 @@
 import { useState, useCallback } from "react";
-import { FileListSummary } from "@/components/molecules/FileListSummary";
 import { DiffFileMolecule } from "@/components/molecules/DiffFile";
 import type { DiffData } from "@/types/diff";
 
 interface FilesChangedPanelProps {
   diffData: DiffData;
+  forceExpanded?: boolean | null;
 }
 
-function FilesChangedPanel({ diffData }: FilesChangedPanelProps) {
+function FilesChangedPanel({ diffData, forceExpanded = null }: FilesChangedPanelProps) {
   const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
 
@@ -47,12 +47,6 @@ function FilesChangedPanel({ diffData }: FilesChangedPanelProps) {
 
   return (
     <div className="p-4 space-y-3">
-      <FileListSummary
-        fileCount={diffData.files.length}
-        additions={diffData.total_additions}
-        deletions={diffData.total_deletions}
-        selectedCount={selectedLines.size}
-      />
       {diffData.files.map((file) => (
         <DiffFileMolecule
           key={file.path}
@@ -63,6 +57,7 @@ function FilesChangedPanel({ diffData }: FilesChangedPanelProps) {
           onLineSelect={handleLineSelect}
           onAskAgent={handleAskAgent}
           onAddComment={handleAddComment}
+          forceExpanded={forceExpanded}
         />
       ))}
     </div>

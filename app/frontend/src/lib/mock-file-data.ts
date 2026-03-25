@@ -2473,242 +2473,554 @@ export const mockFileTree: FileTreeNode = {
 };
 
 const mockFiles: Record<string, FileContent> = {
-  "src/App.tsx": {
-    path: "src/App.tsx",
-    content: `import { useState } from "react";
-import { Header } from "./components/Header";
-import { Sidebar } from "./components/Sidebar";
+  "app/frontend/src/App.tsx": {
+    path: "app/frontend/src/App.tsx",
+    content: `import { useState, useEffect, useMemo } from "react";
+import { AppShell } from "@/components/templates";
+import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
+import { FileContent } from "@/components/molecules/FileContent";
+import { PathBar } from "@/components/molecules/PathBar";
+import { useStackDetail } from "@/hooks/useStackDetail";
+import { useBranchDiff } from "@/hooks/useBranchDiff";
+import { useFileTree } from "@/hooks/useFileTree";
+import { useFileContent } from "@/hooks/useFileContent";
+import { mockActivityEntries } from "@/lib/mock-activity-data";
+import type { StackConnectorItem } from "@/components/molecules";
+import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
+import type { ChangedFileInfo } from "@/components/organisms/FileTree";
+import type { SidebarMode } from "@/types/sidebar";
+import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
+
+function branchTitle(name: string): string {
+  const parts = name.split("/");
+  return parts[parts.length - 1] ?? name;
+}
 
 export function App() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <div className="app">
-      <Header title="My App" />
-      <div className="layout">
-        <Sidebar />
-        <main>
-          <h1>Welcome</h1>
-          <button onClick={() => setCount((c) => c + 1)}>
-            Count: {count}
-          </button>
-        </main>
-      </div>
-    </div>
-  );
+  const { data, loading, error } = useStackDetail();
+  const [activeIndex, setActiveIndex] = useState(2);
+  const [sidebarMode, setSidebarMode] = useState<SidebarMode>("diffs");
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [agentOpen, setAgentOpen] = useState(false);
+  // ...
 }`,
-    size: 2048,
+    size: 5200,
     language: "tsx",
-    lines: 22,
+    lines: 211,
     truncated: false,
   },
 
-  "src/components/Button.tsx": {
-    path: "src/components/Button.tsx",
-    content: `import { type ButtonHTMLAttributes } from "react";
+  "app/frontend/src/components/atoms/Badge/Badge.tsx": {
+    path: "app/frontend/src/components/atoms/Badge/Badge.tsx",
+    content: `import { forwardRef, type HTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full font-medium leading-none whitespace-nowrap",
   {
     variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        outline: "border border-input bg-background hover:bg-accent",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-      },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        sm: "px-1.5 py-0.5 text-[10px]",
+        default: "px-2 py-0.5 text-xs",
+      },
+      color: {
+        default:
+          "bg-[var(--bg-surface-hover)] text-[var(--fg-muted)] border border-[var(--border-muted)]",
+        green:
+          "bg-[var(--green-bg)] text-[var(--green)] border border-[var(--green)]/20",
+        red:
+          "bg-[var(--red-bg)] text-[var(--red)] border border-[var(--red)]/20",
+        purple:
+          "bg-[var(--purple)]/10 text-[var(--purple)] border border-[var(--purple)]/20",
+        yellow:
+          "bg-[var(--yellow)]/10 text-[var(--yellow)] border border-[var(--yellow)]/20",
+        accent:
+          "bg-[var(--accent-muted)] text-[var(--accent)] border border-[var(--accent)]/20",
       },
     },
     defaultVariants: {
-      variant: "default",
       size: "default",
+      color: "default",
     },
   }
 );
 
-interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+type BadgeVariants = VariantProps<typeof badgeVariants>;
 
-export function Button({ className, variant, size, ...props }: ButtonProps) {
-  return (
-    <button
-      className={cn(buttonVariants({ variant, size, className }))}
+interface BadgeProps
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "color">,
+    BadgeVariants {}
+
+const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
+  ({ className, size, color, ...props }, ref) => (
+    <span
+      ref={ref}
+      className={cn(badgeVariants({ size, color }), className)}
       {...props}
     />
-  );
-}`,
-    size: 1240,
+  )
+);
+
+Badge.displayName = "Badge";
+
+export { Badge, badgeVariants };
+export type { BadgeProps };`,
+    size: 1800,
     language: "tsx",
-    lines: 38,
+    lines: 55,
     truncated: false,
   },
 
-  "src/components/Header.tsx": {
-    path: "src/components/Header.tsx",
-    content: `interface HeaderProps {
+  "app/frontend/src/components/atoms/DiffStat/DiffStat.tsx": {
+    path: "app/frontend/src/components/atoms/DiffStat/DiffStat.tsx",
+    content: `interface DiffStatProps {
+  additions: number;
+  deletions: number;
+}
+
+function DiffStat({ additions, deletions }: DiffStatProps) {
+  if (additions === 0 && deletions === 0) {
+    return null;
+  }
+
+  return (
+    <span className="inline-flex items-center gap-0.5 font-[family-name:var(--font-mono)] text-xs tabular-nums">
+      <span className="text-[var(--green)] w-8 text-right">+{additions}</span>
+      <span className="text-[var(--red)] w-8 text-right">-{deletions}</span>
+    </span>
+  );
+}
+
+DiffStat.displayName = "DiffStat";
+
+export { DiffStat };
+export type { DiffStatProps };`,
+    size: 580,
+    language: "tsx",
+    lines: 23,
+    truncated: false,
+  },
+
+  "app/frontend/src/components/atoms/StackDot/StackDot.tsx": {
+    path: "app/frontend/src/components/atoms/StackDot/StackDot.tsx",
+    content: `import { cn } from "@/lib/utils";
+
+type StackDotColor = "default" | "accent" | "green";
+
+interface StackDotProps {
+  color?: StackDotColor;
+  isFirst?: boolean;
+  isLast?: boolean;
+}
+
+const dotColorMap: Record<StackDotColor, string> = {
+  default: "bg-[var(--fg-subtle)]",
+  accent: "bg-[var(--accent)]",
+  green: "bg-[var(--green)]",
+};
+
+const lineColorMap: Record<StackDotColor, string> = {
+  default: "bg-[var(--border)]",
+  accent: "bg-[var(--border)]",
+  green: "bg-[var(--border)]",
+};
+
+function StackDot({ color = "default", isFirst = false, isLast = false }: StackDotProps) {
+  return (
+    <div className="relative flex flex-col items-center w-4 self-stretch">
+      <div
+        className={cn(
+          "w-px flex-1",
+          isFirst ? "bg-transparent" : lineColorMap[color]
+        )}
+      />
+      <div
+        className={cn(
+          "w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-[var(--bg-surface)]",
+          dotColorMap[color]
+        )}
+      />
+      <div
+        className={cn(
+          "w-px flex-1",
+          isLast ? "bg-transparent" : lineColorMap[color]
+        )}
+      />
+    </div>
+  );
+}
+
+StackDot.displayName = "StackDot";
+
+export { StackDot };
+export type { StackDotProps, StackDotColor };`,
+    size: 1400,
+    language: "tsx",
+    lines: 55,
+    truncated: false,
+  },
+
+  "app/frontend/src/components/molecules/StackItem/StackItem.tsx": {
+    path: "app/frontend/src/components/molecules/StackItem/StackItem.tsx",
+    content: `import { cn } from "@/lib/utils";
+import { StackDot, DiffStat, CIDot, PRNumber, RestackBadge } from "@/components/atoms";
+import type { StackDotColor } from "@/components/atoms";
+import { StatusBadge } from "@/components/molecules/StatusBadge";
+import type { CIStatus } from "@/types/activity";
+
+interface StackItemProps {
   title: string;
+  status: string;
+  additions?: number;
+  deletions?: number;
+  prNumber?: number | null;
+  ciStatus?: CIStatus;
+  needsRestack?: boolean;
+  isActive?: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
+  onClick?: () => void;
 }
 
-export function Header({ title }: HeaderProps) {
+function getStackDotColor(status: string, isActive: boolean): StackDotColor {
+  if (status === "merged") return "green";
+  if (isActive) return "accent";
+  return "default";
+}
+
+function StackItem({
+  title,
+  status,
+  additions = 0,
+  deletions = 0,
+  prNumber,
+  ciStatus,
+  needsRestack,
+  isActive = false,
+  isFirst = false,
+  isLast = false,
+  onClick,
+}: StackItemProps) {
+  const dotColor = getStackDotColor(status, isActive);
+
   return (
-    <header className="border-b border-border bg-surface px-4 py-3">
-      <h1 className="text-lg font-semibold">{title}</h1>
-    </header>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-stretch gap-2 w-full px-3 py-1.5 text-left transition-colors rounded-md",
+        isActive
+          ? "bg-[var(--accent-muted)] text-[var(--accent)]"
+          : "text-[var(--fg-default)] hover:bg-[var(--bg-surface-hover)]"
+      )}
+    >
+      <StackDot color={dotColor} isFirst={isFirst} isLast={isLast} />
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        <span
+          className={cn(
+            "text-[13px] font-medium truncate",
+            isActive ? "text-[var(--accent)]" : "text-[var(--fg-default)]"
+          )}
+        >
+          {title}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status={status} />
+          {prNumber != null && prNumber > 0 && <PRNumber number={prNumber} />}
+          <CIDot status={ciStatus ?? "none"} />
+          {needsRestack && <RestackBadge />}
+          {(additions > 0 || deletions > 0) && (
+            <span className="ml-auto">
+              <DiffStat additions={additions} deletions={deletions} />
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
   );
-}`,
-    size: 890,
+}
+
+StackItem.displayName = "StackItem";
+
+export { StackItem };
+export type { StackItemProps };`,
+    size: 2200,
     language: "tsx",
-    lines: 11,
+    lines: 83,
     truncated: false,
   },
 
-  "src/components/Sidebar.tsx": {
-    path: "src/components/Sidebar.tsx",
+  "app/frontend/src/components/molecules/StatusBadge/StatusBadge.tsx": {
+    path: "app/frontend/src/components/molecules/StatusBadge/StatusBadge.tsx",
+    content: `import { Badge } from "@/components/atoms";
+import type { BadgeProps } from "@/components/atoms";
+
+type StatusString =
+  | "draft"
+  | "created"
+  | "pushed"
+  | "local"
+  | "open"
+  | "reviewing"
+  | "review"
+  | "approved"
+  | "ready"
+  | "submitted"
+  | "merged"
+  | "closed"
+  | "active";
+
+const statusColorMap: Record<StatusString, BadgeProps["color"]> = {
+  draft: "default",
+  created: "default",
+  pushed: "default",
+  local: "default",
+  active: "accent",
+  open: "accent",
+  reviewing: "accent",
+  review: "purple",
+  approved: "purple",
+  ready: "purple",
+  submitted: "yellow",
+  merged: "green",
+  closed: "red",
+};
+
+const statusLabelMap: Record<StatusString, string> = {
+  draft: "Draft",
+  created: "Local",
+  pushed: "Pushed",
+  local: "Local",
+  active: "Active",
+  open: "Open",
+  reviewing: "Reviewing",
+  review: "Review",
+  approved: "Approved",
+  ready: "Ready",
+  submitted: "Submitted",
+  merged: "Merged",
+  closed: "Closed",
+};
+
+interface StatusBadgeProps {
+  status: string;
+}
+
+function StatusBadge({ status }: StatusBadgeProps) {
+  const key = status as StatusString;
+  const color = statusColorMap[key] ?? "default";
+  const label = statusLabelMap[key] ?? status;
+
+  return (
+    <Badge size="sm" color={color}>
+      {label}
+    </Badge>
+  );
+}
+
+StatusBadge.displayName = "StatusBadge";
+
+export { StatusBadge };
+export type { StatusBadgeProps, StatusString };`,
+    size: 1800,
+    language: "tsx",
+    lines: 71,
+    truncated: false,
+  },
+
+  "app/frontend/src/hooks/useStackDetail.ts": {
+    path: "app/frontend/src/hooks/useStackDetail.ts",
     content: `import { useState } from "react";
+import type { StackDetail } from "@/types/stack";
+import { mockStackDetail } from "@/lib/mock-data";
 
-const navItems = [
-  { label: "Dashboard", href: "/" },
-  { label: "Projects", href: "/projects" },
-  { label: "Settings", href: "/settings" },
-];
-
-export function Sidebar() {
-  const [active, setActive] = useState("/");
-
-  return (
-    <nav className="w-64 border-r border-border bg-surface p-4">
-      <ul className="space-y-1">
-        {navItems.map((item) => (
-          <li key={item.href}>
-            <a
-              href={item.href}
-              onClick={(e) => {
-                e.preventDefault();
-                setActive(item.href);
-              }}
-              className={
-                active === item.href
-                  ? "block rounded px-3 py-2 text-sm font-medium bg-accent/10 text-accent"
-                  : "block rounded px-3 py-2 text-sm text-muted hover:bg-surface-hover"
-              }
-            >
-              {item.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}`,
-    size: 1560,
-    language: "tsx",
-    lines: 36,
-    truncated: false,
-  },
-
-  "src/hooks/useAuth.ts": {
-    path: "src/hooks/useAuth.ts",
-    content: `import { useState, useCallback } from "react";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface AuthState {
-  user: User | null;
+interface UseStackDetailResult {
+  data: StackDetail | null;
   loading: boolean;
+  error: string | null;
 }
 
-export function useAuth() {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    loading: false,
-  });
+export function useStackDetail(_stackId?: string): UseStackDetailResult {
+  // MVP: return mock data directly. Replace with real fetch when backend is wired.
+  const [data] = useState<StackDetail | null>(mockStackDetail);
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
 
-  const login = useCallback(async (email: string, password: string) => {
-    setState((s) => ({ ...s, loading: true }));
-    // Simulated login
-    await new Promise((r) => setTimeout(r, 1000));
-    setState({
-      user: { id: "1", name: "Test User", email },
-      loading: false,
-    });
-  }, []);
-
-  const logout = useCallback(() => {
-    setState({ user: null, loading: false });
-  }, []);
-
-  return { ...state, login, logout };
+  return { data, loading, error };
 }`,
-    size: 720,
+    size: 520,
     language: "typescript",
-    lines: 34,
+    lines: 19,
     truncated: false,
   },
 
-  "src/hooks/useTheme.ts": {
-    path: "src/hooks/useTheme.ts",
+  "app/frontend/src/hooks/useBranchDiff.ts": {
+    path: "app/frontend/src/hooks/useBranchDiff.ts",
     content: `import { useState } from "react";
+import type { DiffData } from "@/types/diff";
+import { mockDiffDataByBranch } from "@/lib/mock-diff-data";
 
-type Theme = "light" | "dark";
+interface UseBranchDiffResult {
+  data: DiffData | null;
+  loading: boolean;
+  error: string | null;
+}
 
-export function useTheme(initial: Theme = "dark") {
-  const [theme, setTheme] = useState<Theme>(initial);
-  const toggle = () => setTheme((t) => (t === "light" ? "dark" : "light"));
-  return { theme, toggle };
+export function useBranchDiff(branchId: string | undefined): UseBranchDiffResult {
+  // MVP: return mock data directly. Replace with real fetch when backend is wired.
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
+
+  const data = branchId ? (mockDiffDataByBranch[branchId] ?? null) : null;
+
+  return { data, loading, error };
 }`,
-    size: 340,
+    size: 540,
     language: "typescript",
-    lines: 9,
+    lines: 20,
     truncated: false,
   },
 
-  "src/lib/utils.ts": {
-    path: "src/lib/utils.ts",
+  "app/frontend/src/lib/utils.ts": {
+    path: "app/frontend/src/lib/utils.ts",
     content: `import { clsx, type ClassValue } from "clsx";
 
 export function cn(...inputs: ClassValue[]): string {
   return clsx(inputs);
-}
-
-export function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }`,
-    size: 480,
+    size: 120,
     language: "typescript",
-    lines: 13,
+    lines: 5,
     truncated: false,
   },
 
-  "src/index.css": {
-    path: "src/index.css",
+  "app/frontend/src/types/stack.ts": {
+    path: "app/frontend/src/types/stack.ts",
+    content: `export interface Stack {
+  id: string;
+  reference_number: string | null;
+  project_id: string;
+  name: string;
+  base_branch_id: string | null;
+  trunk: string;
+  state: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Branch {
+  id: string;
+  reference_number: string | null;
+  stack_id: string;
+  workspace_id: string;
+  name: string;
+  position: number;
+  head_sha: string | null;
+  state: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PullRequest {
+  id: string;
+  reference_number: string | null;
+  branch_id: string;
+  external_id: number | null;
+  external_url: string | null;
+  title: string;
+  description: string | null;
+  review_notes: string | null;
+  state: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BranchWithPR {
+  branch: Branch;
+  pull_request: PullRequest | null;
+}
+
+export interface StackDetail {
+  stack: Stack;
+  branches: BranchWithPR[];
+}`,
+    size: 820,
+    language: "typescript",
+    lines: 49,
+    truncated: false,
+  },
+
+  "app/frontend/src/types/diff.ts": {
+    path: "app/frontend/src/types/diff.ts",
+    content: `export interface DiffLine {
+  type: "context" | "add" | "del" | "hunk";
+  old_num: number | null;
+  new_num: number | null;
+  content: string;
+  highlightedHtml?: string;
+}
+
+export interface DiffHunk {
+  header: string;
+  lines: DiffLine[];
+}
+
+export interface DiffFile {
+  path: string;
+  change_type: "added" | "modified" | "deleted" | "renamed";
+  additions: number;
+  deletions: number;
+  hunks: DiffHunk[];
+}
+
+export interface DiffData {
+  files: DiffFile[];
+  total_additions: number;
+  total_deletions: number;
+}`,
+    size: 520,
+    language: "typescript",
+    lines: 27,
+    truncated: false,
+  },
+
+  "app/frontend/src/index.css": {
+    path: "app/frontend/src/index.css",
     content: `@import "tailwindcss";
+
+/*
+ * Stack Bench -- Dark Design System Tokens
+ *
+ * All colors, fonts, and semantic values are defined here as CSS custom
+ * properties. Components reference these via var(--token-name). Never
+ * hardcode color values in component code.
+ */
 
 :root {
   --bg-canvas: #0d1117;
   --bg-surface: #161b22;
   --bg-surface-hover: #1c2128;
+  --bg-inset: #010409;
+
   --border: #30363d;
   --border-muted: #21262d;
+
   --fg-default: #e6edf3;
   --fg-muted: #7d8590;
   --fg-subtle: #484f58;
+
   --accent: #58a6ff;
   --green: #3fb950;
   --red: #f85149;
+  --purple: #bc8cff;
+  --yellow: #d29922;
+
+  --accent-emerald: #6ee7b7;
+  --accent-emerald-dim: #065f46;
+
+  --green-bg: #12261e;
+  --red-bg: #28171a;
 }
 
 body {
@@ -2717,57 +3029,69 @@ body {
   color: var(--fg-default);
   font-family: system-ui, sans-serif;
 }`,
-    size: 1200,
+    size: 780,
     language: "css",
-    lines: 22,
+    lines: 44,
     truncated: false,
   },
 
-  "src/main.ts": {
-    path: "src/main.ts",
-    content: `import { createRoot } from "react-dom/client";
+  "app/frontend/src/main.tsx": {
+    path: "app/frontend/src/main.tsx",
+    content: `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(<App />);`,
-    size: 180,
-    language: "typescript",
-    lines: 5,
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);`,
+    size: 240,
+    language: "tsx",
+    lines: 10,
     truncated: false,
   },
 
-  "package.json": {
-    path: "package.json",
+  "app/frontend/package.json": {
+    path: "app/frontend/package.json",
     content: `{
-  "name": "my-app",
+  "name": "@stack-bench/frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "@radix-ui/react-collapsible": "^1.1.12",
     "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.0"
+    "clsx": "^2.1.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "shiki": "^4.0.2"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "typescript": "^5.6.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
     "vite": "^6.0.0"
   }
 }`,
     size: 640,
     language: "json",
-    lines: 22,
+    lines: 29,
     truncated: false,
   },
 
-  "tsconfig.json": {
-    path: "tsconfig.json",
+  "app/frontend/tsconfig.json": {
+    path: "app/frontend/tsconfig.json",
     content: `{
   "compilerOptions": {
     "target": "ES2020",
@@ -2776,19 +3100,57 @@ createRoot(document.getElementById("root")!).render(<App />);`,
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "vite-env.d.ts"],
+  "exclude": ["src/generated"]
 }`,
-    size: 420,
+    size: 560,
     language: "json",
-    lines: 17,
+    lines: 27,
     truncated: false,
+  },
+
+  "CLAUDE.md": {
+    path: "CLAUDE.md",
+    content: `# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What This Is
+
+Stack Bench is a developer workbench for AI-assisted development with stacked PRs.
+It combines a Go CLI (TUI), a Python backend (pattern-stack + agentic-patterns),
+and a React frontend.
+
+## Repository Layout
+
+app/
+  backend/              # Python backend (self-contained service)
+  cli/                  # Go CLI (Bubble Tea TUI)
+  frontend/             # React frontend
+docs/
+  adrs/                 # Architecture Decision Records
+  specs/                # Implementation specs
+  epics/                # Groups of related issues (EP-NNN)
+  issues/               # Individual work units (SB-NNN)`,
+    size: 620,
+    language: "markdown",
+    lines: 22,
+    truncated: true,
   },
 };
 
