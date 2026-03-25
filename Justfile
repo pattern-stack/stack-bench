@@ -41,9 +41,11 @@ deploy-build *args='':
     tag=${1:-$(git rev-parse --short HEAD)}
     registry=$(grep -A5 'registry:' patterns.yaml | grep 'region:' | awk '{print $2}')-docker.pkg.dev/$(grep -A5 'gcp:' patterns.yaml | grep 'project_id:' | awk '{print $2}')/$(grep 'project:' patterns.yaml | head -1 | awk '{print $2}')
     echo "Building backend → $registry/backend:$tag"
-    docker build --secret id=GITHUB_TOKEN,env=GITHUB_TOKEN -f app/backend/Dockerfile -t "$registry/backend:$tag" .
+    docker build --platform linux/amd64 --secret id=GITHUB_TOKEN,env=GITHUB_TOKEN -f app/backend/Dockerfile -t "$registry/backend:$tag" .
     echo "Building frontend → $registry/frontend:$tag"
-    docker build -f app/frontend/Dockerfile -t "$registry/frontend:$tag" .
+    docker build --platform linux/amd64 -f app/frontend/Dockerfile -t "$registry/frontend:$tag" .
+    docker tag "$registry/backend:$tag" "$registry/backend:latest"
+    docker tag "$registry/frontend:$tag" "$registry/frontend:latest"
     echo "Done. Push with: just deploy-push $tag"
 
 deploy-push tag='':
@@ -55,6 +57,9 @@ deploy-push tag='':
     docker push "$registry/backend:$tag"
     echo "Pushing $registry/frontend:$tag"
     docker push "$registry/frontend:$tag"
+    echo "Pushing :latest tags"
+    docker push "$registry/backend:latest"
+    docker push "$registry/frontend:latest"
 
 deploy-release *args='': (deploy-build args)
     #!/usr/bin/env bash

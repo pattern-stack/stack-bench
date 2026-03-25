@@ -9,7 +9,7 @@ region     = "northamerica-northeast2"
 vpc_name   = "default"
 
 # Required for deployment
-domain    = "staging.stack-bench.example.com"  # TODO: Update with actual domain
+domain    = "stack-bench.pattern-stack.com"
 image_tag = "latest"
 
 # Scaling: auto = scale-to-zero (2-5s cold starts, saves ~$20-40/mo per service)

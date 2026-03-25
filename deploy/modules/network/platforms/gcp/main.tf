@@ -33,7 +33,7 @@ variable "region" {
 
 # VPC Access Connector - allows Cloud Run to reach private IPs in VPC
 resource "google_vpc_access_connector" "main" {
-  name          = "${var.project}-${var.environment}-connector"
+  name          = "sb-${var.environment}-vpc"
   region        = var.region
   network       = var.vpc_name
   ip_cidr_range = "10.8.0.0/28"  # Dedicated /28 range for connector

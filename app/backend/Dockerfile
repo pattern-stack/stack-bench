@@ -17,7 +17,7 @@ RUN --mount=type=secret,id=GITHUB_TOKEN \
     if [ -n "$GIT_TOKEN" ]; then \
         git config --global url."https://${GIT_TOKEN}@github.com/".insteadOf "https://github.com/"; \
     fi && \
-    uv sync --frozen --no-dev && \
+    uv sync --frozen --no-dev --no-install-project && \
     git config --global --unset-all url."https://${GIT_TOKEN}@github.com/".insteadOf 2>/dev/null || true
 
 # Copy application code

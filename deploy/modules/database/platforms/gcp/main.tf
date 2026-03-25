@@ -42,7 +42,7 @@ locals {
   selected_tier = local.size_tiers[var.size]
 
   # Build connection string for Cloud SQL socket connection
-  database_url = "postgresql://${google_sql_user.main.name}:${random_password.db_password.result}@/${google_sql_database.main.name}?host=/cloudsql/${google_sql_database_instance.main.connection_name}"
+  database_url = "postgresql+asyncpg://${google_sql_user.main.name}:${random_password.db_password.result}@${google_sql_database_instance.main.private_ip_address}/${google_sql_database.main.name}"
 }
 
 # Cloud SQL Instance
