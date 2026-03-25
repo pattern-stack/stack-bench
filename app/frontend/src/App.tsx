@@ -54,6 +54,7 @@ export function App() {
   const [agentOpen, setAgentOpen] = useState(false);
   const [activityEntries, setActivityEntries] = useState<ActivityLogEntry[]>(mockActivityEntries);
   const [forceExpanded, setForceExpanded] = useState<boolean | null>(null);
+  const [floatingComments, setFloatingComments] = useState(true);
 
   // TODO: Lift selectedLineCount from FilesChangedPanel in a future PR
   const selectedLineCount = 0;
@@ -205,10 +206,19 @@ export function App() {
       deletions={diffData?.total_deletions}
       onCollapseAll={() => setForceExpanded(false)}
       onExpandAll={() => setForceExpanded(true)}
+      floatingComments={floatingComments}
+      onToggleCommentMode={() => setFloatingComments((prev) => !prev)}
     >
       {sidebarMode === "diffs" && (
         diffData ? (
-          <FilesChangedPanel diffData={diffData} forceExpanded={forceExpanded} />
+          <FilesChangedPanel
+            diffData={diffData}
+            forceExpanded={forceExpanded}
+            stackId={stackId}
+            branchId={activeBranchId}
+            pullRequestId={activeBranch?.pull_request?.id}
+            floatingComments={floatingComments}
+          />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-[var(--fg-muted)] text-sm">Select a branch to view changes</p>

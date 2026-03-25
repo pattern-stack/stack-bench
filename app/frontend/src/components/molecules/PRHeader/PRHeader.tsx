@@ -16,12 +16,15 @@ interface PRHeaderProps {
   onRestack?: () => void;
   onCollapseAll?: () => void;
   onExpandAll?: () => void;
+  floatingComments?: boolean;
+  onToggleCommentMode?: () => void;
 }
 
 function PRHeader({
   title, baseBranch, headBranch, description, status,
   fileCount, additions, deletions,
   onPush, onRestack, onCollapseAll, onExpandAll,
+  floatingComments, onToggleCommentMode,
 }: PRHeaderProps) {
   return (
     <div className="px-6 py-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
@@ -72,6 +75,12 @@ function PRHeader({
             )}
           </span>
           <div className="flex items-center gap-1">
+            {onToggleCommentMode && (
+              <Button variant="subtle" size="sm" onClick={onToggleCommentMode}>
+                <Icon name="message-square" size="xs" />
+                {floatingComments ? "Floating" : "Inline"}
+              </Button>
+            )}
             <Button variant="subtle" size="sm" onClick={onExpandAll}>
               <Icon name="chevrons-down" size="xs" />
               Expand all

@@ -50,6 +50,8 @@ interface AppShellProps {
   deletions?: number;
   onCollapseAll?: () => void;
   onExpandAll?: () => void;
+  floatingComments?: boolean;
+  onToggleCommentMode?: () => void;
 }
 
 /** Extract short branch name from full ref: "dug/frontend-mvp/3-stack-nav" → "3-stack-nav" */
@@ -90,6 +92,8 @@ function AppShell({
   deletions,
   onCollapseAll,
   onExpandAll,
+  floatingComments,
+  onToggleCommentMode,
 }: AppShellProps) {
   // Derive PRHeader props from the active branch
   const pr = activeBranch?.pull_request;
@@ -146,6 +150,8 @@ function AppShell({
           deletions={deletions}
           onCollapseAll={onCollapseAll}
           onExpandAll={onExpandAll}
+          floatingComments={floatingComments}
+          onToggleCommentMode={onToggleCommentMode}
         />
         <div className="flex-1 overflow-auto">
           {children}

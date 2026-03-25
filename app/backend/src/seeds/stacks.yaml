@@ -31,6 +31,11 @@ stacks:
     name: round-2-polish
     trunk: dugshub/file-viewer/3-file-icons
 
+  - seed_key: stack-mvp-data-wiring
+    project: stack-bench
+    name: mvp-data-wiring
+    trunk: dugshub/round-2-polish/8-real-data-wiring
+
 branches:
   # frontend-mvp stack
   - seed_key: branch-fmvp-1
@@ -133,6 +138,98 @@ branches:
     position: 5
     head_sha: 8cf139fc11c6a7f3
 
+  - seed_key: branch-r2p-7
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/7-stack-header
+    position: 6
+    head_sha: 8cf139fc11c6a7f3
+
+  - seed_key: branch-r2p-8
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/8-real-data-wiring
+    position: 7
+    head_sha: ec3e8b94f1c5f711
+
+  - seed_key: branch-r2p-9
+    stack: stack-round-2-polish
+    workspace: stack-bench-workspace
+    name: dugshub/round-2-polish/9-infra-sync-clones
+    position: 8
+    head_sha: ec3e8b94f1c5f711
+
+  # mvp-data-wiring stack
+  - seed_key: branch-mdw-1
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/1-diff-stats
+    position: 1
+    head_sha: 086f416a85f322d7
+
+  - seed_key: branch-mdw-2
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/2-stack-switcher
+    position: 2
+    head_sha: d2dff30a8e63c557
+
+  - seed_key: branch-mdw-3
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/3-infra-sync-clones
+    position: 3
+    head_sha: 6c459160b131867f
+
+  - seed_key: branch-mdw-4
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/4-merge-flow
+    position: 4
+    head_sha: dce7de6ff96e0e5c
+
+  - seed_key: branch-mdw-5
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/5-inline-comments
+    position: 5
+    head_sha: d009bc1b23faa101
+
+  - seed_key: branch-mdw-6
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/6-short-refs
+    position: 6
+    head_sha: bcadb36ec55caeda
+
+  - seed_key: branch-mdw-7
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/7-loading-skeletons
+    position: 7
+    head_sha: bcadb36ec55caeda
+
+  - seed_key: branch-mdw-8
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/8-ci-status-dots
+    position: 8
+    head_sha: d009bc1b23faa101
+
+  - seed_key: branch-mdw-9
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/9-mark-pr-ready
+    position: 9
+    head_sha: d009bc1b23faa101
+
+  - seed_key: branch-mdw-10
+    stack: stack-mvp-data-wiring
+    workspace: stack-bench-workspace
+    name: dugshub/mvp-data-wiring/10-remote-rebase
+    position: 10
+    head_sha: d009bc1b23faa101
+
 pull_requests:
   # frontend-mvp PRs
   - seed_key: pr-43
@@ -234,3 +331,60 @@ pull_requests:
     description: "Stack header, branch enrichment, activity log, collapsible stack"
     external_id: 69
     external_url: https://github.com/pattern-stack/stack-bench/pull/69
+
+  - seed_key: pr-104
+    branch: branch-r2p-7
+    title: "Stack Header"
+    description: "Stack header with summary chips and action buttons"
+    external_id: 104
+    external_url: https://github.com/pattern-stack/stack-bench/pull/104
+
+  - seed_key: pr-105
+    branch: branch-r2p-8
+    title: "Real Data Wiring"
+    description: "Wire frontend to live backend API with GitHub adapter"
+    external_id: 105
+    external_url: https://github.com/pattern-stack/stack-bench/pull/105
+
+  - seed_key: pr-106
+    branch: branch-r2p-9
+    title: "Infra Sync Clones"
+    description: "Clone manager and sync infrastructure for GitHub data"
+    external_id: 106
+    external_url: https://github.com/pattern-stack/stack-bench/pull/106
+
+  # mvp-data-wiring PRs
+  - seed_key: pr-107
+    branch: branch-mdw-1
+    title: "Diff Stats"
+    description: "Per-branch diff stats with additions/deletions counts"
+    external_id: 107
+    external_url: https://github.com/pattern-stack/stack-bench/pull/107
+
+  - seed_key: pr-108
+    branch: branch-mdw-2
+    title: "Stack Switcher"
+    description: "Stack switcher dropdown for navigating between stacks"
+    external_id: 108
+    external_url: https://github.com/pattern-stack/stack-bench/pull/108
+
+  - seed_key: pr-109
+    branch: branch-mdw-3
+    title: "Infra Sync Clones"
+    description: "Clone manager for syncing GitHub repository data"
+    external_id: 109
+    external_url: https://github.com/pattern-stack/stack-bench/pull/109
+
+  - seed_key: pr-110
+    branch: branch-mdw-4
+    title: "Merge Flow"
+    description: "Merge stack button wired to backend API"
+    external_id: 110
+    external_url: https://github.com/pattern-stack/stack-bench/pull/110
+
+  - seed_key: pr-111
+    branch: branch-mdw-5
+    title: "Inline Comments"
+    description: "Inline comment threads on diff lines with floating popovers"
+    external_id: 111
+    external_url: https://github.com/pattern-stack/stack-bench/pull/111
