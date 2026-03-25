@@ -9,6 +9,7 @@ interface FilesChangedPanelProps {
 
 function FilesChangedPanel({ diffData }: FilesChangedPanelProps) {
   const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
+  const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
 
   const handleViewedChange = useCallback((path: string, viewed: boolean) => {
     setViewedFiles((prev) => {
@@ -17,6 +18,23 @@ function FilesChangedPanel({ diffData }: FilesChangedPanelProps) {
       else next.delete(path);
       return next;
     });
+  }, []);
+
+  const handleLineSelect = useCallback((lineKey: string) => {
+    setSelectedLines((prev) => {
+      const next = new Set(prev);
+      if (next.has(lineKey)) next.delete(lineKey);
+      else next.add(lineKey);
+      return next;
+    });
+  }, []);
+
+  const handleAskAgent = useCallback((_lineKey: string) => {
+    // Stub — will be wired to agent panel
+  }, []);
+
+  const handleAddComment = useCallback((_lineKey: string) => {
+    // Stub — will be wired to comment system
   }, []);
 
   if (diffData.files.length === 0) {
@@ -33,6 +51,7 @@ function FilesChangedPanel({ diffData }: FilesChangedPanelProps) {
         fileCount={diffData.files.length}
         additions={diffData.total_additions}
         deletions={diffData.total_deletions}
+        selectedCount={selectedLines.size}
       />
       {diffData.files.map((file) => (
         <DiffFileMolecule
@@ -40,6 +59,10 @@ function FilesChangedPanel({ diffData }: FilesChangedPanelProps) {
           file={file}
           viewed={viewedFiles.has(file.path)}
           onViewedChange={(v) => handleViewedChange(file.path, v)}
+          selectedLines={selectedLines}
+          onLineSelect={handleLineSelect}
+          onAskAgent={handleAskAgent}
+          onAddComment={handleAddComment}
         />
       ))}
     </div>
