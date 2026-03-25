@@ -33,3 +33,6 @@ export type { FileTreeItemProps } from "./FileTreeItem";
 
 export { FileContent } from "./FileContent";
 export type { FileContentProps } from "./FileContent";
+
+export { DiffFileList } from "./DiffFileList";
+export type { DiffFileListProps, DiffFileListItem } from "./DiffFileList";
