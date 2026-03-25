@@ -494,9 +494,7 @@ class GitHubAdapter:
         result: list[dict[str, object]] = response.json()
         return result
 
-    async def hydrate_stack(
-        self, owner: str, repo: str, branches: list[tuple[str, str, str]]
-    ) -> None:
+    async def hydrate_stack(self, owner: str, repo: str, branches: list[tuple[str, str, str]]) -> None:
         """Pre-load cache for an entire stack's diffs.
 
         Args:
