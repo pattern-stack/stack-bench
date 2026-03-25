@@ -1,18 +1,19 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { apiClient } from "@/generated/api/client";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
 import { FileContent } from "@/components/molecules/FileContent";
 import { PathBar } from "@/components/molecules/PathBar";
 import { useStackDetail } from "@/hooks/useStackDetail";
-import { useBranchDiff } from "@/hooks/useBranchDiff";
+import { useBranchDiff, branchDiffKeys } from "@/hooks/useBranchDiff";
 import { useFileTree } from "@/hooks/useFileTree";
 import { useFileContent } from "@/hooks/useFileContent";
 import { mockActivityEntries } from "@/lib/mock-activity-data";
 import type { StackConnectorItem } from "@/components/molecules";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { ChangedFileInfo } from "@/components/organisms/FileTree";
+import type { DiffData } from "@/types/diff";
 import type { SidebarMode } from "@/types/sidebar";
 import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
 
@@ -61,21 +62,15 @@ export function App() {
   const { data: fileTree } = useFileTree(stackId, activeBranchId);
   const { data: fileContent } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
 
-  // Prefetch all branch diffs when stack loads
-  const queryClient = useQueryClient();
-  const prefetched = useRef(false);
-  useEffect(() => {
-    if (!data || !stackId || prefetched.current) return;
-    prefetched.current = true;
-    for (const b of data.branches) {
-      const bid = b.branch.id;
-      queryClient.prefetchQuery({
-        queryKey: ["branch-diff", stackId, bid],
-        queryFn: () => apiClient.get(`/api/v1/stacks/${stackId}/branches/${bid}/diff`),
-        staleTime: Infinity,
-      });
-    }
-  }, [data, stackId, queryClient]);
+  // Subscribe reactively to all branch diffs
+  const branchDiffQueries = useQueries({
+    queries: (data?.branches ?? []).map((b) => ({
+      queryKey: branchDiffKeys.diff(stackId ?? "", b.branch.id),
+      queryFn: () => apiClient.get<DiffData>(`/api/v1/stacks/${stackId}/branches/${b.branch.id}/diff`),
+      enabled: !!stackId,
+      staleTime: Infinity,
+    })),
+  });
 
   // Reset sidebar mode and selection when branch changes
   useEffect(() => {
@@ -114,15 +109,17 @@ export function App() {
     );
   }
 
-  const items: StackConnectorItem[] = data.branches.map((b) => {
+  const items: StackConnectorItem[] = data.branches.map((b, index) => {
     const displayStatus = b.pull_request?.state ?? b.branch.state;
+    const diffResult = branchDiffQueries[index]?.data;
 
     return {
       id: b.branch.id,
       title: branchTitle(b.branch.name),
       status: displayStatus,
+      additions: diffResult?.total_additions,
+      deletions: diffResult?.total_deletions,
       prNumber: b.pull_request?.external_id ?? null,
-      // TODO: wire from GitHub API / git analysis when available
       ciStatus: "none" as CIStatus,
       needsRestack: false,
     };
