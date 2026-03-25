@@ -31,3 +31,8 @@ dealbrain/
 *.swp
 .idea/
 .vscode/
+
+# Terraform
+deploy/platforms/gcp/.terraform/
+*.tfstate
+*.tfstate.backup

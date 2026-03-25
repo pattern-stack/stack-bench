@@ -1,14 +1,17 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGitHubConnection } from "@/hooks/useGitHubConnection";
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const github = useGitHubConnection();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -26,15 +29,42 @@ export function LoginPage() {
     }
   }
 
+  async function handleGitHubLogin() {
+    setError(null);
+    setGithubLoading(true);
+    try {
+      await github.connect();
+      navigate("/", { replace: true });
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "GitHub login failed";
+      setError(msg);
+    } finally {
+      setGithubLoading(false);
+    }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.card}>
         <h1 style={styles.title}>Stack Bench</h1>
         <p style={styles.subtitle}>Sign in to your account</p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {error && <div style={styles.error}>{error}</div>}
+        {error && <div style={styles.error}>{error}</div>}
 
+        <button
+          onClick={handleGitHubLogin}
+          disabled={githubLoading}
+          style={styles.githubButton}
+        >
+          {githubLoading ? "Connecting..." : "Sign in with GitHub"}
+        </button>
+
+        <div style={styles.divider}>
+          <span style={styles.dividerText}>or</span>
+        </div>
+
+        <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.label}>
             Email
             <input
@@ -140,6 +170,30 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontFamily: "var(--font-sans)",
     marginTop: "0.25rem",
+  },
+  githubButton: {
+    background: "#24292e",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "0.5rem 1rem",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    cursor: "pointer",
+    fontFamily: "var(--font-sans)",
+    width: "100%",
+    marginBottom: "0.5rem",
+  },
+  divider: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    margin: "0.75rem 0",
+  },
+  dividerText: {
+    color: "var(--fg-muted)",
+    fontSize: "0.75rem",
+    flexShrink: 0,
   },
   error: {
     background: "var(--red-bg)",

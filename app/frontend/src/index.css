@@ -13,7 +13,7 @@
   --bg-canvas: #0d1117;          /* Page background */
   --bg-surface: #161b22;         /* Cards, panels, headers */
   --bg-surface-hover: #1c2128;   /* Surface hover state */
-  --bg-inset: #010409;           /* Inputs, recessed areas */
+  --bg-inset: #0d1117;           /* Inputs, recessed areas */
 
   /* ── Borders ─────────────────────────────────────────────── */
   --border: #30363d;             /* Default border */

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { apiClient } from "@/generated/api/client";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
@@ -22,6 +23,12 @@ import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity"
 import { DiffSkeleton } from "@/components/organisms/FilesChangedPanel/DiffSkeleton";
 
 import { shortBranch } from "@/lib/short-branch";
+
+interface OnboardingStatus {
+  needs_onboarding: boolean;
+  has_github: boolean;
+  has_project: boolean;
+}
 
 
 /** Status values that count as "draft" (no PR or local-only) */
@@ -47,6 +54,22 @@ function computeSummary(items: StackConnectorItem[]): StackSummary {
 
 export function App() {
   const { isAuthenticated, isLoading: authLoading, login, register, logout: _logout } = useAuth();
+  const navigate = useNavigate();
+
+  // After auth loads, check onboarding status
+  const { data: onboardingStatus } = useQuery<OnboardingStatus>({
+    queryKey: ["onboarding", "status"],
+    queryFn: () => apiClient.get<OnboardingStatus>("/api/v1/onboarding/status"),
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+  });
+
+  // Redirect to onboarding if needed
+  useEffect(() => {
+    if (onboardingStatus?.needs_onboarding) {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [onboardingStatus, navigate]);
 
   // Auth gate: show login page if not authenticated
   if (!isAuthenticated && !authLoading) {
@@ -62,8 +85,8 @@ export function App() {
     );
   }
 
-  // Show loading while checking auth
-  if (authLoading) {
+  // Show loading while checking auth or onboarding
+  if (authLoading || (isAuthenticated && !onboardingStatus)) {
     return (
       <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--fg-default)] flex items-center justify-center">
         <p className="text-[var(--fg-muted)] text-sm">Loading...</p>

@@ -22,6 +22,7 @@ from organisms.api.routers.agents import router as agents_router
 from organisms.api.routers.auth import router as auth_router
 from organisms.api.routers.conversations import router as conversations_router
 from organisms.api.routers.events import router as events_router
+from organisms.api.routers.onboarding import router as onboarding_router
 from organisms.api.routers.projects import router as projects_router
 from organisms.api.routers.stacks import router as stacks_router
 
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(stacks_router, prefix="/api/v1")
     app.include_router(events_router, prefix="/api/v1")
+    app.include_router(onboarding_router, prefix="/api/v1")
 
     # Error handlers
     app.add_exception_handler(AuthError, auth_exception_handler)  # type: ignore[arg-type]

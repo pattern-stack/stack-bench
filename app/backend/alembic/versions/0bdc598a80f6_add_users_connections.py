@@ -20,33 +20,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # --- users table (from pattern_stack.features.users.models.User) ---
-    op.create_table('users',
-    sa.Column('first_name', sa.String(length=100), nullable=False, comment="User's first name"),
-    sa.Column('last_name', sa.String(length=100), nullable=False, comment="User's last name"),
-    sa.Column('password_hash', sa.String(length=255), nullable=True, comment='Hashed password (nullable for OAuth-only users)'),
-    sa.Column('is_active', sa.Boolean(), nullable=False, comment='Whether user is active'),
-    sa.Column('oauth_accounts', sa.JSON(), nullable=False, comment='OAuth account links (provider -> account_id mapping)'),
-    sa.Column('display_name', sa.String(length=255), nullable=False, comment='Display name for the actor'),
-    sa.Column('actor_type', sa.String(length=50), nullable=False, comment='Type of actor (user, organization, system, service)'),
-    sa.Column('email', sa.String(length=320), nullable=True, comment='Email address for contactable actors'),
-    sa.Column('phone', sa.String(length=20), nullable=True, comment='Phone number for contactable actors'),
-    sa.Column('profile_data', sa.JSON(), nullable=False, comment='Flexible profile information'),
-    sa.Column('external_id', sa.String(length=100), nullable=True, comment='Reference to external system'),
-    sa.Column('integration_metadata', sa.JSON(), nullable=False, comment='Integration-specific data'),
-    sa.Column('last_activity_at', sa.DateTime(timezone=True), nullable=True, comment='Timestamp of last activity'),
-    sa.Column('activity_count', sa.Integer(), nullable=False, comment='Number of actions performed'),
-    sa.Column('reference_number', sa.String(length=50), nullable=True, comment='Unique reference number'),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-    sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_users_actor_type'), 'users', ['actor_type'], unique=False)
-    op.create_index(op.f('ix_users_display_name'), 'users', ['display_name'], unique=False)
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=False)
-    op.create_index(op.f('ix_users_external_id'), 'users', ['external_id'], unique=False)
-    op.create_index(op.f('ix_users_is_active'), 'users', ['is_active'], unique=False)
-    op.create_index(op.f('ix_users_reference_number'), 'users', ['reference_number'], unique=True)
+    # Skip if already created by a8a10495d2b9
+    conn = op.get_bind()
+    result = conn.execute(sa.text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')"))
+    users_exists = result.scalar()
+    if not users_exists:
+        op.create_table('users',
+            sa.Column('first_name', sa.String(length=100), nullable=False, comment="User's first name"),
+            sa.Column('last_name', sa.String(length=100), nullable=False, comment="User's last name"),
+            sa.Column('password_hash', sa.String(length=255), nullable=True, comment='Hashed password (nullable for OAuth-only users)'),
+            sa.Column('is_active', sa.Boolean(), nullable=False, comment='Whether user is active'),
+            sa.Column('oauth_accounts', sa.JSON(), nullable=False, comment='OAuth account links (provider -> account_id mapping)'),
+            sa.Column('display_name', sa.String(length=255), nullable=False, comment='Display name for the actor'),
+            sa.Column('actor_type', sa.String(length=50), nullable=False, comment='Type of actor (user, organization, system, service)'),
+            sa.Column('email', sa.String(length=320), nullable=True, comment='Email address for contactable actors'),
+            sa.Column('phone', sa.String(length=20), nullable=True, comment='Phone number for contactable actors'),
+            sa.Column('profile_data', sa.JSON(), nullable=False, comment='Flexible profile information'),
+            sa.Column('external_id', sa.String(length=100), nullable=True, comment='Reference to external system'),
+            sa.Column('integration_metadata', sa.JSON(), nullable=False, comment='Integration-specific data'),
+            sa.Column('last_activity_at', sa.DateTime(timezone=True), nullable=True, comment='Timestamp of last activity'),
+            sa.Column('activity_count', sa.Integer(), nullable=False, comment='Number of actions performed'),
+            sa.Column('reference_number', sa.String(length=50), nullable=True, comment='Unique reference number'),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+            sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+            sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
+            sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index(op.f('ix_users_actor_type'), 'users', ['actor_type'], unique=False)
+        op.create_index(op.f('ix_users_display_name'), 'users', ['display_name'], unique=False)
+        op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=False)
+        op.create_index(op.f('ix_users_external_id'), 'users', ['external_id'], unique=False)
+        op.create_index(op.f('ix_users_is_active'), 'users', ['is_active'], unique=False)
+        op.create_index(op.f('ix_users_reference_number'), 'users', ['reference_number'], unique=True)
 
     # --- connections table (from pattern_stack.atoms.integrations.models.Connection) ---
     op.create_table('connections',

@@ -127,7 +127,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     padding: "2.5rem 2rem",
     width: "100%",
-    maxWidth: 380,
+    maxWidth: 440,
   },
   title: {
     color: "var(--fg-default)",

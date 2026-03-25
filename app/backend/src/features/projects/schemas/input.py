@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 from pydantic import Field as PydanticField
@@ -9,13 +10,16 @@ class ProjectCreate(BaseModel):
     name: str = PydanticField(..., min_length=1, max_length=200)
     description: str | None = None
     metadata_: dict[str, Any] | None = None
-    local_path: str = PydanticField(..., min_length=1, max_length=500)
+    owner_id: UUID
+    local_path: str | None = None
     github_repo: str = PydanticField(..., min_length=1, max_length=500)
 
     @field_validator("local_path")
     @classmethod
-    def validate_local_path_exists(cls, v: str) -> str:
-        """Validate that local_path points to an existing directory."""
+    def validate_local_path_exists(cls, v: str | None) -> str | None:
+        """Validate that local_path points to an existing directory (skip if None)."""
+        if v is None:
+            return v
         path = Path(v)
         if not path.exists():
             raise ValueError(f"Directory does not exist: {v}")

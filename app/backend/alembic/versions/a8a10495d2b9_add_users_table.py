@@ -19,6 +19,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Skip if users table already exists (may be created by 0bdc598a80f6)
+    conn = op.get_bind()
+    result = conn.execute(sa.text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')"))
+    if result.scalar():
+        return
     op.create_table(
         'users',
         sa.Column('first_name', sa.String(length=100), nullable=False),
