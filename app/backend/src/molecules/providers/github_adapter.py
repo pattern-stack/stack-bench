@@ -6,9 +6,8 @@ from pathlib import PurePosixPath
 from typing import Protocol
 
 import httpx
-from pydantic import BaseModel
-
 from pattern_stack.atoms.cache import get_cache
+from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # Protocol DTOs
