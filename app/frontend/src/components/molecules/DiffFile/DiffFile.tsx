@@ -13,6 +13,7 @@ interface DiffFileMoleculeProps {
   onAskAgent?: (lineKey: string) => void;
   onAddComment?: (lineKey: string) => void;
   forceExpanded?: boolean | null;
+  defaultExpanded?: boolean;
 }
 
 function DiffFileMolecule({
@@ -24,8 +25,9 @@ function DiffFileMolecule({
   onAskAgent,
   onAddComment,
   forceExpanded = null,
+  defaultExpanded = true,
 }: DiffFileMoleculeProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   useEffect(() => {
     if (forceExpanded !== null) setExpanded(forceExpanded);

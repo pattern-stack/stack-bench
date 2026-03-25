@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from features.branches.schemas.output import BranchResponse
 from features.pull_requests.schemas.output import PullRequestResponse
 from features.stacks.schemas.output import StackResponse
+from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode
 from organisms.api.dependencies import StackAPIDep
 
 router = APIRouter(prefix="/stacks", tags=["stacks"])
@@ -122,3 +123,33 @@ async def link_external_pr(
     api: StackAPIDep,
 ) -> PullRequestResponse:
     return await api.link_external_pr(pull_request_id, data.external_id, data.external_url)
+
+
+# --- Git data endpoints (read-through via GitHub API) ---
+
+
+@router.get(
+    "/{stack_id}/branches/{branch_id}/diff",
+    response_model=DiffData,
+)
+async def get_branch_diff(stack_id: UUID, branch_id: UUID, api: StackAPIDep) -> DiffData:
+    """Get diff for a branch relative to its parent in the stack."""
+    return await api.get_branch_diff(stack_id, branch_id)
+
+
+@router.get(
+    "/{stack_id}/branches/{branch_id}/tree",
+    response_model=FileTreeNode,
+)
+async def get_branch_tree(stack_id: UUID, branch_id: UUID, api: StackAPIDep) -> FileTreeNode:
+    """Get file tree at branch head."""
+    return await api.get_branch_tree(stack_id, branch_id)
+
+
+@router.get(
+    "/{stack_id}/branches/{branch_id}/files/{path:path}",
+    response_model=FileContent,
+)
+async def get_branch_file(stack_id: UUID, branch_id: UUID, path: str, api: StackAPIDep) -> FileContent:
+    """Get file content at branch head."""
+    return await api.get_branch_file(stack_id, branch_id, path)

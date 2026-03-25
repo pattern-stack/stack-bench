@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/generated/api/client";
 import type { FileContent } from "@/types/file-tree";
-import { getMockFileContent } from "@/lib/mock-file-data";
 
 interface UseFileContentResult {
   data: FileContent | null;
@@ -8,15 +8,32 @@ interface UseFileContentResult {
   error: string | null;
 }
 
+export const fileContentKeys = {
+  all: ["file-content"] as const,
+  file: (stackId: string, branchId: string, path: string) =>
+    [...fileContentKeys.all, stackId, branchId, path] as const,
+};
+
 export function useFileContent(
-  _branchId: string | undefined,
+  stackId: string | undefined,
+  branchId: string | undefined,
   path: string | null
 ): UseFileContentResult {
-  // MVP: return mock data directly. Replace with real fetch when backend is wired.
-  const [loading] = useState(false);
-  const [error] = useState<string | null>(null);
+  const {
+    data = null,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: fileContentKeys.file(stackId ?? "", branchId ?? "", path ?? ""),
+    queryFn: () =>
+      apiClient.get<FileContent>(
+        `/api/v1/stacks/${stackId}/branches/${branchId}/files/${path}`
+      ),
+    enabled: !!stackId && !!branchId && !!path,
+    staleTime: Infinity,
+  });
 
-  const data = path ? getMockFileContent(path) : null;
+  const error = queryError ? String(queryError) : null;
 
   return { data, loading, error };
 }

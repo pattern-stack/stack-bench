@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/generated/api/client";
 import type { DiffData } from "@/types/diff";
-import { mockDiffDataByBranch } from "@/lib/mock-diff-data";
 
 interface UseBranchDiffResult {
   data: DiffData | null;
@@ -8,12 +8,31 @@ interface UseBranchDiffResult {
   error: string | null;
 }
 
-export function useBranchDiff(branchId: string | undefined): UseBranchDiffResult {
-  // MVP: return mock data directly. Replace with real fetch when backend is wired.
-  const [loading] = useState(false);
-  const [error] = useState<string | null>(null);
+export const branchDiffKeys = {
+  all: ["branch-diff"] as const,
+  diff: (stackId: string, branchId: string) =>
+    [...branchDiffKeys.all, stackId, branchId] as const,
+};
 
-  const data = branchId ? (mockDiffDataByBranch[branchId] ?? null) : null;
+export function useBranchDiff(
+  stackId: string | undefined,
+  branchId: string | undefined
+): UseBranchDiffResult {
+  const {
+    data = null,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: branchDiffKeys.diff(stackId ?? "", branchId ?? ""),
+    queryFn: () =>
+      apiClient.get<DiffData>(
+        `/api/v1/stacks/${stackId}/branches/${branchId}/diff`
+      ),
+    enabled: !!stackId && !!branchId,
+    staleTime: Infinity, // SHA-addressed — never changes for a given branch
+  });
+
+  const error = queryError ? String(queryError) : null;
 
   return { data, loading, error };
 }

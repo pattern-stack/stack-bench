@@ -37,6 +37,8 @@ function FilesChangedPanel({ diffData, forceExpanded = null }: FilesChangedPanel
     // Stub — will be wired to comment system
   }, []);
 
+  const manyFiles = diffData.files.length > 5;
+
   if (diffData.files.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -47,7 +49,7 @@ function FilesChangedPanel({ diffData, forceExpanded = null }: FilesChangedPanel
 
   return (
     <div className="p-4 space-y-3">
-      {diffData.files.map((file) => (
+      {diffData.files.map((file, index) => (
         <DiffFileMolecule
           key={file.path}
           file={file}
@@ -58,6 +60,7 @@ function FilesChangedPanel({ diffData, forceExpanded = null }: FilesChangedPanel
           onAskAgent={handleAskAgent}
           onAddComment={handleAddComment}
           forceExpanded={forceExpanded}
+          defaultExpanded={manyFiles ? index === 0 : true}
         />
       ))}
     </div>

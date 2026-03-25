@@ -1,4 +1,4 @@
-import { Icon, Button } from "@/components/atoms";
+import { Icon, Button, Badge } from "@/components/atoms";
 import type { StackSummary } from "@/types/activity";
 
 interface StackHeaderProps {
@@ -26,6 +26,11 @@ const summaryChips: {
   },
 ];
 
+function shortRef(ref: string): string {
+  const parts = ref.split("/");
+  return parts[parts.length - 1] ?? ref;
+}
+
 function StackHeader({
   stackName,
   trunk,
@@ -48,8 +53,9 @@ function StackHeader({
         </span>
       </div>
 
-      {/* Row 2: Status summary chips */}
+      {/* Row 2: Trunk badge + status summary */}
       <div className="flex items-center gap-2 flex-wrap">
+        <Badge size="sm" title={trunk}>↑ {shortRef(trunk)}</Badge>
         {summaryChips.map(({ key, label, color }) => {
           const count = summary[key];
           if (count <= 0) return null;
@@ -69,7 +75,7 @@ function StackHeader({
       <div className="flex items-center gap-1.5">
         <Button variant="subtle" size="sm" onClick={onSync}>
           <Icon name="download-cloud" size="xs" />
-          Sync {trunk}
+          Sync
         </Button>
         <Button
           variant="subtle"
