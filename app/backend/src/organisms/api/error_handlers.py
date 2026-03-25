@@ -5,11 +5,23 @@ from molecules.exceptions import (
     AgentNotFoundError,
     ConversationNotFoundError,
     MoleculeError,
+    RelationCycleError,
+    SprintNotFoundError,
+    SyncNotConfiguredError,
+    TaskHasBlockersError,
+    TaskNotFoundError,
+    TaskProjectNotFoundError,
 )
 
 EXCEPTION_MAP: dict[type[MoleculeError], tuple[int, str]] = {
     ConversationNotFoundError: (404, "Conversation not found"),
     AgentNotFoundError: (404, "Agent not found"),
+    TaskNotFoundError: (404, "Task not found"),
+    TaskProjectNotFoundError: (404, "Project not found"),
+    SprintNotFoundError: (404, "Sprint not found"),
+    TaskHasBlockersError: (409, "Task has open blockers"),
+    RelationCycleError: (409, "Relation would create a cycle"),
+    SyncNotConfiguredError: (400, "Sync not configured"),
 }
 
 

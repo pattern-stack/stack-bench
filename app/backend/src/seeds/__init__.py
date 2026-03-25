@@ -2,7 +2,9 @@
 
 from pattern_stack.atoms.seeding.loaders.yaml_loader import register_spec
 
-from seeds.specs import AgentDefinitionSeed, RoleTemplateSeed
+from seeds.specs import AgentDefinitionSeed, RoleTemplateSeed, TaskProjectSeed, TaskTagSeed
 
 register_spec("role_templates", RoleTemplateSeed)
 register_spec("agent_definitions", AgentDefinitionSeed)
+register_spec("TaskProjectSeed", TaskProjectSeed)
+register_spec("TaskTagSeed", TaskTagSeed)

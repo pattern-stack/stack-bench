@@ -77,3 +77,50 @@ class AgentDefinitionSeed(SeedSpec):
             ),
         )
         return agent.id
+
+
+@dataclass
+class TaskProjectSeed(SeedSpec):
+    entity_type: ClassVar[str] = "TaskProject"
+
+    name: str = ""
+    description: str | None = None
+
+    async def create(self, ctx: SeedContext) -> UUID:
+        from features.task_projects.schemas.input import TaskProjectCreate
+        from features.task_projects.service import TaskProjectService
+
+        service = TaskProjectService()
+        obj = await service.create(
+            ctx.db,
+            TaskProjectCreate(name=self.name, description=self.description),
+        )
+        return obj.id
+
+
+@dataclass
+class TaskTagSeed(SeedSpec):
+    entity_type: ClassVar[str] = "TaskTag"
+
+    name: str = ""
+    color: str | None = None
+    group: str | None = None
+    is_exclusive: bool = False
+    description: str | None = None
+
+    async def create(self, ctx: SeedContext) -> UUID:
+        from features.task_tags.schemas.input import TaskTagCreate
+        from features.task_tags.service import TaskTagService
+
+        service = TaskTagService()
+        obj = await service.create(
+            ctx.db,
+            TaskTagCreate(
+                name=self.name,
+                color=self.color,
+                group=self.group,
+                is_exclusive=self.is_exclusive,
+                description=self.description,
+            ),
+        )
+        return obj.id
