@@ -23,6 +23,10 @@ export function App() {
   const { data, loading, error } = useStackDetail();
   const [activeIndex, setActiveIndex] = useState(2);
   const [activeTab, setActiveTab] = useState("files");
+  const [agentOpen, setAgentOpen] = useState(false);
+
+  // TODO: Lift selectedLineCount from FilesChangedPanel in a future PR
+  const selectedLineCount = 0;
 
   const activeBranchId = data?.branches[activeIndex]?.branch.id;
   const { data: diffData } = useBranchDiff(activeBranchId);
@@ -77,6 +81,9 @@ export function App() {
       tabs={tabs}
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      agentOpen={agentOpen}
+      onAgentToggle={() => setAgentOpen((prev) => !prev)}
+      selectedLineCount={selectedLineCount}
     >
       {activeTab === "files" && (
         diffData ? (
