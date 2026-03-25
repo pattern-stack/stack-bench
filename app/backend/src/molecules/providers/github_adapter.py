@@ -452,9 +452,7 @@ class GitHubAdapter:
         data: dict[str, object] = response.json()
         return data
 
-    async def mark_pr_ready(
-        self, owner: str, repo: str, pr_number: int
-    ) -> None:
+    async def mark_pr_ready(self, owner: str, repo: str, pr_number: int) -> None:
         """Remove draft status from a pull request."""
         response = await self._client.patch(
             f"/repos/{owner}/{repo}/pulls/{pr_number}",
@@ -462,9 +460,7 @@ class GitHubAdapter:
         )
         self._raise_for_status(response)
 
-    async def hydrate_stack(
-        self, owner: str, repo: str, branches: list[tuple[str, str, str]]
-    ) -> None:
+    async def hydrate_stack(self, owner: str, repo: str, branches: list[tuple[str, str, str]]) -> None:
         """Pre-load cache for an entire stack's diffs.
 
         Args:
