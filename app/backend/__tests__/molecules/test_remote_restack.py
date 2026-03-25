@@ -24,10 +24,7 @@ from molecules.services.remote_restack import (
 
 def _make_branches(names: list[str]) -> list[dict]:
     """Build a branches list from names, assigning positions 1..N."""
-    return [
-        {"name": name, "position": i + 1, "head_sha": f"sha_{i}"}
-        for i, name in enumerate(names)
-    ]
+    return [{"name": name, "position": i + 1, "head_sha": f"sha_{i}"} for i, name in enumerate(names)]
 
 
 def _mock_clone_manager(clone_path: Path = Path("/tmp/fake-clone")) -> CloneManager:

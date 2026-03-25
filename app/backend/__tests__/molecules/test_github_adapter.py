@@ -766,3 +766,186 @@ class TestDTOSerialization:
         d = fc.model_dump()
         assert d["language"] == "python"
         assert d["truncated"] is False
+
+
+# ---------------------------------------------------------------------------
+# GitHubAdapter.create_check_run
+# ---------------------------------------------------------------------------
+
+
+class TestGitHubAdapterCreateCheckRun:
+    @pytest.mark.unit
+    async def test_sends_correct_payload(self) -> None:
+        captured: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            captured["url"] = str(request.url)
+            captured["method"] = request.method
+            captured["body"] = request.content.decode()
+            return _make_response({"id": 101, "name": "cascade-gate", "status": "in_progress"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.create_check_run("myorg", "myrepo", "cascade-gate", "abc123sha")
+
+        assert "/repos/myorg/myrepo/check-runs" in str(captured["url"])
+        assert captured["method"] == "POST"
+        import json
+
+        body = json.loads(str(captured["body"]))
+        assert body["name"] == "cascade-gate"
+        assert body["head_sha"] == "abc123sha"
+        assert body["status"] == "in_progress"
+        assert result["id"] == 101
+
+    @pytest.mark.unit
+    async def test_raises_on_error(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=422, json={"message": "Validation failed"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubAPIError):
+            await adapter.create_check_run("o", "r", "name", "sha")
+
+
+# ---------------------------------------------------------------------------
+# GitHubAdapter.update_check_run
+# ---------------------------------------------------------------------------
+
+
+class TestGitHubAdapterUpdateCheckRun:
+    @pytest.mark.unit
+    async def test_with_conclusion(self) -> None:
+        captured: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            captured["url"] = str(request.url)
+            captured["method"] = request.method
+            captured["body"] = request.content.decode()
+            return _make_response({"id": 101, "status": "completed", "conclusion": "success"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        output = {"title": "Cascade OK", "summary": "All children merged"}
+        result = await adapter.update_check_run(
+            "myorg", "myrepo", 101, "completed", conclusion="success", output=output
+        )
+
+        assert "/repos/myorg/myrepo/check-runs/101" in str(captured["url"])
+        assert captured["method"] == "PATCH"
+        import json
+
+        body = json.loads(str(captured["body"]))
+        assert body["status"] == "completed"
+        assert body["conclusion"] == "success"
+        assert body["output"]["title"] == "Cascade OK"
+        assert result["id"] == 101
+
+    @pytest.mark.unit
+    async def test_without_conclusion_omits_it(self) -> None:
+        captured: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            captured["body"] = request.content.decode()
+            return _make_response({"id": 101, "status": "in_progress"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        await adapter.update_check_run("o", "r", 101, "in_progress")
+
+        import json
+
+        body = json.loads(str(captured["body"]))
+        assert body["status"] == "in_progress"
+        assert "conclusion" not in body
+        assert "output" not in body
+
+    @pytest.mark.unit
+    async def test_raises_on_error(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=404, json={"message": "Not Found"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubNotFoundError):
+            await adapter.update_check_run("o", "r", 999, "completed", conclusion="failure")
+
+
+# ---------------------------------------------------------------------------
+# GitHubAdapter.retarget_pr
+# ---------------------------------------------------------------------------
+
+
+class TestGitHubAdapterRetargetPR:
+    @pytest.mark.unit
+    async def test_sends_correct_base(self) -> None:
+        captured: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            captured["url"] = str(request.url)
+            captured["method"] = request.method
+            captured["body"] = request.content.decode()
+            return _make_response({"id": 42, "number": 42, "base": {"ref": "main"}})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.retarget_pr("myorg", "myrepo", 42, "main")
+
+        assert "/repos/myorg/myrepo/pulls/42" in str(captured["url"])
+        assert captured["method"] == "PATCH"
+        import json
+
+        body = json.loads(str(captured["body"]))
+        assert body["base"] == "main"
+        assert result["number"] == 42
+
+    @pytest.mark.unit
+    async def test_raises_on_404(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=404, json={"message": "Not Found"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubNotFoundError):
+            await adapter.retarget_pr("o", "r", 999, "main")
+
+
+# ---------------------------------------------------------------------------
+# GitHubAdapter.get_check_suites
+# ---------------------------------------------------------------------------
+
+
+class TestGitHubAdapterGetCheckSuites:
+    @pytest.mark.unit
+    async def test_returns_check_suites_array(self) -> None:
+        suites_response = {
+            "total_count": 2,
+            "check_suites": [
+                {"id": 1, "app": {"slug": "github-actions"}, "status": "completed", "conclusion": "success"},
+                {"id": 2, "app": {"slug": "codecov"}, "status": "completed", "conclusion": "success"},
+            ],
+        }
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            assert "/commits/abc123/check-suites" in str(request.url)
+            return _make_response(suites_response)
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.get_check_suites("myorg", "myrepo", "abc123")
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0]["id"] == 1
+        assert result[1]["app"]["slug"] == "codecov"
+
+    @pytest.mark.unit
+    async def test_empty_check_suites(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return _make_response({"total_count": 0, "check_suites": []})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.get_check_suites("o", "r", "sha1")
+        assert result == []
+
+    @pytest.mark.unit
+    async def test_raises_on_error(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=500, json={"message": "Server Error"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubAPIError):
+            await adapter.get_check_suites("o", "r", "sha")

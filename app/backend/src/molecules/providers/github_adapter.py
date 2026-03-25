@@ -6,9 +6,8 @@ from pathlib import PurePosixPath
 from typing import Protocol
 
 import httpx
-from pydantic import BaseModel
-
 from pattern_stack.atoms.cache import get_cache
+from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # Protocol DTOs
@@ -462,9 +461,7 @@ class GitHubAdapter:
         data: dict[str, object] = response.json()
         return data
 
-    async def mark_pr_ready(
-        self, owner: str, repo: str, pr_number: int
-    ) -> None:
+    async def mark_pr_ready(self, owner: str, repo: str, pr_number: int) -> None:
         """Remove draft status from a pull request."""
         response = await self._client.patch(
             f"/repos/{owner}/{repo}/pulls/{pr_number}",
@@ -506,9 +503,7 @@ class GitHubAdapter:
         result: list[dict[str, object]] = response.json()
         return result
 
-    async def hydrate_stack(
-        self, owner: str, repo: str, branches: list[tuple[str, str, str]]
-    ) -> None:
+    async def hydrate_stack(self, owner: str, repo: str, branches: list[tuple[str, str, str]]) -> None:
         """Pre-load cache for an entire stack's diffs.
 
         Args:
@@ -518,6 +513,72 @@ class GitHubAdapter:
 
         tasks = [self.get_diff(owner, repo, base, head) for _, base, head in branches]
         await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def create_check_run(self, owner: str, repo: str, name: str, head_sha: str) -> dict[str, object]:
+        """Create a check run on a commit.
+
+        POST /repos/{owner}/{repo}/check-runs
+        Requires GitHub App installation token with checks:write permission.
+        """
+        response = await self._client.post(
+            f"/repos/{owner}/{repo}/check-runs",
+            json={"name": name, "head_sha": head_sha, "status": "in_progress"},
+        )
+        self._raise_for_status(response)
+        data: dict[str, object] = response.json()
+        return data
+
+    async def update_check_run(
+        self,
+        owner: str,
+        repo: str,
+        check_run_id: int,
+        status: str,
+        conclusion: str | None = None,
+        output: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        """Update a check run's status and conclusion.
+
+        PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}
+        Only includes non-None fields in the request body.
+        """
+        body: dict[str, object] = {"status": status}
+        if conclusion is not None:
+            body["conclusion"] = conclusion
+        if output is not None:
+            body["output"] = output
+        response = await self._client.patch(
+            f"/repos/{owner}/{repo}/check-runs/{check_run_id}",
+            json=body,
+        )
+        self._raise_for_status(response)
+        data: dict[str, object] = response.json()
+        return data
+
+    async def retarget_pr(self, owner: str, repo: str, pr_number: int, new_base: str) -> dict[str, object]:
+        """Change a PR's base branch.
+
+        PATCH /repos/{owner}/{repo}/pulls/{pr_number}
+        """
+        response = await self._client.patch(
+            f"/repos/{owner}/{repo}/pulls/{pr_number}",
+            json={"base": new_base},
+        )
+        self._raise_for_status(response)
+        data: dict[str, object] = response.json()
+        return data
+
+    async def get_check_suites(self, owner: str, repo: str, ref: str) -> list[dict[str, object]]:
+        """Get all check suites for a commit ref.
+
+        GET /repos/{owner}/{repo}/commits/{ref}/check-suites
+        Returns the check_suites array from the response.
+        """
+        response = await self._client.get(f"/repos/{owner}/{repo}/commits/{ref}/check-suites")
+        self._raise_for_status(response)
+        data = response.json()
+        result: list[dict[str, object]] = data.get("check_suites", [])
+        return result
 
     async def get_check_status(self, owner: str, repo: str, ref: str) -> CheckStatusResult:
         """Get aggregated CI check status for a commit ref."""
@@ -556,9 +617,7 @@ class GitHubAdapter:
             else:
                 agg_status = "pass"
 
-            result = CheckStatusResult(
-                status=agg_status, total=total, passed=passed, failed=failed, pending=pending
-            )
+            result = CheckStatusResult(status=agg_status, total=total, passed=passed, failed=failed, pending=pending)
 
         await self._cache.set(cache_key, result.model_dump(), ttl=_CI_CACHE_TTL, namespace=_CACHE_NS)
         return result
