@@ -1,5 +1,5 @@
 import { Icon } from "@/components/atoms/Icon";
-import { getExtensionColor } from "@/components/atoms/FileIcon";
+import { getFileColor } from "@/components/atoms/FileIcon";
 import { cn } from "@/lib/utils";
 
 interface PathBarProps {
@@ -15,7 +15,7 @@ function PathBar({ path, onNavigate }: PathBarProps) {
       {segments.map((segment, i) => {
         const isLast = i === segments.length - 1;
         const segmentPath = segments.slice(0, i + 1).join("/");
-        const color = isLast ? getExtensionColor(segment) : undefined;
+        const color = isLast ? getFileColor(segment) : undefined;
 
         return (
           <span key={segmentPath} className="flex items-center gap-1 shrink-0">

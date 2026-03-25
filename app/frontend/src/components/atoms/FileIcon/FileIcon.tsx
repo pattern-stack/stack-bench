@@ -1,26 +1,6 @@
 import { Icon } from "@/components/atoms/Icon";
+import { getIcon, getFileColor } from "@/lib/file-icons";
 import { cn } from "@/lib/utils";
-
-const extensionColors: Record<string, string> = {
-  tsx: "var(--accent)",
-  jsx: "var(--accent)",
-  ts: "var(--yellow)",
-  js: "var(--yellow)",
-  css: "var(--purple)",
-  scss: "var(--purple)",
-  json: "var(--yellow)",
-  md: "var(--fg-muted)",
-  html: "var(--red)",
-  go: "var(--accent)",
-  py: "var(--yellow)",
-};
-
-function getExtensionColor(fileName?: string): string {
-  if (!fileName) return "var(--fg-subtle)";
-  const ext = fileName.split(".").pop()?.toLowerCase();
-  if (!ext) return "var(--fg-subtle)";
-  return extensionColors[ext] ?? "var(--fg-subtle)";
-}
 
 interface FileIconProps {
   type: "file" | "dir";
@@ -31,6 +11,7 @@ interface FileIconProps {
 
 function FileIcon({ type, isOpen = false, fileName, className }: FileIconProps) {
   if (type === "dir") {
+    const entry = fileName ? getIcon(fileName, "dir", isOpen) : getIcon("", "dir", isOpen);
     return (
       <span className={cn("inline-flex items-center", className)}>
         <Icon
@@ -38,24 +19,41 @@ function FileIcon({ type, isOpen = false, fileName, className }: FileIconProps) 
           size="xs"
           className="text-[var(--fg-subtle)] mr-0.5"
         />
-        <Icon
-          name="folder"
-          size="sm"
-          className="text-[var(--fg-muted)]"
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={16}
+          height={16}
+          viewBox={entry.viewBox ?? "0 0 24 24"}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={0}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="inline-block shrink-0"
+          style={{ color: entry.color }}
+          dangerouslySetInnerHTML={{ __html: entry.svg }}
         />
       </span>
     );
   }
 
-  const color = getExtensionColor(fileName);
+  const entry = fileName ? getIcon(fileName, "file") : getIcon("", "file");
 
   return (
     <span className={cn("inline-flex items-center", className)}>
-      <Icon
-        name="file"
-        size="sm"
-        className="ml-[14px]"
-        style={{ color }}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={16}
+        height={16}
+        viewBox={entry.viewBox ?? "0 0 24 24"}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={0}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="inline-block shrink-0 ml-[14px]"
+        style={{ color: entry.color }}
+        dangerouslySetInnerHTML={{ __html: entry.svg }}
       />
     </span>
   );
@@ -63,5 +61,5 @@ function FileIcon({ type, isOpen = false, fileName, className }: FileIconProps) 
 
 FileIcon.displayName = "FileIcon";
 
-export { FileIcon, extensionColors, getExtensionColor };
+export { FileIcon, getFileColor };
 export type { FileIconProps };
