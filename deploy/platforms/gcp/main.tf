@@ -22,7 +22,7 @@ module "database" {
   name        = "stack-bench-db"
   engine           = "postgres"
   postgres_version = "15"
-  size        = var.environment == "prod" ? "medium" : "small"
+  size        = var.environment == "prod" ? "small" : "micro"
 
   network_id  = module.network.id
   region      = var.region
@@ -43,7 +43,7 @@ module "backend" {
 
   # Scaling
   min_instances = var.environment == "prod" ? 1 : 0
-  max_instances = var.environment == "prod" ? 10 : 3
+  max_instances = var.environment == "prod" ? 10 : 1
 
   # Health checks
   health_path           = "/health"
