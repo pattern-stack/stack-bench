@@ -1,8 +1,8 @@
-import { Checkbox } from "@/components/atoms/Checkbox";
 import { DiffBadge } from "@/components/atoms/DiffBadge";
 import { DiffStat } from "@/components/atoms/DiffStat";
 import { FileIcon } from "@/components/atoms/FileIcon";
 import { Icon } from "@/components/atoms/Icon";
+import { ViewedToggle } from "@/components/atoms/ViewedToggle";
 import type { DiffFile } from "@/types/diff";
 
 interface DiffFileHeaderProps {
@@ -58,12 +58,8 @@ function DiffFileHeader({ file, expanded, viewed = false, onToggle, onViewedChan
       </span>
 
       {onViewedChange && (
-        <span className="shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
-          <Checkbox
-            checked={viewed}
-            onChange={onViewedChange}
-            label="Viewed"
-          />
+        <span className="shrink-0 ml-2">
+          <ViewedToggle viewed={viewed} onChange={onViewedChange} />
         </span>
       )}
     </div>
