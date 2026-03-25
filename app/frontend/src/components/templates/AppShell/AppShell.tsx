@@ -54,11 +54,7 @@ interface AppShellProps {
   onToggleCommentMode?: () => void;
 }
 
-/** Extract short branch name from full ref: "dug/frontend-mvp/3-stack-nav" → "3-stack-nav" */
-function shortBranch(name: string): string {
-  const parts = name.split("/");
-  return parts[parts.length - 1] ?? name;
-}
+import { shortBranch } from "@/lib/short-branch";
 
 function AppShell({
   stackName,
@@ -102,8 +98,12 @@ function AppShell({
   const description = pr?.description ?? (pr ? null : "No pull request");
   const headBranch = shortBranch(branchName);
 
+  // Full branch names for tooltips
+  const fullHeadBranch = activeBranch?.branch.name ?? "";
+
   // Base branch: for position 1, base is trunk. For others, it's the previous branch.
   const position = activeBranch?.branch.position ?? 1;
+  // items[].title is already short — we don't have the full base ref, so tooltip falls back to short name
   const baseBranch = position <= 1 ? trunk : shortBranch(
     // Find branch at position - 1
     items[activeIndex - 1]?.title ?? trunk
@@ -143,6 +143,7 @@ function AppShell({
           title={title}
           baseBranch={baseBranch}
           headBranch={headBranch}
+          fullHeadBranch={fullHeadBranch}
           description={description}
           status={displayStatus}
           fileCount={fileCount}

@@ -18,10 +18,7 @@ import type { DiffData } from "@/types/diff";
 import type { SidebarMode } from "@/types/sidebar";
 import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
 
-function branchTitle(name: string): string {
-  const parts = name.split("/");
-  return parts[parts.length - 1] ?? name;
-}
+import { shortBranch } from "@/lib/short-branch";
 
 
 /** Status values that count as "draft" (no PR or local-only) */
@@ -130,7 +127,7 @@ export function App() {
 
     return {
       id: b.branch.id,
-      title: branchTitle(b.branch.name),
+      title: shortBranch(b.branch.name),
       status: displayStatus,
       additions: diffResult?.total_additions,
       deletions: diffResult?.total_deletions,
