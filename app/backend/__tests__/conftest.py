@@ -5,7 +5,9 @@ instance. Tests should use unique identifiers to avoid conflicts.
 """
 
 import contextlib
+import socket
 from collections.abc import AsyncGenerator, Generator
+from urllib.parse import urlparse
 
 import pytest
 import pytest_asyncio
@@ -22,7 +24,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 # Import all models so they're registered
-import features  # noqa: F401
+import features  # noqa: E402, F401
 
 # Ensure JWT secret is configured for tests
 ps_settings.JWT_SECRET_KEY = "test-secret-for-conftest-key-must-be-32-chars-long!"
@@ -34,12 +36,30 @@ get_cached_auth_config.cache_clear()
 pytest_plugins = ["pattern_stack.testing.pytest_plugin"]
 
 
+def _postgres_reachable(url: str) -> bool:
+    """Check if Postgres is reachable by probing the port."""
+    try:
+        parsed = urlparse(url.replace("+asyncpg", ""))
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        with socket.create_connection((host, port), timeout=1):
+            return True
+    except (OSError, TimeoutError):
+        return False
+
+
 @pytest.fixture(scope="session")
 def database_url() -> str:
-    """Use the dev Postgres instance for integration tests."""
+    """Use the dev Postgres instance for integration tests.
+
+    Skips the test if Postgres is not reachable.
+    """
     from config.settings import get_settings
 
-    return get_settings().DATABASE_URL
+    url = get_settings().DATABASE_URL
+    if not _postgres_reachable(url):
+        pytest.skip("Postgres not reachable — start with `pts services up`")
+    return url
 
 
 @pytest_asyncio.fixture(scope="function")
