@@ -1,8 +1,10 @@
-from collections.abc import AsyncGenerator
-from pathlib import Path
-from typing import Annotated
+from __future__ import annotations
 
-from fastapi import Depends, Request
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, Any
+
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import get_settings
@@ -11,6 +13,9 @@ from molecules.apis.stack_api import StackAPI
 from molecules.providers.github_adapter import GitHubAdapter
 from molecules.runtime.conversation_runner import ConversationRunner
 from molecules.services.clone_manager import CloneManager
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 
 async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -63,3 +68,41 @@ def get_clone_manager() -> CloneManager:
 
 
 CloneManagerDep = Annotated[CloneManager, Depends(get_clone_manager)]
+
+
+# --- Auth dependencies ---
+
+bearer_scheme = HTTPBearer()
+_auth_api: Any = None
+
+
+def _get_auth_api() -> Any:
+    global _auth_api
+    if _auth_api is None:
+        from pattern_stack.molecules.apis.auth import AuthAPI
+
+        _auth_api = AuthAPI()
+    return _auth_api
+
+
+async def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+    db: DatabaseSession,
+) -> Any:
+    """Get current authenticated user from Bearer token.
+
+    Use as a dependency on any route that requires authentication.
+    Raises 401 if token is invalid or user not found.
+    """
+    auth_api = _get_auth_api()
+    user = await auth_api.get_current_user(db, credentials.credentials)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+CurrentUser = Annotated[Any, Depends(get_current_user)]
