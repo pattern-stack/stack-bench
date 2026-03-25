@@ -93,7 +93,7 @@ class ProjectSeed(SeedSpec):
         service = ProjectService()
         project = await service.create(
             ctx.db,
-            ProjectCreate(name=self.name, description=self.description),
+            ProjectCreate(name=self.name, description=self.description, local_path="/tmp/seeds", github_repo="https://github.com/example/seed-project"),
         )
         return project.id
 
