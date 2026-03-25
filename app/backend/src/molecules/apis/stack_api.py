@@ -8,6 +8,13 @@ from features.review_comments.schemas.output import ReviewCommentResponse
 from features.review_comments.service import ReviewCommentService
 from features.stacks.schemas.output import StackResponse
 from molecules.entities.stack_entity import StackEntity
+from molecules.events import (
+    PULL_REQUEST_MERGED,
+    REVIEW_COMMENT_CREATED,
+    REVIEW_COMMENT_UPDATED,
+    DomainEvent,
+    publish,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -196,6 +203,20 @@ class StackAPI:
             branch.transition_to("merged")
             results.append({"branch": branch.name, "pr_number": pr.external_id, "merged": True})
 
+            await publish(
+                DomainEvent(
+                    topic=PULL_REQUEST_MERGED,
+                    entity_type="pull_request",
+                    entity_id=pr.id,
+                    source="user_action",
+                    payload={
+                        "branch_id": str(branch.id),
+                        "stack_id": str(stack_id),
+                        "external_id": pr.external_id,
+                    },
+                )
+            )
+
         await self.db.commit()
         return {"stack_id": str(stack_id), "merged": results}
 
@@ -206,6 +227,20 @@ class StackAPI:
         comment = await self._comment_svc.create(self.db, data)
         await self.db.commit()
         await self.db.refresh(comment)
+
+        await publish(
+            DomainEvent(
+                topic=REVIEW_COMMENT_CREATED,
+                entity_type="review_comment",
+                entity_id=comment.id,
+                source="user_action",
+                payload={
+                    "pull_request_id": str(data.pull_request_id),
+                    "branch_id": str(data.branch_id),
+                },
+            )
+        )
+
         return ReviewCommentResponse.model_validate(comment)
 
     async def list_comments(self, branch_id: UUID) -> list[ReviewCommentResponse]:
@@ -218,6 +253,20 @@ class StackAPI:
         comment = await self._comment_svc.update(self.db, comment_id, data)
         await self.db.commit()
         await self.db.refresh(comment)
+
+        await publish(
+            DomainEvent(
+                topic=REVIEW_COMMENT_UPDATED,
+                entity_type="review_comment",
+                entity_id=comment.id,
+                source="user_action",
+                payload={
+                    "comment_id": str(comment.id),
+                    "resolved": getattr(comment, "resolved", None),
+                },
+            )
+        )
+
         return ReviewCommentResponse.model_validate(comment)
 
     async def delete_comment(self, comment_id: UUID) -> None:
