@@ -5,11 +5,13 @@ from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from config.settings import get_settings
+from molecules.events.setup import setup_event_handlers, teardown_event_handlers
 from molecules.exceptions import MoleculeError
 from molecules.providers.github_adapter import GitHubAPIError
 from organisms.api.error_handlers import github_exception_handler, molecule_exception_handler
 from organisms.api.routers.agents import router as agents_router
 from organisms.api.routers.conversations import router as conversations_router
+from organisms.api.routers.events import router as events_router
 from organisms.api.routers.projects import router as projects_router
 from organisms.api.routers.stacks import router as stacks_router
 
@@ -27,7 +29,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.engine = engine
     app.state.session_factory = session_factory
 
+    # Event subsystems
+    setup_event_handlers()
+
     yield
+
+    # Clean up event handlers
+    teardown_event_handlers()
 
     # Shutdown
     await engine.dispose()
@@ -51,6 +59,7 @@ def create_app() -> FastAPI:
     app.include_router(agents_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(stacks_router, prefix="/api/v1")
+    app.include_router(events_router, prefix="/api/v1")
 
     # Error handlers
     app.add_exception_handler(MoleculeError, molecule_exception_handler)  # type: ignore[arg-type]

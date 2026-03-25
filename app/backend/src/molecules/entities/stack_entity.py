@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from features.branches.schemas.input import BranchCreate, BranchUpdate
 from features.branches.service import BranchService
@@ -9,6 +10,13 @@ from features.pull_requests.service import PullRequestService
 from features.stacks.schemas.input import StackCreate
 from features.stacks.service import StackService
 from features.workspaces.service import WorkspaceService
+from molecules.events import (
+    BRANCH_SYNCED,
+    PULL_REQUEST_SYNCED,
+    SYNC_STACK_COMPLETED,
+    DomainEvent,
+    publish,
+)
 from molecules.exceptions import (
     BranchNotFoundError,
     PullRequestNotFoundError,
@@ -227,6 +235,7 @@ class StackEntity:
         synced_count = 0
         created_count = 0
         branch_results: list[dict[str, Any]] = []
+        correlation_id = str(uuid4())
 
         for bd in branches_data:
             name = bd["name"]
@@ -236,6 +245,7 @@ class StackEntity:
             pr_url = bd.get("pr_url")
 
             branch = await self.branch_service.get_by_name(self.db, stack_id, name)
+            was_created = False
 
             if branch is None:
                 branch = await self.branch_service.create(
@@ -249,12 +259,29 @@ class StackEntity:
                     ),
                 )
                 created_count += 1
+                was_created = True
             else:
                 update_data = BranchUpdate(head_sha=head_sha, position=position)
                 branch = await self.branch_service.update(self.db, branch.id, update_data)
                 synced_count += 1
 
+            await publish(
+                DomainEvent(
+                    topic=BRANCH_SYNCED,
+                    entity_type="branch",
+                    entity_id=branch.id,
+                    source="sync",
+                    correlation_id=correlation_id,
+                    payload={
+                        "stack_id": str(stack_id),
+                        "action": "created" if was_created else "updated",
+                        "head_sha": branch.head_sha,
+                    },
+                )
+            )
+
             pr = await self.pr_service.get_by_branch(self.db, branch.id)
+            pr_was_created = False
 
             if pr_number is not None:
                 if pr is None:
@@ -267,6 +294,7 @@ class StackEntity:
                             external_url=pr_url,
                         ),
                     )
+                    pr_was_created = True
                 elif pr.external_id != pr_number:
                     pr = await self.pr_service.update(
                         self.db,
@@ -277,7 +305,38 @@ class StackEntity:
                         ),
                     )
 
+            if pr_was_created and pr is not None:
+                await publish(
+                    DomainEvent(
+                        topic=PULL_REQUEST_SYNCED,
+                        entity_type="pull_request",
+                        entity_id=pr.id,
+                        source="sync",
+                        correlation_id=correlation_id,
+                        payload={
+                            "branch_id": str(branch.id),
+                            "action": "created",
+                            "external_id": pr.external_id,
+                        },
+                    )
+                )
+
             branch_results.append({"branch": branch, "pull_request": pr})
+
+        await publish(
+            DomainEvent(
+                topic=SYNC_STACK_COMPLETED,
+                entity_type="stack",
+                entity_id=stack_id,
+                source="sync",
+                correlation_id=correlation_id,
+                payload={
+                    "synced_count": synced_count,
+                    "created_count": created_count,
+                    "branch_ids": [str(br["branch"].id) for br in branch_results],
+                },
+            )
+        )
 
         return {
             "branches": branch_results,

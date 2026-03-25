@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from molecules.services.clone_manager import CloneError, CloneOptions, GitOperations
 
@@ -65,7 +65,7 @@ class RemoteRestackService:
         self,
         repo_url: str,
         trunk: str,
-        branches: list[dict],
+        branches: list[dict[str, Any]],
     ) -> RestackResult:
         """Clone repo, rebase branches in order, force-push results.
 

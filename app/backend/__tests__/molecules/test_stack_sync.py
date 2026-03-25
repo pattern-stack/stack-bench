@@ -4,13 +4,20 @@ Tests the sync_stack method on StackEntity and StackAPI which
 reconciles DB state with branch/PR data from the client.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from molecules.apis.stack_api import StackAPI
 from molecules.entities.stack_entity import StackEntity
+
+
+@pytest.fixture(autouse=True)
+def _mock_publish():
+    """Patch event publishing so sync tests don't need EventBus/EventStore."""
+    with patch("molecules.entities.stack_entity.publish", new_callable=AsyncMock):
+        yield
 
 
 def _make_branch(
