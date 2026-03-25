@@ -16,6 +16,19 @@ class AppSettings(BaseSettings):
     ANTHROPIC_API_KEY: str = Field(default="")
     GITHUB_TOKEN: str = Field(default="")
 
+    # Auth
+    JWT_SECRET: str = Field(default="change-me-in-production")
+    ENCRYPTION_KEY: str = Field(default="")  # Fernet key for Connection config encryption
+
+    # Frontend URL (for OAuth redirects)
+    FRONTEND_URL: str = Field(default="http://localhost:5173")
+
+    # GitHub App OAuth
+    GITHUB_APP_ID: str = Field(default="3169724")
+    GITHUB_CLIENT_ID: str = Field(default="Iv23lixxrPIqZQvr3BlX")
+    GITHUB_CLIENT_SECRET: str = Field(default="")  # Required for OAuth
+    GITHUB_APP_PRIVATE_KEY: str = Field(default="")  # For installation tokens (Phase 4)
+
     # Ephemeral clone settings
     CLONE_BASE_DIR: str = Field(default="/tmp/stack-bench-clones")
     CLONE_MAX_CONCURRENT: int = Field(default=5)

@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pattern_stack.atoms.config import settings as ps_settings
+from pattern_stack.features.auth.exceptions import AuthError
 from pattern_stack.organisms.api.auth_router import create_auth_router
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -11,8 +13,13 @@ from molecules.events.setup import setup_event_handlers, teardown_event_handlers
 from molecules.exceptions import MoleculeError
 from molecules.providers.github_adapter import GitHubAPIError
 from organisms.api.dependencies import get_db
-from organisms.api.error_handlers import github_exception_handler, molecule_exception_handler
+from organisms.api.error_handlers import (
+    auth_exception_handler,
+    github_exception_handler,
+    molecule_exception_handler,
+)
 from organisms.api.routers.agents import router as agents_router
+from organisms.api.routers.auth import router as auth_router
 from organisms.api.routers.conversations import router as conversations_router
 from organisms.api.routers.events import router as events_router
 from organisms.api.routers.projects import router as projects_router
@@ -23,6 +30,9 @@ from organisms.api.routers.stacks import router as stacks_router
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan — setup and teardown."""
     settings = get_settings()
+
+    # Wire our JWT_SECRET into pattern-stack's auth config
+    ps_settings.JWT_SECRET_KEY = settings.JWT_SECRET
 
     # Create engine and session factory
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
@@ -67,13 +77,14 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     # Auth router (pattern-stack built-in)
-    auth_router = create_auth_router(
+    ps_auth_router = create_auth_router(
         get_session=get_db,
         prefix="/api/v1/auth",
     )
-    app.include_router(auth_router)
+    app.include_router(ps_auth_router)
 
     # Register routers
+    app.include_router(auth_router, prefix="/api/v1")
     app.include_router(conversations_router, prefix="/api/v1")
     app.include_router(agents_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
@@ -81,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(events_router, prefix="/api/v1")
 
     # Error handlers
+    app.add_exception_handler(AuthError, auth_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(MoleculeError, molecule_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(GitHubAPIError, github_exception_handler)  # type: ignore[arg-type]
 

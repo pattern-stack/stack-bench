@@ -8,7 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/api"
-	"github.com/dugshub/stack-bench/app/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 // PickerAction describes what the user chose to do with a conversation.
@@ -124,45 +124,45 @@ func (m PickerModel) View() string {
 
 	var lines []string
 
-	header := " " + ui.Bold.Render("CONVERSATIONS") +
-		ui.Dim.Render(" — ") +
-		ui.Accent.Render(m.agentName)
+	header := " " + theme.Bold().Render("CONVERSATIONS") +
+		theme.Dim().Render(" — ") +
+		theme.Resolve(theme.Style{Category: theme.CatAgent}).Render(m.agentName)
 	lines = append(lines, header)
-	lines = append(lines, ui.Dim.Render(strings.Repeat("─", m.width)))
+	lines = append(lines, theme.Dim().Render(strings.Repeat("─", m.width)))
 	lines = append(lines, "")
 
 	if m.loadErr != nil {
-		lines = append(lines, ui.Red.Render(fmt.Sprintf("  Error: %v", m.loadErr)))
+		lines = append(lines, theme.Resolve(theme.Style{Status: theme.Error}).Render(fmt.Sprintf("  Error: %v", m.loadErr)))
 	} else if m.loading {
-		lines = append(lines, ui.Dim.Render("  Loading conversations..."))
+		lines = append(lines, theme.Dim().Render("  Loading conversations..."))
 	} else {
 		// "New conversation" option
 		newCursor := "  "
-		newLabel := ui.Fg.Render("+ New conversation")
+		newLabel := theme.Fg().Render("+ New conversation")
 		if m.cursor == 0 {
-			newCursor = ui.Accent.Render("> ")
-			newLabel = ui.Bold.Render("+ New conversation")
+			newCursor = theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("> ")
+			newLabel = theme.Bold().Render("+ New conversation")
 		}
 		lines = append(lines, fmt.Sprintf("  %s%s", newCursor, newLabel))
 		lines = append(lines, "")
 
 		if len(m.conversations) > 0 {
-			lines = append(lines, ui.Dim.Render("  Past conversations:"))
+			lines = append(lines, theme.Dim().Render("  Past conversations:"))
 			lines = append(lines, "")
 
 			for i, conv := range m.conversations {
 				idx := i + 1 // offset by 1 for the "new" option
 				cursor := "  "
 				if m.cursor == idx {
-					cursor = ui.Accent.Render("> ")
+					cursor = theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("> ")
 				}
 
 				// Format: state, exchange count, time
 				label := conv.AgentName
 				if m.cursor == idx {
-					label = ui.Bold.Render(label)
+					label = theme.Bold().Render(label)
 				} else {
-					label = ui.Fg.Render(label)
+					label = theme.Fg().Render(label)
 				}
 
 				meta := fmt.Sprintf("%s  %d exchanges  %s",
@@ -173,15 +173,15 @@ func (m PickerModel) View() string {
 
 				branch := ""
 				if conv.BranchedFromID != nil {
-					branch = " " + ui.Accent.Render("[branch]")
+					branch = " " + theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("[branch]")
 				}
 
 				lines = append(lines,
-					fmt.Sprintf("  %s%s  %s%s", cursor, label, ui.Dim.Render(meta), branch),
+					fmt.Sprintf("  %s%s  %s%s", cursor, label, theme.Dim().Render(meta), branch),
 				)
 			}
 		} else {
-			lines = append(lines, ui.Dim.Render("  No past conversations."))
+			lines = append(lines, theme.Dim().Render("  No past conversations."))
 		}
 	}
 

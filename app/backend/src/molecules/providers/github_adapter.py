@@ -71,6 +71,8 @@ class GitRepoProtocol(Protocol):
 
     async def get_file_content(self, owner: str, repo: str, ref: str, path: str) -> FileContent: ...
 
+    async def get_behind_count(self, owner: str, repo: str, base_ref: str, head_ref: str) -> int: ...
+
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -435,6 +437,25 @@ class GitHubAdapter:
         )
         await self._cache.set(cache_key, result.model_dump(), ttl=_CACHE_TTL, namespace=_CACHE_NS)
         return result
+
+    async def get_behind_count(self, owner: str, repo: str, base_ref: str, head_ref: str) -> int:
+        """Return how many commits head_ref is behind base_ref.
+
+        Uses the compare API: GET /repos/{owner}/{repo}/compare/{base}...{head}
+        The response includes `behind_by` which counts commits on base not on head.
+        """
+        cache_key = f"behind:{owner}/{repo}:{base_ref}:{head_ref}"
+        cached = await self._cache.get(cache_key, namespace=_CACHE_NS)
+        if cached is not None:
+            return int(cached)
+
+        response = await self._client.get(f"/repos/{owner}/{repo}/compare/{base_ref}...{head_ref}")
+        self._raise_for_status(response)
+        data = response.json()
+        behind_by = int(data.get("behind_by", 0))
+
+        await self._cache.set(cache_key, behind_by, ttl=_CACHE_TTL, namespace=_CACHE_NS)
+        return behind_by
 
     async def merge_pr(
         self,

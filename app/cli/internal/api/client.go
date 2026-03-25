@@ -38,6 +38,12 @@ type StreamChunk struct {
 	Type    ChunkType // "text", "thinking", "tool_start", "tool_end"
 	Done    bool
 	Error   error
+	// New fields for tool events (populated when Type is ChunkToolStart or ChunkToolEnd):
+	ToolCallID  string // tool_call_id from SSE payload
+	ToolName    string // tool_name from SSE payload
+	DisplayType string // display_type from SSE payload (requires SB-026)
+	ToolInput   string // arguments stringified (tool_start only)
+	ToolError   string // error field (tool_end only, if failed)
 }
 
 // Client defines the interface for communicating with the stack-bench backend.

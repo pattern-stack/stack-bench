@@ -7,6 +7,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/ui"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
@@ -50,31 +51,34 @@ func (m *Model) renderHeader() string {
 	if agent == "" {
 		agent = "no agent"
 	}
-	left := " " + ui.Bold.Render("CHAT")
+	left := " " + theme.Bold().Render("CHAT")
 
 	// Build right-side metadata
+	ctx := atoms.DefaultContext(m.width)
 	var meta []string
-	meta = append(meta, ui.Dim.Render("agent: ")+ui.Accent.Render(agent))
-	if m.ExchangeCount > 0 {
-		meta = append(meta, ui.Dim.Render(fmt.Sprintf("%d exchanges", m.ExchangeCount)))
+	meta = append(meta, theme.Dim().Render("agent: ")+theme.Resolve(theme.Style{Category: theme.CatAgent}).Render(agent))
+	if !ctx.Compact() {
+		if m.ExchangeCount > 0 {
+			meta = append(meta, theme.Dim().Render(fmt.Sprintf("%d exchanges", m.ExchangeCount)))
+		}
+		if m.IsBranch {
+			meta = append(meta, theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("[branch]"))
+		}
 	}
-	if m.IsBranch {
-		meta = append(meta, ui.Accent.Render("[branch]"))
-	}
-	right := strings.Join(meta, ui.Dim.Render("  "))
+	right := strings.Join(meta, theme.Dim().Render("  "))
 
 	fill := m.width - lipgloss.Width(left) - lipgloss.Width(right)
 	if fill < 0 {
 		fill = 0
 	}
 	line := left + strings.Repeat(" ", fill) + right
-	sep := ui.Dim.Render(strings.Repeat("─", m.width))
+	sep := theme.Dim().Render(strings.Repeat("─", m.width))
 	return line + "\n" + sep
 }
 
 func (m *Model) renderMessages(maxH int) string {
 	if len(m.messages) == 0 {
-		empty := ui.Dim.Render("  No messages yet. Type below to start a conversation.")
+		empty := theme.Dim().Render("  No messages yet. Type below to start a conversation.")
 		pad := maxH - 1
 		if pad < 0 {
 			pad = 0
@@ -88,7 +92,7 @@ func (m *Model) renderMessages(maxH int) string {
 	}
 
 	if m.streaming {
-		rendered = append(rendered, ui.Accent.Render("  ..."))
+		rendered = append(rendered, theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("  ..."))
 	}
 
 	lineHeights := make([]int, len(rendered))
@@ -122,35 +126,137 @@ func (m *Model) renderMessages(maxH int) string {
 }
 
 func renderMessage(msg Message, width int) string {
-	t := theme.Active()
 	switch msg.Role {
 	case RoleUser:
-		return fmt.Sprintf(" %s %s", ui.Dim.Render("you:"), ui.Fg.Render(msg.Content))
+		return renderUserMessage(msg, width)
 	case RoleAssistant:
-		prefix := ui.Accent.Render("sb:")
-		contentWidth := width - 4
-		if contentWidth < 20 {
-			contentWidth = 20
-		}
-		rendered := ui.RenderMarkdown(msg.Content, contentWidth)
-		lines := strings.Split(rendered, "\n")
-		if len(lines) > 1 {
-			indent := strings.Repeat(" ", lipgloss.Width("  "+prefix+" "))
-			for i := 1; i < len(lines); i++ {
-				lines[i] = indent + lines[i]
-			}
-		}
-		return fmt.Sprintf("  %s %s", prefix, strings.Join(lines, "\n"))
+		return renderAssistantMessage(msg, width)
 	case RoleSystem:
-		sysStyle := lipgloss.NewStyle().Foreground(t.Categories[theme.CatSystem])
-		return fmt.Sprintf("  %s %s", sysStyle.Render("sys:"), sysStyle.Render(msg.Content))
+		return renderSystemMessage(msg, width)
 	}
 	return ""
 }
 
+func renderUserMessage(msg Message, width int) string {
+	return fmt.Sprintf(" %s %s", theme.Dim().Render("you:"), theme.Fg().Render(msg.Content()))
+}
+
+func renderSystemMessage(msg Message, width int) string {
+	t := theme.Active()
+	sysStyle := lipgloss.NewStyle().Foreground(t.Categories[theme.CatSystem])
+	return fmt.Sprintf("  %s %s", sysStyle.Render("sys:"), sysStyle.Render(msg.Content()))
+}
+
+func renderAssistantMessage(msg Message, width int) string {
+	prefix := theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("sb:")
+	contentWidth := width - 4
+	if contentWidth < 20 {
+		contentWidth = 20
+	}
+
+	var sections []string
+	for _, part := range msg.Parts {
+		sections = append(sections, renderPart(part, contentWidth))
+	}
+
+	// If no parts (legacy message with only Raw), fall back to markdown render
+	if len(sections) == 0 && msg.Raw != "" {
+		sections = append(sections, ui.RenderMarkdown(msg.Raw, contentWidth))
+	}
+
+	rendered := strings.Join(sections, "\n")
+	lines := strings.Split(rendered, "\n")
+	if len(lines) > 1 {
+		indent := strings.Repeat(" ", lipgloss.Width("  "+prefix+" "))
+		for i := 1; i < len(lines); i++ {
+			lines[i] = indent + lines[i]
+		}
+	}
+	return fmt.Sprintf("  %s %s", prefix, strings.Join(lines, "\n"))
+}
+
+func renderPart(part MessagePart, width int) string {
+	switch p := part.(type) {
+	case TextPart:
+		return ui.RenderMarkdown(p.Content, width)
+	case ThinkingPart:
+		return renderThinkingPart(p, width)
+	case ToolCallPart:
+		return renderToolCallPart(p, width)
+	case ErrorPart:
+		return theme.Resolve(theme.Style{Status: theme.Error}).Render("Error: " + p.Message)
+	}
+	return ""
+}
+
+func renderThinkingPart(p ThinkingPart, width int) string {
+	if p.Content == "" {
+		return ""
+	}
+	lines := strings.Split(p.Content, "\n")
+	summary := lines[0]
+	if len(summary) > 60 {
+		summary = summary[:57] + "..."
+	}
+	return theme.Dim().Render("thinking: " + summary)
+}
+
+func renderToolCallPart(p ToolCallPart, width int) string {
+	// Status indicator
+	var status string
+	switch p.State {
+	case ToolCallRunning:
+		status = theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("running")
+	case ToolCallComplete:
+		status = theme.Resolve(theme.Style{Status: theme.Success}).Render("done")
+	case ToolCallFailed:
+		status = theme.Resolve(theme.Style{Status: theme.Error}).Render("failed")
+	}
+
+	ctx := atoms.DefaultContext(width)
+	var header string
+	if ctx.Compact() {
+		header = theme.Dim().Render("tool: ") + theme.Fg().Render(p.Name) + "\n  " + status
+	} else {
+		header = theme.Dim().Render("tool: ") + theme.Fg().Render(p.Name) + "  " + status
+	}
+
+	if p.State == ToolCallRunning {
+		return header
+	}
+
+	if p.Error != "" {
+		return header + "\n" + theme.Resolve(theme.Style{Status: theme.Error}).Render(p.Error)
+	}
+
+	// Dispatch result rendering by DisplayType
+	switch p.DisplayType {
+	case DisplayDiff:
+		return header + "\n" + renderCodeFallback(p.Result, width)
+	case DisplayCode:
+		return header + "\n" + renderCodeFallback(p.Result, width)
+	case DisplayBash:
+		return header + "\n" + renderCodeFallback(p.Result, width)
+	default: // DisplayGeneric
+		return header + "\n" + theme.Dim().Render(truncate(p.Result, 200))
+	}
+}
+
+func renderCodeFallback(content string, width int) string {
+	ctx := atoms.DefaultContext(width)
+	return atoms.CodeBlock(ctx, atoms.CodeBlockData{Code: content})
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max-3] + "..."
+}
+
 func (m *Model) renderPrompt() string {
-	sep := ui.Dim.Render(strings.Repeat("─", m.width))
+	sep := theme.Dim().Render(strings.Repeat("─", m.width))
 	cursor := m.input + "_"
-	prompt := fmt.Sprintf(" %s %s", ui.Dim.Render("you:"), ui.Fg.Render(cursor))
+	prompt := fmt.Sprintf(" %s %s", theme.Dim().Render("you:"), theme.Fg().Render(cursor))
 	return sep + "\n" + prompt
 }

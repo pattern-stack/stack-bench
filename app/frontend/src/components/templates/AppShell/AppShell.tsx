@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { StackSidebar } from "@/components/organisms/StackSidebar";
 import { AgentPanel } from "@/components/organisms/AgentPanel";
+import { MergeFlowPanel } from "@/components/organisms/MergeFlowPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
 import { HeaderSkeleton } from "@/components/molecules/PRHeader/HeaderSkeleton";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
@@ -45,6 +46,12 @@ interface AppShellProps {
   stacks?: Stack[];
   onStackChange?: (id: string) => void;
 
+  // Merge panel props
+  mergeOpen?: boolean;
+  onMergeClose?: () => void;
+  stackId?: string;
+  branches?: BranchWithPR[];
+
   // Diff toolbar props
   fileCount?: number;
   additions?: number;
@@ -86,6 +93,10 @@ function AppShell({
   onSync,
   onMerge,
   onClearActivity,
+  mergeOpen,
+  onMergeClose,
+  stackId,
+  branches,
   fileCount,
   additions,
   deletions,
@@ -175,6 +186,15 @@ function AppShell({
         selectedLineCount={selectedLineCount}
         branchName={headBranch}
       />
+      {mergeOpen && stackId && branches && onMergeClose && (
+        <MergeFlowPanel
+          isOpen={mergeOpen}
+          onClose={onMergeClose}
+          stackId={stackId}
+          branches={branches}
+          onSyncTrunk={onSync}
+        />
+      )}
     </div>
   );
 }

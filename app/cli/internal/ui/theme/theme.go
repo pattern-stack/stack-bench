@@ -42,7 +42,7 @@ func (t *Theme) Resolve(s Style) lipgloss.Style {
 	case Strong:
 		st = st.Bold(true)
 	case Subtle:
-		if s.Status == NoStatus && s.Category == CatDefault && s.Hierarchy < Tertiary {
+		if s.Status == NoStatus && s.Category == CatAgent && s.Hierarchy < Tertiary {
 			st = st.Foreground(t.DimColor)
 		}
 	}

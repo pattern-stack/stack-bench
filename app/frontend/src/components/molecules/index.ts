@@ -51,3 +51,12 @@ export type { CommentInputProps } from "./CommentInput";
 
 export { CommentPopover } from "./CommentPopover";
 export type { CommentPopoverProps } from "./CommentPopover";
+
+export { MergeStepItem } from "./MergeStepItem";
+export type { MergeStepItemProps } from "./MergeStepItem";
+
+export { MergeQueueList } from "./MergeQueueList";
+export type { MergeQueueListProps } from "./MergeQueueList";
+
+export { CascadeProgressBar } from "./CascadeProgressBar";
+export type { CascadeProgressBarProps } from "./CascadeProgressBar";

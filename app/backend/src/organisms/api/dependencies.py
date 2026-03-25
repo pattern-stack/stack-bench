@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pattern_stack.features.users.models import User
+from pattern_stack.molecules.apis.auth import AuthAPI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import get_settings
 from molecules.apis.conversation_api import ConversationAPI
+from molecules.apis.github_oauth_api import GitHubOAuthAPI
 from molecules.apis.stack_api import StackAPI
 from molecules.providers.github_adapter import GitHubAdapter
 from molecules.runtime.conversation_runner import ConversationRunner
@@ -16,6 +19,10 @@ from molecules.services.clone_manager import CloneManager
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+_auth_api = AuthAPI()
+_github_oauth = GitHubOAuthAPI()
 
 
 async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -26,6 +33,54 @@ async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
 
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
+
+
+async def get_current_user(
+    db: DatabaseSession,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),  # noqa: B008
+) -> User:
+    """Resolve the currently authenticated user from the Bearer token."""
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = await _auth_api.get_current_user(db, credentials.credentials)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_optional_user(
+    db: DatabaseSession,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),  # noqa: B008
+) -> User | None:
+    """Optionally resolve the authenticated user; returns None if no token."""
+    if not credentials:
+        return None
+    return await _auth_api.get_current_user(db, credentials.credentials)
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
+
+async def get_user_github_token(user: CurrentUser, db: DatabaseSession) -> str:
+    """Resolve the user's GitHub access token from their Connection."""
+    token = await _github_oauth.get_user_github_token(db, user.id)
+    if not token:
+        raise HTTPException(403, detail="GitHub account not connected")
+    return token
+
+
+UserGitHubToken = Annotated[str, Depends(get_user_github_token)]
 
 
 def get_conversation_api(db: DatabaseSession) -> ConversationAPI:
@@ -68,41 +123,3 @@ def get_clone_manager() -> CloneManager:
 
 
 CloneManagerDep = Annotated[CloneManager, Depends(get_clone_manager)]
-
-
-# --- Auth dependencies ---
-
-bearer_scheme = HTTPBearer()
-_auth_api: Any = None
-
-
-def _get_auth_api() -> Any:
-    global _auth_api
-    if _auth_api is None:
-        from pattern_stack.molecules.apis.auth import AuthAPI
-
-        _auth_api = AuthAPI()
-    return _auth_api
-
-
-async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
-    db: DatabaseSession,
-) -> Any:
-    """Get current authenticated user from Bearer token.
-
-    Use as a dependency on any route that requires authentication.
-    Raises 401 if token is invalid or user not found.
-    """
-    auth_api = _get_auth_api()
-    user = await auth_api.get_current_user(db, credentials.credentials)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
-
-
-CurrentUser = Annotated[Any, Depends(get_current_user)]
