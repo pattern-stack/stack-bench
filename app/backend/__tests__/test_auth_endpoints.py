@@ -1,4 +1,8 @@
-"""Integration tests for auth endpoints wired via pattern-stack."""
+"""Integration tests for auth endpoints wired via pattern-stack.
+
+These tests require a running Postgres database. They are automatically
+skipped when the database is not reachable (e.g., in CI without a DB service).
+"""
 
 import time
 
@@ -7,15 +11,36 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from config.settings import get_settings
-from organisms.api.app import create_app
+
+
+def _db_is_reachable() -> bool:
+    """Check if the database is reachable (sync check at import time)."""
+    try:
+        from sqlalchemy import create_engine, text
+
+        settings = get_settings()
+        # Convert async URL to sync for a quick connectivity check
+        sync_url = settings.DATABASE_URL.replace("+asyncpg", "")
+        engine = create_engine(sync_url, pool_pre_ping=True)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        engine.dispose()
+        return True
+    except Exception:
+        return False
+
+
+_DB_AVAILABLE = _db_is_reachable()
+skip_no_db = pytest.mark.skipif(not _DB_AVAILABLE, reason="Database not reachable")
 
 
 @pytest.fixture
 async def client():
     """Async HTTP client with lifespan initialized."""
+    from organisms.api.app import create_app
+
     app = create_app()
 
-    # Manually set up DB on app state (mirroring lifespan)
     settings = get_settings()
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -57,6 +82,7 @@ async def _register(client: AsyncClient, email: str | None = None) -> dict:
     return {"response": resp, "email": email}
 
 
+@skip_no_db
 @pytest.mark.integration
 async def test_register_success(client: AsyncClient) -> None:
     result = await _register(client)
@@ -69,6 +95,7 @@ async def test_register_success(client: AsyncClient) -> None:
     assert data["user"]["first_name"] == "Test"
 
 
+@skip_no_db
 @pytest.mark.integration
 async def test_login_success(client: AsyncClient) -> None:
     result = await _register(client)
@@ -84,6 +111,7 @@ async def test_login_success(client: AsyncClient) -> None:
     assert data["user"]["email"] == email
 
 
+@skip_no_db
 @pytest.mark.integration
 async def test_login_wrong_password(client: AsyncClient) -> None:
     result = await _register(client)
@@ -96,6 +124,7 @@ async def test_login_wrong_password(client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
+@skip_no_db
 @pytest.mark.integration
 async def test_me_with_valid_token(client: AsyncClient) -> None:
     result = await _register(client)
@@ -110,12 +139,14 @@ async def test_me_with_valid_token(client: AsyncClient) -> None:
     assert data["email"] == result["email"]
 
 
+@skip_no_db
 @pytest.mark.integration
 async def test_me_without_token(client: AsyncClient) -> None:
     resp = await client.get("/api/v1/auth/me")
     assert resp.status_code in (401, 403, 422)
 
 
+@skip_no_db
 @pytest.mark.integration
 async def test_refresh_token(client: AsyncClient) -> None:
     result = await _register(client)
@@ -130,6 +161,7 @@ async def test_refresh_token(client: AsyncClient) -> None:
     assert "access_token" in data
 
 
+@skip_no_db
 @pytest.mark.integration
 async def test_register_duplicate_email(client: AsyncClient) -> None:
     email = _unique_email()
