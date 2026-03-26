@@ -129,6 +129,10 @@ CloneManagerDep = Annotated[CloneManager, Depends(get_clone_manager)]
 
 def get_gcp_client() -> GCPClientProtocol:
     settings = get_settings()
+    if not settings.GCP_PROJECT_ID or settings.GCP_PROJECT_ID == "local":
+        from molecules.services.local_gcp_client import LocalGCPClient
+
+        return LocalGCPClient(project_id=settings.GCP_PROJECT_ID or "local")
     return GCPClient(project_id=settings.GCP_PROJECT_ID)
 
 
