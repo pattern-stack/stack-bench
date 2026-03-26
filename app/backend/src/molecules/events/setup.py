@@ -2,10 +2,23 @@
 
 from __future__ import annotations
 
-from pattern_stack.atoms.shared.events import get_event_bus
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
+
+from pattern_stack.atoms.broadcast import get_broadcast, reset_broadcast
+from pattern_stack.atoms.jobs import JobConfig, configure_jobs, get_job_queue, reset_jobs
+from pattern_stack.atoms.shared.events import get_event_bus, get_event_store, reset_event_store
+
+from config.settings import AppSettings
 
 from . import topics
 from .handlers.broadcast_bridge import handle_for_broadcast
+from .handlers.cascade_handler import on_pull_request_merged
+from .job_handlers import register_job_handlers
+
+logger = logging.getLogger(__name__)
 
 # All domain event topics that should be forwarded to the broadcast bridge
 ALL_TOPICS = [
@@ -23,12 +36,82 @@ ALL_TOPICS = [
 ]
 
 
+@dataclass
+class SubsystemRefs:
+    """References to configured subsystems for lifecycle management."""
+
+    event_bus: Any = None
+    event_store: Any = None
+    broadcast: Any = None
+    job_queue: Any = None
+    extras: dict[str, Any] = field(default_factory=dict)
+
+
+def configure_subsystems(
+    settings: AppSettings,
+    session_factory: Callable | None = None,
+) -> SubsystemRefs:
+    """Initialize all infrastructure subsystems based on settings.
+
+    Call this at application startup, before setup_event_handlers().
+
+    Args:
+        settings: Application settings with subsystem configuration.
+        session_factory: Async session factory for database-backed subsystems.
+
+    Returns:
+        SubsystemRefs with references to the configured subsystems.
+    """
+    refs = SubsystemRefs()
+
+    # 1. Events — bus and store use singletons, no explicit configure needed
+    refs.event_bus = get_event_bus()
+    refs.event_store = get_event_store()
+    logger.info("Event subsystem initialized (backend=%s)", settings.EVENT_BACKEND)
+
+    # 2. Broadcast — singleton, no configure function
+    refs.broadcast = get_broadcast()
+    logger.info("Broadcast subsystem initialized (backend=%s)", settings.BROADCAST_BACKEND)
+
+    # 3. Jobs — requires explicit configuration
+    job_config = JobConfig(
+        backend=settings.JOB_BACKEND,
+        max_concurrent=settings.JOB_MAX_CONCURRENT,
+        poll_interval=settings.JOB_POLL_INTERVAL,
+    )
+    configure_jobs(job_config, session_factory=session_factory)
+    refs.job_queue = get_job_queue()
+    logger.info(
+        "Jobs subsystem initialized (backend=%s, max_concurrent=%d)",
+        settings.JOB_BACKEND,
+        settings.JOB_MAX_CONCURRENT,
+    )
+
+    # 4. Job handlers — register after queue is configured
+    register_job_handlers()
+    logger.info("Job handlers registered")
+
+    return refs
+
+
+def teardown_subsystems() -> None:
+    """Reset all subsystem singletons. Called on shutdown."""
+    reset_jobs()
+    reset_broadcast()
+    reset_event_store()
+    logger.info("All subsystems torn down")
+
+
 def setup_event_handlers() -> None:
     """Register all event handlers with the EventBus."""
     bus = get_event_bus()
 
+    # Broadcast bridge for all topics
     for topic in ALL_TOPICS:
         bus.subscribe(topic, handle_for_broadcast)
+
+    # Reactive handlers
+    bus.subscribe(topics.PULL_REQUEST_MERGED, on_pull_request_merged)
 
 
 def teardown_event_handlers() -> None:
