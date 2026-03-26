@@ -4,8 +4,11 @@ No HTTP concerns. Handles token exchange, user linking, and encrypted
 Connection storage. Used by the auth router (organisms layer).
 """
 
+import logging
 import time
 import urllib.parse
+
+logger = logging.getLogger(__name__)
 from typing import Any
 from uuid import UUID
 
@@ -48,20 +51,26 @@ class GitHubOAuthAPI:
     def __init__(self, user_service: UserService | None = None) -> None:
         self.user_service = user_service or UserService()
 
-    def get_authorize_url(self, state: str) -> str:
-        """Generate GitHub OAuth authorization URL."""
+    def get_authorize_url(self, state: str, redirect_origin: str | None = None) -> str:
+        """Generate GitHub OAuth authorization URL.
+
+        If redirect_origin is provided, it overrides FRONTEND_URL for the
+        redirect_uri — supports dynamic dev ports.
+        """
         settings = get_settings()
+        base_url = redirect_origin or settings.FRONTEND_URL
         params = {
             "client_id": settings.GITHUB_CLIENT_ID,
-            "redirect_uri": f"{settings.FRONTEND_URL}/auth/github/callback",
+            "redirect_uri": f"{base_url}/auth/github/callback",
             "scope": OAUTH_SCOPE,
             "state": state,
         }
         return f"{AUTHORIZE_URL}?{urllib.parse.urlencode(params)}"
 
-    async def exchange_code(self, code: str) -> dict[str, Any] | None:
+    async def exchange_code(self, code: str, redirect_origin: str | None = None) -> dict[str, Any] | None:
         """POST to GitHub to exchange auth code for access + refresh tokens."""
         settings = get_settings()
+        base_url = redirect_origin or settings.FRONTEND_URL
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 TOKEN_URL,
@@ -69,13 +78,16 @@ class GitHubOAuthAPI:
                     "client_id": settings.GITHUB_CLIENT_ID,
                     "client_secret": settings.GITHUB_CLIENT_SECRET,
                     "code": code,
+                    "redirect_uri": f"{base_url}/auth/github/callback",
                 },
                 headers={"Accept": "application/json"},
             )
         if response.status_code != 200:
+            logger.warning("GitHub token exchange failed: status=%s body=%s", response.status_code, response.text)
             return None
         data = response.json()
         if "error" in data:
+            logger.warning("GitHub token exchange error: %s", data)
             return None
         return dict(data)
 
@@ -93,7 +105,7 @@ class GitHubOAuthAPI:
             return dict(response.json())
 
     async def get_github_emails(self, access_token: str) -> list[dict[str, Any]]:
-        """GET /user/emails from GitHub API."""
+        """GET /user/emails from GitHub API. Returns empty list on permission error."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 USER_EMAILS_URL,
@@ -102,6 +114,9 @@ class GitHubOAuthAPI:
                     "Accept": "application/json",
                 },
             )
+            if response.status_code == 403:
+                # GitHub App may not have email permission — fall back gracefully
+                return []
             response.raise_for_status()
             return list(response.json())
 

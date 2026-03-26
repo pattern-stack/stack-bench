@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from config.settings import get_settings
 from molecules.workflows.onboarding import OnboardingError, OnboardingWorkflow
 from organisms.api.dependencies import CurrentUser, DatabaseSession
 
@@ -20,6 +21,9 @@ class GitHubOrgResponse(BaseModel):
     login: str
     avatar_url: str
     description: str | None = None
+    installed: bool = False
+    installation_id: int | None = None
+    account_type: str = "Organization"
 
 
 class GitHubRepoResponse(BaseModel):
@@ -28,6 +32,10 @@ class GitHubRepoResponse(BaseModel):
     private: bool
     default_branch: str
     description: str | None = None
+
+
+class GitHubAppInstallResponse(BaseModel):
+    install_url: str
 
 
 class OnboardingCompleteRequest(BaseModel):
@@ -55,6 +63,18 @@ async def get_onboarding_status(user: CurrentUser, db: DatabaseSession) -> Onboa
     )
 
 
+@router.get("/github/install", response_model=GitHubAppInstallResponse)
+async def get_github_app_install_url(user: CurrentUser) -> GitHubAppInstallResponse:
+    """Return the URL to install the Stack Bench GitHub App on an org.
+
+    Uses /installations/select_target which shows the org picker even if
+    the app is already installed on the user's personal account.
+    """
+    settings = get_settings()
+    install_url = f"https://github.com/apps/{settings.GITHUB_APP_SLUG}/installations/new"
+    return GitHubAppInstallResponse(install_url=install_url)
+
+
 @router.get("/github/orgs", response_model=list[GitHubOrgResponse])
 async def list_github_orgs(user: CurrentUser, db: DatabaseSession) -> list[GitHubOrgResponse]:
     workflow = OnboardingWorkflow(db)
@@ -79,24 +99,20 @@ async def list_github_repos(
     return [GitHubRepoResponse(**vars(r)) for r in repos]
 
 
-@router.post("/complete", response_model=OnboardingCompleteResponse)
+class OnboardingCompleteSimpleResponse(BaseModel):
+    completed: bool
+
+
+@router.post("/complete", response_model=OnboardingCompleteSimpleResponse)
 async def complete_onboarding(
-    data: OnboardingCompleteRequest,
     user: CurrentUser,
     db: DatabaseSession,
-) -> OnboardingCompleteResponse:
+) -> OnboardingCompleteSimpleResponse:
+    """Mark onboarding as complete. GitHub App is installed, user is ready.
+
+    Project creation is a separate workflow — not part of onboarding.
+    """
     workflow = OnboardingWorkflow(db)
-    try:
-        result = await workflow.complete(
-            user_id=user.id,
-            repo_full_name=data.repo_full_name,
-            default_branch=data.default_branch,
-        )
-    except OnboardingError as e:
-        raise HTTPException(status_code=400, detail=e.message) from None
+    await workflow.mark_complete(user.id)
     await db.commit()
-    return OnboardingCompleteResponse(
-        project_id=str(result.project_id),
-        workspace_id=str(result.workspace_id),
-        project_name=result.project_name,
-    )
+    return OnboardingCompleteSimpleResponse(completed=True)

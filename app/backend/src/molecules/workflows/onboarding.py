@@ -13,6 +13,8 @@ from molecules.apis.github_oauth_api import GitHubOAuthAPI
 from molecules.exceptions import MoleculeError
 
 GITHUB_ORGS_URL = "https://api.github.com/user/orgs"
+GITHUB_INSTALLATIONS_URL = "https://api.github.com/user/installations"
+GITHUB_INSTALL_REPOS_URL = "https://api.github.com/user/installations/{installation_id}/repositories"
 GITHUB_USER_REPOS_URL = "https://api.github.com/user/repos"
 GITHUB_ORG_REPOS_URL = "https://api.github.com/orgs/{org}/repos"
 
@@ -29,6 +31,9 @@ class GitHubOrg:
     login: str
     avatar_url: str
     description: str | None = None
+    installed: bool = False
+    installation_id: int | None = None
+    account_type: str = "Organization"  # "User" or "Organization"
 
 
 @dataclass
@@ -63,100 +68,133 @@ class OnboardingWorkflow:
     workspace_service: WorkspaceService = field(default_factory=WorkspaceService)
 
     async def get_status(self, user_id: UUID) -> OnboardingStatus:
-        """Check onboarding status: does the user have GitHub + a Project?"""
+        """Check onboarding status: does the user have GitHub connected?"""
         github_status = await self.github_oauth.get_connection_status(self.db, user_id)
         has_github = github_status["connected"]
 
-        projects = await self.project_service.get_by_owner(self.db, user_id)
-        has_project = len(projects) > 0
+        # Check if user has any GitHub App installations (app installed somewhere)
+        has_installations = False
+        if has_github:
+            token = await self.github_oauth.get_user_github_token(self.db, user_id)
+            if token:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(
+                        GITHUB_INSTALLATIONS_URL,
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                            "Accept": "application/vnd.github+json",
+                        },
+                    )
+                    if resp.status_code == 200:
+                        installations = resp.json().get("installations", [])
+                        has_installations = len(installations) > 0
 
         return OnboardingStatus(
-            needs_onboarding=not has_project,
+            needs_onboarding=not has_installations,
             has_github=has_github,
-            has_project=has_project,
+            has_project=has_installations,
         )
+
+    async def mark_complete(self, user_id: UUID) -> None:
+        """Mark onboarding as complete. No-op — status is derived from GitHub state."""
+        # Onboarding completion is determined by having GitHub connected + app installed.
+        # This endpoint exists so the frontend has a clear "done" action.
+        pass
 
     async def list_github_orgs(self, user_id: UUID) -> list[GitHubOrg]:
-        """List GitHub orgs the user belongs to, plus a personal account entry."""
-        token = await self.github_oauth.get_user_github_token(self.db, user_id)
-        if not token:
-            raise OnboardingError("GitHub not connected")
+        """List all accounts (personal + orgs) with their app installation status.
 
-        # Fetch user profile for personal account
-        github_user = await self.github_oauth.get_github_user(token)
-        personal = GitHubOrg(
-            login=github_user["login"],
-            avatar_url=github_user.get("avatar_url", ""),
-            description="Personal account",
-        )
+        Combines:
+        - /user (personal account — always shown)
+        - /user/orgs (orgs the user belongs to — requires read:org)
+        - /user/installations (where the app is installed)
 
-        # Fetch orgs
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                GITHUB_ORGS_URL,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Accept": "application/json",
-                },
-                params={"per_page": 100},
-            )
-            response.raise_for_status()
-            orgs_data: list[dict[str, Any]] = response.json()
-
-        orgs = [
-            GitHubOrg(
-                login=o["login"],
-                avatar_url=o.get("avatar_url", ""),
-                description=o.get("description"),
-            )
-            for o in orgs_data
-        ]
-
-        return [personal] + orgs
-
-    async def list_github_repos(self, user_id: UUID, org: str | None = None) -> list[GitHubRepo]:
-        """List repos for an org, or the user's personal repos."""
+        Each entry indicates whether the app is installed, so the frontend
+        can show "Install" vs "Select" for each account.
+        """
         token = await self.github_oauth.get_user_github_token(self.db, user_id)
         if not token:
             raise OnboardingError("GitHub not connected")
 
         headers = {
             "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
+            "Accept": "application/vnd.github+json",
         }
 
         async with httpx.AsyncClient() as client:
-            if org:
-                # Check if org is the user's personal account
-                github_user = await self.github_oauth.get_github_user(token)
-                if org == github_user["login"]:
-                    # Personal repos
-                    response = await client.get(
-                        GITHUB_USER_REPOS_URL,
-                        headers=headers,
-                        params={
-                            "per_page": 100,
-                            "sort": "pushed",
-                            "affiliation": "owner",
-                        },
+            # Only source of truth: /user/installations
+            # Shows accounts where the GitHub App is actually installed.
+            inst_response = await client.get(
+                GITHUB_INSTALLATIONS_URL, headers=headers, params={"per_page": 100}
+            )
+
+        result: list[GitHubOrg] = []
+        if inst_response.status_code == 200:
+            for inst in inst_response.json().get("installations", []):
+                account = inst.get("account", {})
+                account_type = account.get("type", "User")
+                result.append(
+                    GitHubOrg(
+                        login=account.get("login", ""),
+                        avatar_url=account.get("avatar_url", ""),
+                        description="Personal account" if account_type == "User" else "Organization",
+                        installed=True,
+                        installation_id=inst["id"],
+                        account_type=account_type,
                     )
-                else:
-                    # Org repos
-                    response = await client.get(
-                        GITHUB_ORG_REPOS_URL.format(org=org),
-                        headers=headers,
-                        params={"per_page": 100, "sort": "pushed"},
-                    )
-            else:
-                # All repos the user can access
+                )
+
+        return result
+
+    async def list_github_repos(self, user_id: UUID, org: str | None = None) -> list[GitHubRepo]:
+        """List repos accessible via the GitHub App installation for a given account.
+
+        Uses /user/installations to find the installation_id for the account,
+        then /user/installations/{id}/repositories to list repos the app can access.
+        """
+        token = await self.github_oauth.get_user_github_token(self.db, user_id)
+        if not token:
+            raise OnboardingError("GitHub not connected")
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+        }
+
+        async with httpx.AsyncClient() as client:
+            # Find the installation_id for this account
+            inst_response = await client.get(
+                GITHUB_INSTALLATIONS_URL,
+                headers=headers,
+                params={"per_page": 100},
+            )
+            inst_response.raise_for_status()
+            installations = inst_response.json().get("installations", [])
+
+            installation_id = None
+            for inst in installations:
+                if inst.get("account", {}).get("login") == org:
+                    installation_id = inst["id"]
+                    break
+
+            if installation_id is None:
+                # Fallback: use /user/repos filtered by owner
                 response = await client.get(
                     GITHUB_USER_REPOS_URL,
                     headers=headers,
-                    params={"per_page": 100, "sort": "pushed"},
+                    params={"per_page": 100, "sort": "pushed", "affiliation": "owner"},
                 )
-
-            response.raise_for_status()
-            repos_data: list[dict[str, Any]] = response.json()
+                response.raise_for_status()
+                repos_data: list[dict[str, Any]] = response.json()
+            else:
+                # Use installation repos endpoint
+                response = await client.get(
+                    GITHUB_INSTALL_REPOS_URL.format(installation_id=installation_id),
+                    headers=headers,
+                    params={"per_page": 100},
+                )
+                response.raise_for_status()
+                repos_data = response.json().get("repositories", [])
 
         return [
             GitHubRepo(

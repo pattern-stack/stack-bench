@@ -86,6 +86,7 @@ class GitHubAuthorizeResponse(BaseModel):
 class GitHubCallbackRequest(BaseModel):
     code: str
     state: str
+    redirect_origin: str | None = None
 
 
 class GitHubConnectionStatus(BaseModel):
@@ -94,39 +95,51 @@ class GitHubConnectionStatus(BaseModel):
 
 
 @router.get("/github", response_model=GitHubAuthorizeResponse)
-async def github_login() -> GitHubAuthorizeResponse:
-    """Return GitHub OAuth authorization URL."""
+async def github_login(redirect_origin: str | None = None) -> GitHubAuthorizeResponse:
+    """Return GitHub OAuth authorization URL.
+
+    If redirect_origin is provided (e.g. http://localhost:3502), it overrides
+    the FRONTEND_URL setting for building the redirect_uri. This supports
+    dynamic dev ports where the frontend may not be on a fixed port.
+    """
     state = secrets.token_urlsafe(32)
-    url = github_oauth.get_authorize_url(state)
+    url = github_oauth.get_authorize_url(state, redirect_origin=redirect_origin)
     return GitHubAuthorizeResponse(authorize_url=url, state=state)
 
 
-@router.post("/github/callback", response_model=TokenResponse)
+class GitHubCallbackResponse(BaseModel):
+    connected: bool
+    github_login: str | None = None
+
+
+@router.post("/github/callback", response_model=GitHubCallbackResponse)
 async def github_callback(
     data: GitHubCallbackRequest,
+    user: CurrentUser,
     db: DatabaseSession,
-) -> TokenResponse:
-    """Exchange GitHub auth code for tokens, create/link user, return JWT."""
-    # 1. Exchange code for GitHub tokens
-    token_data = await github_oauth.exchange_code(data.code)
+) -> GitHubCallbackResponse:
+    """Exchange GitHub auth code for tokens and store as Connection for the authenticated user.
+
+    Users are created only through pattern-stack auth (register/login).
+    GitHub is an integration — stored as a Connection linked to the user.
+    """
+    # 1. Exchange code for GitHub tokens (redirect_uri must match the one used in authorize)
+    token_data = await github_oauth.exchange_code(data.code, redirect_origin=data.redirect_origin)
     if not token_data:
         raise HTTPException(status_code=400, detail="Invalid GitHub authorization code")
 
-    # 2. Fetch GitHub user profile + emails
+    # 2. Fetch GitHub user profile
     github_user = await github_oauth.get_github_user(token_data["access_token"])
-    github_emails = await github_oauth.get_github_emails(token_data["access_token"])
 
-    # 3. Find or create user
-    user, _is_new = await github_oauth.find_or_create_user_from_github(db, github_user, github_emails)
-
-    # 4. Store GitHub tokens as encrypted Connection
+    # 3. Store GitHub tokens as Connection for the authenticated user
     await github_oauth.store_github_connection(db, user.id, token_data, github_user)
 
     await db.commit()
 
-    # 5. Generate Stack Bench JWT tokens
-    result = auth_api._create_auth_result(user)
-    return result.to_token_response()
+    return GitHubCallbackResponse(
+        connected=True,
+        github_login=github_user.get("login"),
+    )
 
 
 @router.get("/github/status", response_model=GitHubConnectionStatus)

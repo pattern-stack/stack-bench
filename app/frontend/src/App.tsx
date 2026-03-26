@@ -21,6 +21,7 @@ import type { DiffData } from "@/types/diff";
 import type { SidebarMode } from "@/types/sidebar";
 import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
 import { DiffSkeleton } from "@/components/organisms/FilesChangedPanel/DiffSkeleton";
+import { ContentEmptyState } from "@/components/organisms/ContentEmptyState";
 
 import { shortBranch } from "@/lib/short-branch";
 
@@ -169,11 +170,22 @@ function AuthenticatedApp() {
     );
   }
 
-  if (error || !data) {
+  if (error) {
     return (
       <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--fg-default)] flex items-center justify-center">
-        <p className="text-[var(--red)] text-sm">{error ?? "No data"}</p>
+        <p className="text-[var(--red)] text-sm">{error}</p>
       </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <AppShell
+        agentOpen={agentOpen}
+        onAgentToggle={() => setAgentOpen((prev) => !prev)}
+      >
+        <ContentEmptyState />
+      </AppShell>
     );
   }
 

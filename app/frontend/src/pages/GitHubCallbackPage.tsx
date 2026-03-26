@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * GitHub OAuth callback page.
@@ -9,8 +9,12 @@ import { useEffect, useState } from "react";
  */
 export function GitHubCallbackPage() {
   const [error, setError] = useState<string | null>(null);
+  const sent = useRef(false);
 
   useEffect(() => {
+    // Guard against StrictMode double-mount sending the code twice
+    if (sent.current) return;
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
@@ -21,6 +25,7 @@ export function GitHubCallbackPage() {
     }
 
     if (window.opener) {
+      sent.current = true;
       window.opener.postMessage(
         { type: "github-oauth-callback", code, state },
         window.location.origin

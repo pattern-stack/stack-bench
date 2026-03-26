@@ -1,25 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/generated/api/client";
 import { useGitHubConnection } from "@/hooks/useGitHubConnection";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
-type Step = "connect" | "org" | "repo";
+type Step = "connect" | "install";
 
 export function OnboardingPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("connect");
-  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
-  const [repoFilter, setRepoFilter] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const github = useGitHubConnection();
-  const { status, orgs, repos, complete, invalidateStatus } =
-    useOnboarding(selectedOrg);
+  const { status, orgs, complete, invalidateStatus } =
+    useOnboarding(null);
+  const installUrl = useQuery({
+    queryKey: ["onboarding", "install-url"],
+    queryFn: () =>
+      apiClient.get<{ install_url: string }>("/api/v1/onboarding/github/install"),
+    enabled: step === "install",
+  });
 
   // Auto-advance from connect step when GitHub is connected
   if (step === "connect" && status.data?.has_github && !connecting) {
-    setStep("org");
+    setStep("install");
   }
 
   const handleConnect = async () => {
@@ -37,32 +44,16 @@ export function OnboardingPage() {
     }
   };
 
-  const handleSelectOrg = (login: string) => {
-    setSelectedOrg(login);
-    setRepoFilter("");
-    setStep("repo");
-  };
-
-  const handleSelectRepo = async (
-    fullName: string,
-    defaultBranch: string
-  ) => {
+  const handleFinish = async () => {
     try {
-      await complete.mutateAsync({
-        repo_full_name: fullName,
-        default_branch: defaultBranch,
-      });
+      await complete.mutateAsync({});
+      await queryClient.invalidateQueries({ queryKey: ["onboarding", "status"] });
       navigate("/", { replace: true });
     } catch {
       // Error is available via complete.error
     }
   };
 
-  const filteredRepos = (repos.data ?? []).filter(
-    (r) =>
-      r.name.toLowerCase().includes(repoFilter.toLowerCase()) ||
-      (r.description ?? "").toLowerCase().includes(repoFilter.toLowerCase())
-  );
 
   return (
     <div style={styles.page}>
@@ -74,9 +65,7 @@ export function OnboardingPage() {
         <div style={styles.steps}>
           <StepDot active={step === "connect"} done={step !== "connect"} label="1" />
           <div style={styles.stepLine} />
-          <StepDot active={step === "org"} done={step === "repo"} label="2" />
-          <div style={styles.stepLine} />
-          <StepDot active={step === "repo"} done={false} label="3" />
+          <StepDot active={step === "install"} done={false} label="2" />
         </div>
 
         {/* Step 1: Connect GitHub */}
@@ -98,105 +87,88 @@ export function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2: Select Org */}
-        {step === "org" && (
+        {/* Step 2: Install app on accounts */}
+        {step === "install" && (
           <div style={styles.stepContent}>
-            <h2 style={styles.stepTitle}>Select an organization</h2>
+            <h2 style={styles.stepTitle}>Install Stack Bench</h2>
             <p style={styles.stepDesc}>
-              Choose where your repository lives.
+              Grant Stack Bench access to your GitHub accounts. You'll choose
+              which repos to grant on GitHub.
             </p>
+
             {orgs.isLoading && (
-              <p style={styles.loading}>Loading organizations...</p>
+              <p style={styles.loading}>Loading accounts...</p>
             )}
-            {orgs.data && (
+
+            {/* Show installed accounts */}
+            {orgs.data && orgs.data.length > 0 && (
               <div style={styles.list}>
-                {orgs.data.map((org) => (
-                  <button
-                    key={org.login}
-                    onClick={() => handleSelectOrg(org.login)}
-                    style={styles.listItem}
-                  >
+                {orgs.data.map((org: any) => (
+                  <div key={org.login} style={styles.listItem}>
                     <img
                       src={org.avatar_url}
                       alt={org.login}
                       style={styles.avatar}
                     />
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <div style={styles.itemName}>{org.login}</div>
-                      {org.description && (
-                        <div style={styles.itemDesc}>{org.description}</div>
-                      )}
+                      <div style={styles.itemDesc}>
+                        {org.account_type === "User" ? "Personal account" : "Organization"}
+                      </div>
                     </div>
-                  </button>
+                    <span style={styles.installedBadge}>Connected</span>
+                  </div>
                 ))}
+              </div>
+            )}
+
+            {/* Install on more accounts */}
+            {installUrl.data && (
+              <a
+                href={installUrl.data.install_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.installLink}
+                onClick={() => {
+                  const check = setInterval(() => {
+                    if (!document.hidden) {
+                      clearInterval(check);
+                      orgs.refetch();
+                    }
+                  }, 1000);
+                }}
+              >
+                {orgs.data && orgs.data.length > 0
+                  ? "Connect another organization"
+                  : "Install Stack Bench on GitHub"}
+              </a>
+            )}
+
+            {orgs.data && orgs.data.length === 0 && (
+              <p style={styles.stepDesc}>
+                Install the GitHub App to grant access to your repositories.
+              </p>
+            )}
+
+            {/* Finish button — enabled when at least one account is connected */}
+            {orgs.data && orgs.data.length > 0 && (
+              <button
+                onClick={handleFinish}
+                disabled={complete.isPending}
+                style={styles.button}
+              >
+                {complete.isPending ? "Setting up..." : "Continue to Stack Bench"}
+              </button>
+            )}
+
+            {complete.error && (
+              <div style={styles.error}>
+                {(complete.error as { detail?: string })?.detail ?? "Setup failed"}
               </div>
             )}
           </div>
         )}
 
-        {/* Step 3: Select Repo */}
-        {step === "repo" && (
-          <div style={styles.stepContent}>
-            <div style={styles.stepHeader}>
-              <button
-                onClick={() => {
-                  setStep("org");
-                  setSelectedOrg(null);
-                }}
-                style={styles.backButton}
-              >
-                Back
-              </button>
-              <h2 style={styles.stepTitle}>Select a repository</h2>
-            </div>
-            <p style={styles.stepDesc}>
-              Choose the repo for your first project.
-            </p>
-            <input
-              type="text"
-              value={repoFilter}
-              onChange={(e) => setRepoFilter(e.target.value)}
-              placeholder="Filter repositories..."
-              style={styles.input}
-            />
-            {repos.isLoading && (
-              <p style={styles.loading}>Loading repositories...</p>
-            )}
-            {complete.error && (
-              <div style={styles.error}>
-                {(complete.error as { detail?: string })?.detail ??
-                  "Failed to create project"}
-              </div>
-            )}
-            {repos.data && (
-              <div style={styles.list}>
-                {filteredRepos.map((repo) => (
-                  <button
-                    key={repo.full_name}
-                    onClick={() =>
-                      handleSelectRepo(repo.full_name, repo.default_branch)
-                    }
-                    disabled={complete.isPending}
-                    style={styles.listItem}
-                  >
-                    <div style={styles.repoIcon}>
-                      {repo.private ? "L" : "P"}
-                    </div>
-                    <div>
-                      <div style={styles.itemName}>{repo.name}</div>
-                      {repo.description && (
-                        <div style={styles.itemDesc}>{repo.description}</div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-                {filteredRepos.length === 0 && (
-                  <p style={styles.empty}>No repositories match your filter.</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -395,6 +367,41 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.8125rem",
     textAlign: "center" as const,
     padding: "1rem 0",
+  },
+  installedBadge: {
+    fontSize: "0.6875rem",
+    color: "var(--green)",
+    border: "1px solid var(--green)",
+    borderRadius: 4,
+    padding: "0.125rem 0.5rem",
+    flexShrink: 0,
+  },
+  installBadge: {
+    fontSize: "0.6875rem",
+    color: "var(--accent)",
+    border: "1px solid var(--accent)",
+    borderRadius: 4,
+    padding: "0.125rem 0.5rem",
+    flexShrink: 0,
+  },
+  installLink: {
+    color: "var(--accent)",
+    fontSize: "0.8125rem",
+    textAlign: "center" as const,
+    textDecoration: "none",
+    display: "block",
+    padding: "0.5rem",
+    marginTop: "0.25rem",
+  },
+  installHint: {
+    color: "var(--fg-muted)",
+    fontSize: "0.8125rem",
+    textAlign: "center" as const,
+    margin: "0.5rem 0 0",
+  },
+  link: {
+    color: "var(--accent)",
+    textDecoration: "none",
   },
   error: {
     background: "var(--red-bg)",

@@ -59,12 +59,30 @@ export function useAuth() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Handle 401 errors — clear tokens and reset state
+  // Handle 401 errors — attempt refresh before clearing tokens
   useEffect(() => {
     if (error && "status" in error && (error as { status: number }).status === 401) {
-      clearTokens();
-      setIsAuthenticated(false);
-      queryClient.removeQueries({ queryKey: ["auth", "me"] });
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        // Try to refresh before giving up
+        apiClient
+          .post<{ access_token: string }>("/api/v1/auth/refresh", {
+            refresh_token: refreshToken,
+          })
+          .then((result) => {
+            setTokens(result.access_token, refreshToken);
+            queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+          })
+          .catch(() => {
+            clearTokens();
+            setIsAuthenticated(false);
+            queryClient.removeQueries({ queryKey: ["auth", "me"] });
+          });
+      } else {
+        clearTokens();
+        setIsAuthenticated(false);
+        queryClient.removeQueries({ queryKey: ["auth", "me"] });
+      }
     }
   }, [error, queryClient]);
 
