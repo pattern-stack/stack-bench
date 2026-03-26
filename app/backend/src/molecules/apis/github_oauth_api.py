@@ -7,8 +7,6 @@ Connection storage. Used by the auth router (organisms layer).
 import logging
 import time
 import urllib.parse
-
-logger = logging.getLogger(__name__)
 from typing import Any
 from uuid import UUID
 
@@ -22,6 +20,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import get_settings
+
+logger = logging.getLogger(__name__)
 
 # GitHub OAuth URLs
 AUTHORIZE_URL = "https://github.com/login/oauth/authorize"

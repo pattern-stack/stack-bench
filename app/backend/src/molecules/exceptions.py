@@ -42,3 +42,16 @@ class StackCycleError(MoleculeError):
         super().__init__(f"Setting base_branch_id={base_branch_id} on stack {stack_id} would create a cycle")
         self.stack_id = stack_id
         self.base_branch_id = base_branch_id
+
+
+class WorkspaceNotFoundError(MoleculeError):
+    def __init__(self, workspace_id: UUID) -> None:
+        super().__init__(f"Workspace {workspace_id} not found")
+        self.workspace_id = workspace_id
+
+
+class WorkspaceProvisionError(MoleculeError):
+    def __init__(self, workspace_id: UUID, reason: str) -> None:
+        super().__init__(f"Workspace {workspace_id} provisioning failed: {reason}")
+        self.workspace_id = workspace_id
+        self.reason = reason

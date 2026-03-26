@@ -1,0 +1,14 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'northamerica-northeast2-docker.pkg.dev/stack-bench/workspace/workspace-server:$SHORT_SHA'
+      - '-t'
+      - 'northamerica-northeast2-docker.pkg.dev/stack-bench/workspace/workspace-server:latest'
+      - '.'
+    dir: 'infrastructure/workspace'
+
+images:
+  - 'northamerica-northeast2-docker.pkg.dev/stack-bench/workspace/workspace-server:$SHORT_SHA'
+  - 'northamerica-northeast2-docker.pkg.dev/stack-bench/workspace/workspace-server:latest'

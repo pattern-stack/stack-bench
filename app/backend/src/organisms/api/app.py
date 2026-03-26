@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pattern_stack.atoms.config import settings as ps_settings
+from pattern_stack.atoms.patterns import InvalidStateTransitionError
 from pattern_stack.features.auth.exceptions import AuthError
 from pattern_stack.organisms.api.auth_router import create_auth_router
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -17,6 +18,7 @@ from organisms.api.error_handlers import (
     auth_exception_handler,
     github_exception_handler,
     molecule_exception_handler,
+    state_transition_handler,
 )
 from organisms.api.routers.agents import router as agents_router
 from organisms.api.routers.auth import router as auth_router
@@ -25,6 +27,7 @@ from organisms.api.routers.events import router as events_router
 from organisms.api.routers.onboarding import router as onboarding_router
 from organisms.api.routers.projects import router as projects_router
 from organisms.api.routers.stacks import router as stacks_router
+from organisms.api.routers.workspaces import router as workspaces_router
 
 
 @asynccontextmanager
@@ -92,11 +95,13 @@ def create_app() -> FastAPI:
     app.include_router(stacks_router, prefix="/api/v1")
     app.include_router(events_router, prefix="/api/v1")
     app.include_router(onboarding_router, prefix="/api/v1")
+    app.include_router(workspaces_router, prefix="/api/v1")
 
     # Error handlers
     app.add_exception_handler(AuthError, auth_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(MoleculeError, molecule_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(GitHubAPIError, github_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(InvalidStateTransitionError, state_transition_handler)  # type: ignore[arg-type]
 
     return app
 

@@ -16,6 +16,8 @@ from molecules.apis.stack_api import StackAPI
 from molecules.providers.github_adapter import GitHubAdapter
 from molecules.runtime.conversation_runner import ConversationRunner
 from molecules.services.clone_manager import CloneManager
+from molecules.services.gcp_client import GCPClient, GCPClientProtocol
+from molecules.services.workspace_manager import WorkspaceManager
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -123,3 +125,22 @@ def get_clone_manager() -> CloneManager:
 
 
 CloneManagerDep = Annotated[CloneManager, Depends(get_clone_manager)]
+
+
+def get_gcp_client() -> GCPClientProtocol:
+    settings = get_settings()
+    if not settings.GCP_PROJECT_ID or settings.GCP_PROJECT_ID == "local":
+        from molecules.services.local_gcp_client import LocalGCPClient
+
+        return LocalGCPClient(project_id=settings.GCP_PROJECT_ID or "local")
+    return GCPClient(project_id=settings.GCP_PROJECT_ID)
+
+
+GCPClientDep = Annotated[GCPClientProtocol, Depends(get_gcp_client)]
+
+
+def get_workspace_manager(db: DatabaseSession, gcp_client: GCPClientDep) -> WorkspaceManager:
+    return WorkspaceManager(db=db, gcp_client=gcp_client)
+
+
+WorkspaceManagerDep = Annotated[WorkspaceManager, Depends(get_workspace_manager)]

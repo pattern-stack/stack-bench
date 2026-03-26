@@ -1,5 +1,6 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from pattern_stack.atoms.patterns import InvalidStateTransitionError
 from pattern_stack.features.auth.exceptions import AuthError
 
 from molecules.exceptions import (
@@ -8,6 +9,8 @@ from molecules.exceptions import (
     ConversationNotFoundError,
     MoleculeError,
     StackNotFoundError,
+    WorkspaceNotFoundError,
+    WorkspaceProvisionError,
 )
 from molecules.providers.github_adapter import (
     GitHubAPIError,
@@ -20,6 +23,8 @@ EXCEPTION_MAP: dict[type[MoleculeError], tuple[int, str]] = {
     AgentNotFoundError: (404, "Agent not found"),
     BranchNotFoundError: (404, "Branch not found"),
     StackNotFoundError: (404, "Stack not found"),
+    WorkspaceNotFoundError: (404, "Workspace not found"),
+    WorkspaceProvisionError: (409, "Workspace provisioning failed"),
 }
 
 
@@ -33,6 +38,11 @@ async def molecule_exception_handler(request: Request, exc: MoleculeError) -> JS
 async def auth_exception_handler(request: Request, exc: AuthError) -> JSONResponse:
     """Handle pattern-stack auth exceptions."""
     return JSONResponse(status_code=401, content={"detail": str(exc)})
+
+
+async def state_transition_handler(request: Request, exc: InvalidStateTransitionError) -> JSONResponse:
+    """Handle invalid state transitions as 409 Conflict."""
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 async def github_exception_handler(request: Request, exc: GitHubAPIError) -> JSONResponse:

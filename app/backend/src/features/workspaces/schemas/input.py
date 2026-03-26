@@ -14,6 +14,9 @@ class WorkspaceCreate(BaseModel):
     local_path: str | None = None
     metadata_: dict[str, Any] | None = None
     is_active: bool = True
+    resource_profile: Literal["light", "standard", "heavy"] = "standard"
+    region: str = PydanticField("northamerica-northeast2", max_length=50)
+    config: dict[str, Any] = PydanticField(default_factory=dict)
 
 
 class WorkspaceUpdate(BaseModel):
@@ -24,3 +27,5 @@ class WorkspaceUpdate(BaseModel):
     local_path: str | None = None
     metadata_: dict[str, Any] | None = None
     is_active: bool | None = None
+    resource_profile: Literal["light", "standard", "heavy"] | None = None
+    config: dict[str, Any] | None = None

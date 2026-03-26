@@ -35,6 +35,14 @@ class AppSettings(BaseSettings):
     CLONE_MAX_CONCURRENT: int = Field(default=5)
     CLONE_TTL_SECONDS: int = Field(default=3600)
 
+    # GCP Workspace provisioning
+    GCP_PROJECT_ID: str = Field(default="stack-bench")
+    GCP_REGION: str = Field(default="northamerica-northeast2")
+    GCP_WORKSPACE_IMAGE: str = Field(
+        default="northamerica-northeast2-docker.pkg.dev/stack-bench/workspace/workspace-server:latest"
+    )
+    GCP_SERVICE_ACCOUNT_EMAIL: str = Field(default="")
+
     model_config = {
         "env_file": str(PROJECT_ROOT / ".env"),
         "case_sensitive": True,

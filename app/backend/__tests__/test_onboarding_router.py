@@ -10,7 +10,6 @@ from molecules.workflows.onboarding import (
     GitHubOrg,
     GitHubRepo,
     OnboardingError,
-    OnboardingResult,
     OnboardingStatus,
 )
 
@@ -153,43 +152,16 @@ class TestGitHubReposEndpoint:
 class TestCompleteEndpoint:
     def test_success(self, unit_client):
         client, user = unit_client
-        project_id = uuid4()
-        workspace_id = uuid4()
-
-        mock_result = OnboardingResult(
-            project_id=project_id,
-            workspace_id=workspace_id,
-            project_name="dug/backend",
-        )
 
         with patch("organisms.api.routers.onboarding.OnboardingWorkflow") as MockWorkflow:
             instance = MockWorkflow.return_value
-            instance.complete = AsyncMock(return_value=mock_result)
+            instance.mark_complete = AsyncMock(return_value=None)
 
             response = client.post(
                 "/api/v1/onboarding/complete",
                 headers=_auth_headers(),
-                json={"repo_full_name": "dug/backend", "default_branch": "main"},
             )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["project_id"] == str(project_id)
-        assert data["workspace_id"] == str(workspace_id)
-        assert data["project_name"] == "dug/backend"
-
-    def test_duplicate_project(self, unit_client):
-        client, user = unit_client
-
-        with patch("organisms.api.routers.onboarding.OnboardingWorkflow") as MockWorkflow:
-            instance = MockWorkflow.return_value
-            instance.complete = AsyncMock(side_effect=OnboardingError("Project 'dug/backend' already exists"))
-
-            response = client.post(
-                "/api/v1/onboarding/complete",
-                headers=_auth_headers(),
-                json={"repo_full_name": "dug/backend"},
-            )
-
-        assert response.status_code == 400
-        assert "already exists" in response.json()["detail"]
+        assert data["completed"] is True
