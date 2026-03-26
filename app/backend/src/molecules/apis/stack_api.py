@@ -264,8 +264,29 @@ class StackAPI:
             if pr.state == "draft":
                 await self.github.mark_pr_ready(owner, repo, pr.external_id)
                 pr.transition_to("open")
-                await publish(DomainEvent(
-                    topic=PULL_REQUEST_MARKED_READY,
+                await publish(
+                    DomainEvent(
+                        topic=PULL_REQUEST_MARKED_READY,
+                        entity_type="pull_request",
+                        entity_id=pr.id,
+                        source="user_action",
+                        payload={
+                            "branch_id": str(branch.id),
+                            "stack_id": str(stack_id),
+                            "external_id": pr.external_id,
+                        },
+                    )
+                )
+
+            # Merge
+            await self.github.merge_pr(owner, repo, pr.external_id)
+            if pr.state == "open":
+                pr.transition_to("approved")
+            pr.transition_to("merged")
+            branch.transition_to("merged")
+            await publish(
+                DomainEvent(
+                    topic=PULL_REQUEST_MERGED,
                     entity_type="pull_request",
                     entity_id=pr.id,
                     source="user_action",
@@ -274,25 +295,8 @@ class StackAPI:
                         "stack_id": str(stack_id),
                         "external_id": pr.external_id,
                     },
-                ))
-
-            # Merge
-            await self.github.merge_pr(owner, repo, pr.external_id)
-            if pr.state == "open":
-                pr.transition_to("approved")
-            pr.transition_to("merged")
-            branch.transition_to("merged")
-            await publish(DomainEvent(
-                topic=PULL_REQUEST_MERGED,
-                entity_type="pull_request",
-                entity_id=pr.id,
-                source="user_action",
-                payload={
-                    "branch_id": str(branch.id),
-                    "stack_id": str(stack_id),
-                    "external_id": pr.external_id,
-                },
-            ))
+                )
+            )
             results.append({"branch": branch.name, "pr_number": pr.external_id, "merged": True})
 
         await self.db.commit()
@@ -305,16 +309,18 @@ class StackAPI:
         comment = await self._comment_svc.create(self.db, data)
         await self.db.commit()
         await self.db.refresh(comment)
-        await publish(DomainEvent(
-            topic=REVIEW_COMMENT_CREATED,
-            entity_type="review_comment",
-            entity_id=comment.id,
-            source="user_action",
-            payload={
-                "pull_request_id": str(data.pull_request_id),
-                "branch_id": str(data.branch_id),
-            },
-        ))
+        await publish(
+            DomainEvent(
+                topic=REVIEW_COMMENT_CREATED,
+                entity_type="review_comment",
+                entity_id=comment.id,
+                source="user_action",
+                payload={
+                    "pull_request_id": str(data.pull_request_id),
+                    "branch_id": str(data.branch_id),
+                },
+            )
+        )
         return ReviewCommentResponse.model_validate(comment)
 
     async def list_comments(self, branch_id: UUID) -> list[ReviewCommentResponse]:
@@ -327,15 +333,17 @@ class StackAPI:
         comment = await self._comment_svc.update(self.db, comment_id, data)
         await self.db.commit()
         await self.db.refresh(comment)
-        await publish(DomainEvent(
-            topic=REVIEW_COMMENT_UPDATED,
-            entity_type="review_comment",
-            entity_id=comment.id,
-            source="user_action",
-            payload={
-                "resolved": getattr(data, 'resolved', None),
-            },
-        ))
+        await publish(
+            DomainEvent(
+                topic=REVIEW_COMMENT_UPDATED,
+                entity_type="review_comment",
+                entity_id=comment.id,
+                source="user_action",
+                payload={
+                    "resolved": getattr(data, "resolved", None),
+                },
+            )
+        )
         return ReviewCommentResponse.model_validate(comment)
 
     async def delete_comment(self, comment_id: UUID) -> None:

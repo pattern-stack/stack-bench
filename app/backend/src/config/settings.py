@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pattern_stack.atoms.config.settings import Settings as BaseSettings
 from pydantic import Field
@@ -32,7 +33,7 @@ class AppSettings(BaseSettings):
 
     # Event & Job subsystem settings
     EVENT_BACKEND: str = Field(default="memory")  # "memory" or "database"
-    BROADCAST_BACKEND: str = Field(default="memory")  # "memory" or "redis"
+    BROADCAST_BACKEND: Literal["memory", "redis", "noop"] = Field(default="memory")
     JOB_BACKEND: str = Field(default="memory")  # "memory" or "database"
     JOB_MAX_CONCURRENT: int = Field(default=5)
     JOB_POLL_INTERVAL: float = Field(default=1.0)

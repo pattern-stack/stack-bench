@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pattern_stack.atoms.broadcast import get_broadcast, reset_broadcast
 from pattern_stack.atoms.jobs import JobConfig, configure_jobs, get_job_queue, reset_jobs
 from pattern_stack.atoms.shared.events import get_event_bus, get_event_store, reset_event_store
 
-from config.settings import AppSettings
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from config.settings import AppSettings
 
 from . import topics
 from .handlers.broadcast_bridge import handle_for_broadcast
@@ -49,7 +51,7 @@ class SubsystemRefs:
 
 def configure_subsystems(
     settings: AppSettings,
-    session_factory: Callable | None = None,
+    session_factory: Callable[..., Any] | None = None,
 ) -> SubsystemRefs:
     """Initialize all infrastructure subsystems based on settings.
 

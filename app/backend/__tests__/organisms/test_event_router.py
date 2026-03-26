@@ -1,7 +1,6 @@
 """Tests for the SSE event stream router."""
 
 import asyncio
-import json
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -71,9 +70,7 @@ async def test_history_endpoint_returns_events() -> None:
     mock_store = AsyncMock()
     mock_store.query = AsyncMock(return_value=[mock_event])
 
-    with patch(
-        "organisms.api.routers.events.get_event_store", return_value=mock_store
-    ):
+    with patch("organisms.api.routers.events.get_event_store", return_value=mock_store):
         result = await event_history(entity_type="Stack", event_type=None, limit=50)
 
     assert len(result) == 1
@@ -99,9 +96,7 @@ async def test_history_endpoint_default_params() -> None:
     mock_store = AsyncMock()
     mock_store.query = AsyncMock(return_value=[])
 
-    with patch(
-        "organisms.api.routers.events.get_event_store", return_value=mock_store
-    ):
+    with patch("organisms.api.routers.events.get_event_store", return_value=mock_store):
         result = await event_history(entity_type=None, event_type=None, limit=50)
 
     assert result == []
@@ -122,10 +117,10 @@ async def test_history_endpoint_error_handling() -> None:
     mock_store = AsyncMock()
     mock_store.query = AsyncMock(side_effect=Exception("DB connection failed"))
 
-    with patch(
-        "organisms.api.routers.events.get_event_store", return_value=mock_store
+    with (
+        patch("organisms.api.routers.events.get_event_store", return_value=mock_store),
+        pytest.raises(HTTPException) as exc_info,
     ):
-        with pytest.raises(HTTPException) as exc_info:
-            await event_history(entity_type=None, event_type=None, limit=50)
+        await event_history(entity_type=None, event_type=None, limit=50)
 
     assert exc_info.value.status_code == 500

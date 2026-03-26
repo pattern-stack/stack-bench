@@ -118,9 +118,7 @@ async def test_merge_stack_publishes_for_each_pr(mock_publish: AsyncMock) -> Non
     for i in range(3):
         branches_data.append({"branch": _make_branch(name=f"feat/{i}"), "pull_request": _make_pr(external_id=i + 1)})
 
-    api.entity.get_stack_with_branches = AsyncMock(
-        return_value={"stack": MagicMock(), "branches": branches_data}
-    )
+    api.entity.get_stack_with_branches = AsyncMock(return_value={"stack": MagicMock(), "branches": branches_data})
     api.entity.get_branch_repo_context = AsyncMock(return_value=("owner", "repo", "main", "sha"))
 
     await api.merge_stack(uuid4())

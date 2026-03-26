@@ -13,7 +13,6 @@ from molecules.events.setup import (
     teardown_subsystems,
 )
 
-
 # ---------------------------------------------------------------------------
 # setup_event_handlers / teardown_event_handlers
 # ---------------------------------------------------------------------------
@@ -46,9 +45,7 @@ def test_setup_registers_cascade_handler() -> None:
 
         # Find the cascade handler subscription
         cascade_calls = [
-            c
-            for c in mock_bus.subscribe.call_args_list
-            if c[0] == (PULL_REQUEST_MERGED, on_pull_request_merged)
+            c for c in mock_bus.subscribe.call_args_list if c[0] == (PULL_REQUEST_MERGED, on_pull_request_merged)
         ]
         assert len(cascade_calls) == 1
 

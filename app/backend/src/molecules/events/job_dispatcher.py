@@ -7,7 +7,9 @@ framework's JobQueue so the Worker can pick it up.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 from pattern_stack.atoms.jobs import get_job_queue
 
@@ -15,9 +17,7 @@ if TYPE_CHECKING:
     from pattern_stack.atoms.jobs import JobRecord
 
 
-async def dispatch_job(
-    job_type: str, payload: dict[str, Any], priority: int = 0
-) -> JobRecord:
+async def dispatch_job(job_type: str, payload: dict[str, Any], priority: int = 0) -> JobRecord:
     """Enqueue a job on the framework's JobQueue.
 
     Returns the JobRecord which contains the job_id for tracking.

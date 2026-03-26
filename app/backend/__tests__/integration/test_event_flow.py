@@ -8,6 +8,13 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from pattern_stack.atoms.broadcast import get_broadcast
+from pattern_stack.atoms.jobs import get_job_queue
+from pattern_stack.atoms.shared.events import (
+    EventFilters,
+    get_event_bus,
+    get_event_store,
+)
 
 from molecules.events import (
     BRANCH_SYNCED,
@@ -24,13 +31,6 @@ from molecules.events.setup import (
     setup_event_handlers,
     teardown_event_handlers,
     teardown_subsystems,
-)
-from pattern_stack.atoms.broadcast import get_broadcast
-from pattern_stack.atoms.jobs import get_job_queue
-from pattern_stack.atoms.shared.events import (
-    EventFilters,
-    get_event_bus,
-    get_event_store,
 )
 
 
@@ -154,9 +154,7 @@ class TestEventPublishFlow:
                 )
             )
 
-        events = await store.query(
-            EventFilters(entity_type="branch", event_type=BRANCH_SYNCED, limit=20)
-        )
+        events = await store.query(EventFilters(entity_type="branch", event_type=BRANCH_SYNCED, limit=20))
         assert len(events) >= 5
 
 
@@ -219,15 +217,11 @@ class TestCascadeHandlerFlow:
 
         await asyncio.sleep(0.2)
 
-        events = await store.query(
-            EventFilters(event_type=MERGE_CASCADE_STARTED, limit=10)
-        )
+        events = await store.query(EventFilters(event_type=MERGE_CASCADE_STARTED, limit=10))
         assert len(events) >= 1
         # The cascade event should reference the same stack
         cascade_event = events[0]
-        metadata = getattr(cascade_event, "event_metadata", {}) or getattr(
-            cascade_event, "metadata", {}
-        )
+        metadata = getattr(cascade_event, "event_metadata", {}) or getattr(cascade_event, "metadata", {})
         assert metadata.get("stack_id") == stack_id
 
 
@@ -302,7 +296,4 @@ class TestEventBusHandlerRegistration:
         """PULL_REQUEST_MERGED should have 2 handlers: broadcast bridge + cascade."""
         bus = get_event_bus()
         count = bus.get_handler_count(PULL_REQUEST_MERGED)
-        assert count >= 2, (
-            f"PULL_REQUEST_MERGED should have >= 2 handlers "
-            f"(broadcast + cascade), got {count}"
-        )
+        assert count >= 2, f"PULL_REQUEST_MERGED should have >= 2 handlers (broadcast + cascade), got {count}"
