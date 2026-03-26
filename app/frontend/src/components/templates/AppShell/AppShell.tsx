@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { StackSidebar } from "@/components/organisms/StackSidebar";
+import { StackSidebarEmpty } from "@/components/organisms/StackSidebar/StackSidebarEmpty";
 import { AgentPanel } from "@/components/organisms/AgentPanel";
 import { MergeFlowPanel } from "@/components/organisms/MergeFlowPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
+import { PRHeaderEmpty } from "@/components/molecules/PRHeader/PRHeaderEmpty";
 import { HeaderSkeleton } from "@/components/molecules/PRHeader/HeaderSkeleton";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
@@ -13,31 +15,34 @@ import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 import type { StackSummary, ActivityLogEntry } from "@/types/activity";
 
 interface AppShellProps {
-  stackName: string;
-  trunk: string;
-  items: StackConnectorItem[];
-  activeIndex: number;
-  onSelect: (index: number) => void;
-  activeBranch: BranchWithPR | null;
+  // Data props — optional for empty mode (detected via !stackName)
+  stackName?: string;
+  trunk?: string;
+  items?: StackConnectorItem[];
+  activeIndex?: number;
+  onSelect?: (index: number) => void;
+  activeBranch?: BranchWithPR | null;
+  selectedLineCount?: number;
+
+  // Layout/interaction — always required
   agentOpen: boolean;
   onAgentToggle: () => void;
-  selectedLineCount: number;
   children?: ReactNode;
 
-  // Sidebar props
-  sidebarMode: SidebarMode;
-  onSidebarModeChange: (mode: SidebarMode) => void;
-  diffFiles: DiffFileListItem[];
-  fileTree: FileTreeNode | null;
-  selectedPath: string | null;
-  onSelectFile: (path: string) => void;
+  // Sidebar props — optional for empty mode
+  sidebarMode?: SidebarMode;
+  onSidebarModeChange?: (mode: SidebarMode) => void;
+  diffFiles?: DiffFileListItem[];
+  fileTree?: FileTreeNode | null;
+  selectedPath?: string | null;
+  onSelectFile?: (path: string) => void;
   diffFileCount?: number;
   onRefresh?: () => void;
   changedFiles?: Map<string, ChangedFileInfo>;
 
   // Stack header + activity props
-  summary: StackSummary;
-  activityEntries: ActivityLogEntry[];
+  summary?: StackSummary;
+  activityEntries?: ActivityLogEntry[];
   onSync?: () => void;
   onMerge?: () => void;
   onClearActivity?: () => void;
@@ -107,7 +112,7 @@ function AppShell({
   diffLoading,
   treeLoading,
 }: AppShellProps) {
-  // Derive PRHeader props from the active branch
+  // Derive PRHeader props from the active branch (only used in populated mode)
   const pr = activeBranch?.pull_request;
   const branchName = activeBranch?.branch.name ?? "";
   const title = pr?.title ?? shortBranch(branchName);
@@ -119,45 +124,51 @@ function AppShell({
 
   // Base branch: for position 1, base is trunk. For others, it's the previous branch.
   const position = activeBranch?.branch.position ?? 1;
-  // items[].title is already short — we don't have the full base ref, so tooltip falls back to short name
-  const baseBranch = position <= 1 ? trunk : shortBranch(
-    // Find branch at position - 1
-    items[activeIndex - 1]?.title ?? trunk
+  const baseBranch = position <= 1 ? (trunk ?? "") : shortBranch(
+    items?.[( activeIndex ?? 0) - 1]?.title ?? (trunk ?? "")
   );
 
   // Display status: prefer PR state over branch state
   const displayStatus = pr?.state ?? activeBranch?.branch.state ?? "created";
 
+  const isEmpty = !stackName;
+
   return (
     <div className="flex h-screen bg-[var(--bg-canvas)] text-[var(--fg-default)] font-[family-name:var(--font-sans)]">
-      <StackSidebar
-        stackName={stackName}
-        trunk={trunk}
-        stacks={stacks}
-        onStackChange={onStackChange}
-        items={items}
-        activeIndex={activeIndex}
-        onSelect={onSelect}
-        summary={summary}
-        activityEntries={activityEntries}
-        onSync={onSync}
-        onRestackAll={summary.needsRestack > 0 ? () => console.log("restack all") : undefined}
-        onMerge={onMerge}
-        onClearActivity={onClearActivity}
-        sidebarMode={sidebarMode}
-        onSidebarModeChange={onSidebarModeChange}
-        diffFiles={diffFiles}
-        fileTree={fileTree}
-        selectedPath={selectedPath}
-        onSelectFile={onSelectFile}
-        diffFileCount={diffFileCount}
-        onRefresh={onRefresh}
-        changedFiles={changedFiles}
-        diffLoading={diffLoading}
-        treeLoading={treeLoading}
-      />
+      {isEmpty ? (
+        <StackSidebarEmpty />
+      ) : (
+        <StackSidebar
+          stackName={stackName}
+          trunk={trunk!}
+          stacks={stacks}
+          onStackChange={onStackChange}
+          items={items!}
+          activeIndex={activeIndex!}
+          onSelect={onSelect!}
+          summary={summary!}
+          activityEntries={activityEntries!}
+          onSync={onSync}
+          onRestackAll={summary!.needsRestack > 0 ? () => console.log("restack all") : undefined}
+          onMerge={onMerge}
+          onClearActivity={onClearActivity}
+          sidebarMode={sidebarMode!}
+          onSidebarModeChange={onSidebarModeChange!}
+          diffFiles={diffFiles!}
+          fileTree={fileTree ?? null}
+          selectedPath={selectedPath ?? null}
+          onSelectFile={onSelectFile!}
+          diffFileCount={diffFileCount}
+          onRefresh={onRefresh}
+          changedFiles={changedFiles}
+          diffLoading={diffLoading}
+          treeLoading={treeLoading}
+        />
+      )}
       <main className="flex-1 flex flex-col min-w-0">
-        {diffLoading ? (
+        {isEmpty ? (
+          <PRHeaderEmpty />
+        ) : diffLoading ? (
           <HeaderSkeleton />
         ) : (
           <PRHeader
@@ -183,7 +194,7 @@ function AppShell({
       <AgentPanel
         isOpen={agentOpen}
         onToggle={onAgentToggle}
-        selectedLineCount={selectedLineCount}
+        selectedLineCount={selectedLineCount ?? 0}
         branchName={headBranch}
       />
       {mergeOpen && stackId && branches && onMergeClose && (

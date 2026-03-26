@@ -21,7 +21,7 @@ import type { DiffData } from "@/types/diff";
 import type { SidebarMode } from "@/types/sidebar";
 import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
 import { DiffSkeleton } from "@/components/organisms/FilesChangedPanel/DiffSkeleton";
-import { EmptyState } from "@/components/organisms/EmptyState";
+import { ContentEmptyState } from "@/components/organisms/ContentEmptyState";
 
 import { shortBranch } from "@/lib/short-branch";
 
@@ -179,7 +179,14 @@ function AuthenticatedApp() {
   }
 
   if (!data) {
-    return <EmptyState />;
+    return (
+      <AppShell
+        agentOpen={agentOpen}
+        onAgentToggle={() => setAgentOpen((prev) => !prev)}
+      >
+        <ContentEmptyState />
+      </AppShell>
+    );
   }
 
   const items: StackConnectorItem[] = data.branches.map((b, index) => {
