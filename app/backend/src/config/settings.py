@@ -25,6 +25,7 @@ class AppSettings(BaseSettings):
 
     # GitHub App OAuth
     GITHUB_APP_ID: str = Field(default="3169724")
+    GITHUB_APP_SLUG: str = Field(default="stack-bench")  # Override via env if different
     GITHUB_CLIENT_ID: str = Field(default="Iv23lixxrPIqZQvr3BlX")
     GITHUB_CLIENT_SECRET: str = Field(default="")  # Required for OAuth
     GITHUB_APP_PRIVATE_KEY: str = Field(default="")  # For installation tokens (Phase 4)
