@@ -8,6 +8,25 @@ allowed-tools: Bash, Read, Grep, Glob
 
 You are an agent responsible for starting the Stack Bench development environment and monitoring its logs.
 
+## Arguments
+
+This command accepts optional arguments to control browser mode:
+
+| Argument | Effect |
+|----------|--------|
+| `follow` | Connect to the user's browser via Chrome DevTools MCP (`chrome-devtools`). Use `list_pages` → `select_page` to attach to their active tab. Enables live debugging — see their session, cookies, console errors, network requests. |
+| `headless` | Use Playwright MCP (`playwright`) for independent headless browser verification. No user browser needed. Good for automated checks and screenshots. |
+| _(no arg)_ | Backend-only monitoring. No browser connection unless the user asks later. |
+
+### How to apply
+
+When `follow` or `headless` is passed:
+
+1. Start the dev environment as normal (`pts dev`)
+2. **`follow`**: Call `mcp__chrome-devtools__list_pages` to connect to the user's browser. If CDP fails, follow the connection check in the browser skill (check `BROWSER_PREFERENCE`, show launch command). Select the localhost:3500 tab if one exists. Take an initial snapshot to confirm connection.
+3. **`headless`**: Call `mcp__playwright__browser_navigate` to `http://localhost:3500` after services are up. Take an initial snapshot to confirm the app loaded.
+4. Throughout the session, proactively use the connected browser to check console errors, network failures, and page state when debugging.
+
 ## Architecture Overview
 
 Stack Bench runs via `pts dev` which starts Docker services + application processes:

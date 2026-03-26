@@ -1,16 +1,23 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pattern_stack.atoms.config import settings as ps_settings
+from pattern_stack.atoms.jobs import Worker, get_job_queue
 from pattern_stack.atoms.patterns import InvalidStateTransitionError
 from pattern_stack.features.auth.exceptions import AuthError
 from pattern_stack.organisms.api.auth_router import create_auth_router
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from config.settings import get_settings
-from molecules.events.setup import setup_event_handlers, teardown_event_handlers
+from molecules.events.setup import (
+    configure_subsystems,
+    setup_event_handlers,
+    teardown_event_handlers,
+    teardown_subsystems,
+)
 from molecules.exceptions import MoleculeError
 from molecules.providers.github_adapter import GitHubAPIError
 from organisms.api.dependencies import get_db
@@ -46,13 +53,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.engine = engine
     app.state.session_factory = session_factory
 
-    # Event subsystems
+    # Configure infrastructure subsystems (jobs, events, broadcast)
+    configure_subsystems(settings, session_factory=session_factory)
+
+    # Wire domain event handlers onto the bus
     setup_event_handlers()
+
+    # Start job worker as background task
+    queue = get_job_queue()
+    worker = Worker(
+        queue=queue,
+        max_concurrent=settings.JOB_MAX_CONCURRENT,
+        poll_interval=settings.JOB_POLL_INTERVAL,
+    )
+    worker_task = asyncio.create_task(worker.start())
+    app.state.worker = worker
+    app.state.worker_task = worker_task
 
     yield
 
+    # Stop job worker gracefully
+    await worker.stop(graceful=True)
+    worker_task.cancel()
+
     # Clean up event handlers
     teardown_event_handlers()
+
+    # Reset subsystem singletons
+    teardown_subsystems()
 
     # Shutdown
     await engine.dispose()

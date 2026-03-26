@@ -129,3 +129,23 @@ def client(app: FastAPI) -> TestClient:
     """Create test client from test app."""
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture()
+def clean_event_subsystems() -> Generator[None, None, None]:
+    """Reset all event subsystems for integration tests.
+
+    Yields control to the test, then tears down EventBus, EventStore,
+    Broadcast, and Jobs singletons so the next test starts clean.
+    """
+    from pattern_stack.atoms.broadcast import reset_broadcast
+    from pattern_stack.atoms.jobs import reset_jobs
+    from pattern_stack.atoms.shared.events import get_event_bus, reset_event_store
+
+    yield
+
+    bus = get_event_bus()
+    bus.clear()
+    reset_event_store()
+    reset_broadcast()
+    reset_jobs()
