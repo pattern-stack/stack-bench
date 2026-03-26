@@ -62,12 +62,11 @@ export function useOnboarding(selectedOrg: string | null) {
   const complete = useMutation<
     OnboardingCompleteResponse,
     Error,
-    { repo_full_name: string; default_branch: string }
+    void
   >({
-    mutationFn: (data) =>
+    mutationFn: () =>
       apiClient.post<OnboardingCompleteResponse>(
         "/api/v1/onboarding/complete",
-        data
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboarding", "status"] });

@@ -46,7 +46,7 @@ export function OnboardingPage() {
 
   const handleFinish = async () => {
     try {
-      await complete.mutateAsync({});
+      await complete.mutateAsync();
       await queryClient.invalidateQueries({ queryKey: ["onboarding", "status"] });
       navigate("/", { replace: true });
     } catch {

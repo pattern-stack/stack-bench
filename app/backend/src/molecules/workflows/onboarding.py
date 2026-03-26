@@ -124,9 +124,7 @@ class OnboardingWorkflow:
         async with httpx.AsyncClient() as client:
             # Only source of truth: /user/installations
             # Shows accounts where the GitHub App is actually installed.
-            inst_response = await client.get(
-                GITHUB_INSTALLATIONS_URL, headers=headers, params={"per_page": 100}
-            )
+            inst_response = await client.get(GITHUB_INSTALLATIONS_URL, headers=headers, params={"per_page": 100})
 
         result: list[GitHubOrg] = []
         if inst_response.status_code == 200:
