@@ -12,13 +12,21 @@ bin/
 # React / Node
 node_modules/
 .next/
+.vite/
 build/
+/package.json
+/package-lock.json
 
 # Claude Code worktrees
 .claude/worktrees/
 
 # MCP server caches
 .playwright-mcp/
+.playwright-cli/
+
+# Runtime / dev process files
+.pts-apps.pid
+.pts-plans/
 
 # Browser-pilot screenshots (uploaded to GitHub CDN, not committed)
 screenshots/
