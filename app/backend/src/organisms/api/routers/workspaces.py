@@ -5,6 +5,7 @@ lifecycle operations, proxies requests to workspace servers, and manages
 worktrees. No business logic -- pure delegation + HTTP error translation.
 """
 
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -114,7 +115,7 @@ async def stop_workspace(
 async def get_workspace_status(
     workspace_id: UUID,
     manager: WorkspaceManagerDep,
-) -> dict:
+) -> dict[str, Any]:
     return await manager.get_status(workspace_id)
 
 
@@ -160,10 +161,10 @@ async def proxy_to_workspace(
                 headers=headers,
                 params=dict(request.query_params),
             )
-    except httpx.ConnectError:
-        raise HTTPException(status_code=502, detail="Cannot reach workspace server")
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Workspace server timeout")
+    except httpx.ConnectError as exc:
+        raise HTTPException(status_code=502, detail="Cannot reach workspace server") from exc
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="Workspace server timeout") from exc
 
     return Response(
         content=resp.content,
@@ -181,7 +182,7 @@ async def _proxy_workspace_request(
     method: str,
     db: AsyncSession,
     body: bytes = b"",
-    headers: dict | None = None,
+    headers: dict[str, str] | None = None,
 ) -> Response:
     """Shared proxy helper for convenience endpoints."""
     workspace = await workspace_service.get(db, workspace_id)
@@ -194,10 +195,10 @@ async def _proxy_workspace_request(
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.request(method=method, url=target_url, content=body, headers=headers or {})
-    except httpx.ConnectError:
-        raise HTTPException(status_code=502, detail="Cannot reach workspace server")
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Workspace server timeout")
+    except httpx.ConnectError as exc:
+        raise HTTPException(status_code=502, detail="Cannot reach workspace server") from exc
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="Workspace server timeout") from exc
 
     return Response(content=resp.content, status_code=resp.status_code, headers=dict(resp.headers))
 

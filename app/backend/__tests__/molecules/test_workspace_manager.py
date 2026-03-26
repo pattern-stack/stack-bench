@@ -18,7 +18,6 @@ from molecules.services.gcp_client import (
 )
 from molecules.services.workspace_manager import WorkspaceManager
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

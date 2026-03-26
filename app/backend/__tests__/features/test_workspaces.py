@@ -9,7 +9,6 @@ from features.workspaces.schemas.input import WorkspaceCreate, WorkspaceUpdate
 from features.workspaces.schemas.output import WorkspaceResponse, WorkspaceSummary
 from features.workspaces.service import WorkspaceService
 
-
 # ---------------------------------------------------------------------------
 # Existing tests (preserved)
 # ---------------------------------------------------------------------------
@@ -226,7 +225,7 @@ def test_workspace_state_transition_stopped_to_destroying() -> None:
 
 @pytest.mark.unit
 def test_workspace_full_lifecycle() -> None:
-    """Complete lifecycle: created -> provisioning -> ready -> stopped -> provisioning -> ready -> destroying -> destroyed."""
+    """Complete lifecycle: created -> provisioning -> ready -> stopped -> destroying -> destroyed."""
     ws = Workspace()
     assert ws.state == "created"
     ws.transition_to("provisioning")

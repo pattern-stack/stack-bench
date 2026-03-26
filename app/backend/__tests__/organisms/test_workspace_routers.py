@@ -10,7 +10,6 @@ import pytest
 
 from organisms.api.app import app as live_app
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -51,7 +50,10 @@ async def _create_project(db):
     return project
 
 
-async def _create_workspace(db, project_id, name="test-ws", *, state="created", cloud_run_url=None, cloud_run_service=None, gcs_bucket=None):
+async def _create_workspace(
+    db, project_id, name="test-ws", *, state="created",
+    cloud_run_url=None, cloud_run_service=None, gcs_bucket=None,
+):
     """Create a workspace with optional state transitions."""
     from features.workspaces import WorkspaceCreate, WorkspaceService
 
@@ -266,9 +268,8 @@ async def test_delete_workspace_not_found(client, app) -> None:
 @pytest.mark.integration
 async def test_provision_workspace(client, app, db) -> None:
     """POST /workspaces/{id}/provision transitions to ready."""
-    from organisms.api.dependencies import get_gcp_client
-
     from molecules.services.gcp_client import CloudRunServiceInfo, GCSBucketInfo
+    from organisms.api.dependencies import get_gcp_client
 
     mock_gcp = AsyncMock()
     mock_gcp.bucket_exists.return_value = False
@@ -372,9 +373,8 @@ async def test_stop_workspace_invalid_state(client, app, db) -> None:
 @pytest.mark.integration
 async def test_get_workspace_status(client, app, db) -> None:
     """GET /workspaces/{id}/status returns live cloud status."""
-    from organisms.api.dependencies import get_gcp_client
-
     from molecules.services.gcp_client import CloudRunServiceInfo
+    from organisms.api.dependencies import get_gcp_client
 
     mock_gcp = AsyncMock()
     mock_gcp.get_cloud_run_service.return_value = CloudRunServiceInfo(

@@ -10,7 +10,6 @@ from molecules.services.gcp_client import (
     ResourceProfileConfig,
 )
 
-
 # ---------------------------------------------------------------------------
 # ResourceProfileConfig
 # ---------------------------------------------------------------------------

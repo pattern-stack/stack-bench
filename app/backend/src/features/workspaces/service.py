@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .models import Workspace
 from .schemas.input import WorkspaceCreate, WorkspaceUpdate
 
+_deleted_at = Workspace.__table__.c.deleted_at
+_state = Workspace.__table__.c.state
+
 
 class WorkspaceService(BaseService[Workspace, WorkspaceCreate, WorkspaceUpdate]):
     model = Workspace
@@ -27,7 +30,7 @@ class WorkspaceService(BaseService[Workspace, WorkspaceCreate, WorkspaceUpdate])
         result = await db.execute(
             select(Workspace)
             .where(Workspace.project_id == project_id)
-            .where(Workspace.deleted_at.is_(None))
+            .where(_deleted_at.is_(None))
             .limit(1)
         )
         return result.scalar_one_or_none()
@@ -37,7 +40,7 @@ class WorkspaceService(BaseService[Workspace, WorkspaceCreate, WorkspaceUpdate])
         result = await db.execute(
             select(Workspace)
             .where(Workspace.project_id == project_id)
-            .where(Workspace.state == "ready")
-            .where(Workspace.deleted_at.is_(None))
+            .where(_state == "ready")
+            .where(_deleted_at.is_(None))
         )
         return list(result.scalars().all())

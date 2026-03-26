@@ -113,7 +113,7 @@ class GCPClient:
         self.project_id = project_id
 
     async def create_gcs_bucket(self, bucket_name: str, region: str) -> GCSBucketInfo:
-        from google.cloud import storage
+        from google.cloud import storage  # type: ignore[import-not-found]
 
         def _create() -> GCSBucketInfo:
             client = storage.Client(project=self.project_id)
@@ -139,7 +139,7 @@ class GCPClient:
 
         def _exists() -> bool:
             client = storage.Client(project=self.project_id)
-            return client.bucket(bucket_name).exists()
+            return bool(client.bucket(bucket_name).exists())
 
         return await asyncio.to_thread(_exists)
 

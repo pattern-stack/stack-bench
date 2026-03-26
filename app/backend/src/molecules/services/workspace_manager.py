@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 from config.settings import get_settings
 from features.workspaces.service import WorkspaceService
@@ -179,10 +181,10 @@ class WorkspaceManager:
                 logger.info("Deleted GCS bucket %s", workspace.gcs_bucket)
 
             # Step 4: Clear cloud fields
-            workspace.cloud_run_service = None
-            workspace.cloud_run_url = None
+            workspace.cloud_run_service = None  # type: ignore[assignment]
+            workspace.cloud_run_url = None  # type: ignore[assignment]
             if not preserve_storage:
-                workspace.gcs_bucket = None
+                workspace.gcs_bucket = None  # type: ignore[assignment]
 
             # Step 5: Transition to destroyed
             workspace.transition_to("destroyed")
@@ -272,8 +274,9 @@ class WorkspaceManager:
             "GCS_BUCKET": bucket_name,
         }
         # Merge any custom config from workspace.config
-        if workspace.config:
-            for key, value in workspace.config.items():
+        config: dict[str, Any] = workspace.config or {}  # type: ignore[assignment]
+        if config:
+            for key, value in config.items():
                 if isinstance(value, str):
                     env_vars[key] = value
         return env_vars
