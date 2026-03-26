@@ -264,7 +264,7 @@ class GitHubOAuthAPI:
     ) -> dict[str, Any]:
         """Return connection status for a user's GitHub account.
 
-        Returns {"connected": bool, "github_login": str | None}.
+        Returns {"connected": bool, "github_login": str | None, "needs_reauth": bool}.
         """
         connection = await self.get_user_connection(db, user_id)
         if connection:
@@ -274,8 +274,20 @@ class GitHubOAuthAPI:
                     connection.config_encrypted,
                     settings.ENCRYPTION_KEY.encode(),
                 )
-                return {"connected": True, "github_login": config.get("github_login")}
-        return {"connected": False, "github_login": None}
+                # Check if token is usable (not expired, or refreshable)
+                needs_reauth = False
+                expires_at = config.get("expires_at")
+                if expires_at and time.time() > expires_at:
+                    # Token expired — try refresh to see if it works
+                    token = await self.get_user_github_token(db, user_id)
+                    if token is None:
+                        needs_reauth = True
+                return {
+                    "connected": True,
+                    "github_login": config.get("github_login"),
+                    "needs_reauth": needs_reauth,
+                }
+        return {"connected": False, "github_login": None, "needs_reauth": False}
 
     async def disconnect(
         self,
@@ -354,8 +366,10 @@ class GitHubOAuthAPI:
                 headers={"Accept": "application/json"},
             )
         if response.status_code != 200:
+            logger.warning("GitHub token refresh HTTP %s", response.status_code)
             return None
         data = response.json()
         if "error" in data:
+            logger.warning("GitHub token refresh failed: %s", data.get("error_description", data["error"]))
             return None
         return dict(data)
