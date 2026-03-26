@@ -5,8 +5,8 @@ from typing import Literal
 from pattern_stack.atoms.config.settings import Settings as BaseSettings
 from pydantic import Field
 
-# Project root: config/ → src/ → backend/ → app/ → root
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+# Repo root: config/ → src/ → backend/ → app/ → repo root
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
 
 class AppSettings(BaseSettings):
@@ -52,7 +52,7 @@ class AppSettings(BaseSettings):
     GCP_SERVICE_ACCOUNT_EMAIL: str = Field(default="")
 
     model_config = {
-        "env_file": str(PROJECT_ROOT / ".env"),
+        "env_file": str(REPO_ROOT / ".env"),
         "case_sensitive": True,
     }
 

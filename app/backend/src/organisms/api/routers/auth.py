@@ -92,6 +92,7 @@ class GitHubCallbackRequest(BaseModel):
 class GitHubConnectionStatus(BaseModel):
     connected: bool
     github_login: str | None = None
+    needs_reauth: bool = False
 
 
 @router.get("/github", response_model=GitHubAuthorizeResponse)

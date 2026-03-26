@@ -10,6 +10,7 @@ import { apiClient } from "@/generated/api/client";
 interface GitHubConnectionStatus {
   connected: boolean;
   github_login: string | null;
+  needs_reauth?: boolean;
 }
 
 interface GitHubAuthorizeResponse {
@@ -116,6 +117,7 @@ export function useGitHubConnection() {
   return {
     connected: status?.connected ?? false,
     githubLogin: status?.github_login ?? null,
+    status: status ?? null,
     isLoading,
     connect,
     disconnect: disconnectMutation.mutate,

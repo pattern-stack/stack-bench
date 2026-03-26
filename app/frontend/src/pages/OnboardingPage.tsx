@@ -24,9 +24,14 @@ export function OnboardingPage() {
     enabled: step === "install",
   });
 
-  // Auto-advance from connect step when GitHub is connected
-  if (step === "connect" && status.data?.has_github && !connecting) {
+  // Auto-advance from connect step when GitHub is connected (and token is valid)
+  const needsReauth = github.status?.needs_reauth === true;
+  if (step === "connect" && status.data?.has_github && !connecting && !needsReauth) {
     setStep("install");
+  }
+  // If token expired and refresh failed, go back to connect step
+  if (step === "install" && needsReauth) {
+    setStep("connect");
   }
 
   const handleConnect = async () => {
@@ -71,10 +76,13 @@ export function OnboardingPage() {
         {/* Step 1: Connect GitHub */}
         {step === "connect" && (
           <div style={styles.stepContent}>
-            <h2 style={styles.stepTitle}>Connect your GitHub account</h2>
+            <h2 style={styles.stepTitle}>
+              {needsReauth ? "Reconnect GitHub" : "Connect your GitHub account"}
+            </h2>
             <p style={styles.stepDesc}>
-              Stack Bench needs access to your repositories to manage stacked
-              PRs.
+              {needsReauth
+                ? "Your GitHub session has expired. Please reconnect to continue."
+                : "Stack Bench needs access to your repositories to manage stacked PRs."}
             </p>
             {connectError && <div style={styles.error}>{connectError}</div>}
             <button
@@ -82,7 +90,7 @@ export function OnboardingPage() {
               disabled={connecting}
               style={styles.button}
             >
-              {connecting ? "Connecting..." : "Connect GitHub"}
+              {connecting ? "Connecting..." : needsReauth ? "Reconnect GitHub" : "Connect GitHub"}
             </button>
           </div>
         )}
