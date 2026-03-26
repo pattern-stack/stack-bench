@@ -13,6 +13,7 @@ import type {
   LoginRequest,
   RegisterRequest,
 } from "@/types/auth";
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from "@/lib/auth";
 
 interface AuthContextValue {
   user: UserInfo | null;
@@ -48,25 +49,29 @@ async function apiFetch<T>(
   return res.json();
 }
 
+async function fetchMe(token: string): Promise<UserInfo> {
+  return apiFetch<UserInfo>("/api/v1/auth/me", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // On mount, validate stored token
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    const token = getAccessToken();
     if (!token) {
       setIsLoading(false);
       return;
     }
 
-    apiFetch<UserInfo>("/api/v1/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetchMe(token)
       .then(setUser)
       .catch(async () => {
         // Try refresh
-        const refreshToken = localStorage.getItem("refresh_token");
+        const refreshToken = getRefreshToken();
         if (refreshToken) {
           try {
             const result = await apiFetch<RefreshResult>(
@@ -76,19 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ refresh_token: refreshToken }),
               }
             );
-            localStorage.setItem("access_token", result.access_token);
-            const meData = await apiFetch<UserInfo>("/api/v1/auth/me", {
-              headers: {
-                Authorization: `Bearer ${result.access_token}`,
-              },
-            });
+            setTokens(result.access_token, refreshToken);
+            const meData = await fetchMe(result.access_token);
             setUser(meData);
           } catch {
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("refresh_token");
+            clearTokens();
           }
         } else {
-          localStorage.removeItem("access_token");
+          clearTokens();
         }
       })
       .finally(() => setIsLoading(false));
@@ -99,8 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify(req),
     });
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
+    setTokens(data.access_token, data.refresh_token);
     setUser(data.user);
   }, []);
 
@@ -109,14 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify(req),
     });
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
+    setTokens(data.access_token, data.refresh_token);
     setUser(data.user);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    clearTokens();
     setUser(null);
   }, []);
 

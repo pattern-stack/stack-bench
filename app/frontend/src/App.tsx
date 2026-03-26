@@ -21,6 +21,7 @@ import type { DiffData } from "@/types/diff";
 import type { SidebarMode } from "@/types/sidebar";
 import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
 import { DiffSkeleton } from "@/components/organisms/FilesChangedPanel/DiffSkeleton";
+import { EmptyState } from "@/components/organisms/EmptyState";
 
 import { shortBranch } from "@/lib/short-branch";
 
@@ -169,12 +170,16 @@ function AuthenticatedApp() {
     );
   }
 
-  if (error || !data) {
+  if (error) {
     return (
       <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--fg-default)] flex items-center justify-center">
-        <p className="text-[var(--red)] text-sm">{error ?? "No data"}</p>
+        <p className="text-[var(--red)] text-sm">{error}</p>
       </div>
     );
+  }
+
+  if (!data) {
+    return <EmptyState />;
   }
 
   const items: StackConnectorItem[] = data.branches.map((b, index) => {
