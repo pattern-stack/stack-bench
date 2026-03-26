@@ -28,10 +28,7 @@ class WorkspaceService(BaseService[Workspace, WorkspaceCreate, WorkspaceUpdate])
     async def get_by_project(self, db: AsyncSession, project_id: UUID) -> Workspace | None:
         """Get a single workspace for a project (convenience for 1:1 relationship)."""
         result = await db.execute(
-            select(Workspace)
-            .where(Workspace.project_id == project_id)
-            .where(_deleted_at.is_(None))
-            .limit(1)
+            select(Workspace).where(Workspace.project_id == project_id).where(_deleted_at.is_(None)).limit(1)
         )
         return result.scalar_one_or_none()
 

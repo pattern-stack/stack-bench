@@ -12,9 +12,9 @@ class Workspace(EventPattern):
         initial_state = "created"
         states = {
             "created": ["provisioning"],
-            "provisioning": ["ready", "created"],       # can fail back to created
+            "provisioning": ["ready", "created"],  # can fail back to created
             "ready": ["stopped", "destroying"],
-            "stopped": ["provisioning", "destroying"],   # can re-provision
+            "stopped": ["provisioning", "destroying"],  # can re-provision
             "destroying": ["destroyed"],
             "destroyed": [],
         }

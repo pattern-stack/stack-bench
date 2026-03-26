@@ -87,7 +87,12 @@ class LocalGCPClient:
         if repo_url and not main_dir.exists():
             logger.info("Cloning %s into %s", repo_url, main_dir)
             proc = await asyncio.create_subprocess_exec(
-                "git", "clone", "--depth", "1", repo_url, str(main_dir),
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                repo_url,
+                str(main_dir),
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -103,7 +108,8 @@ class LocalGCPClient:
             server_script = Path(__file__).parents[3] / "infrastructure" / "workspace" / "server" / "main.py"
             if server_script.exists():
                 process = await asyncio.create_subprocess_exec(
-                    "python", str(server_script),
+                    "python",
+                    str(server_script),
                     env=server_env,
                     stdout=asyncio.subprocess.DEVNULL,
                     stderr=asyncio.subprocess.PIPE,

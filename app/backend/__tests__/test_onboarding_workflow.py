@@ -193,9 +193,7 @@ class TestListGitHubRepos:
             return _mock_repos_response(repos, is_installation=True)
 
         with patch("molecules.workflows.onboarding.httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__ = AsyncMock(
-                return_value=MagicMock(get=AsyncMock(side_effect=mock_get))
-            )
+            mock_client.return_value.__aenter__ = AsyncMock(return_value=MagicMock(get=AsyncMock(side_effect=mock_get)))
             mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
             result = await workflow.list_github_repos(user_id, org="my-org")
 
@@ -224,9 +222,7 @@ class TestListGitHubRepos:
             return _mock_repos_response(repos)
 
         with patch("molecules.workflows.onboarding.httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__ = AsyncMock(
-                return_value=MagicMock(get=AsyncMock(side_effect=mock_get))
-            )
+            mock_client.return_value.__aenter__ = AsyncMock(return_value=MagicMock(get=AsyncMock(side_effect=mock_get)))
             mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
             result = await workflow.list_github_repos(user_id, org="dug")
 
@@ -245,7 +241,11 @@ class TestListGitHubRepos:
 @pytest.mark.unit
 class TestComplete:
     async def test_creates_project_and_workspace(
-        self, workflow, mock_project_service, mock_workspace_service, mock_db,
+        self,
+        workflow,
+        mock_project_service,
+        mock_workspace_service,
+        mock_db,
     ):
         user_id = uuid4()
         project_id = uuid4()

@@ -181,9 +181,7 @@ class GCPClient:
                         gcs=run_v2.GcsVolumeSource(bucket=gcs_bucket),
                     )
                 )
-                volume_mounts.append(
-                    run_v2.VolumeMount(name="workspace-storage", mount_path="/workspace/storage")
-                )
+                volume_mounts.append(run_v2.VolumeMount(name="workspace-storage", mount_path="/workspace/storage"))
                 container.volume_mounts = volume_mounts
 
             template = run_v2.RevisionTemplate(

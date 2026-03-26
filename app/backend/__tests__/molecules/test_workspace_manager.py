@@ -202,9 +202,7 @@ async def test_provision_happy_path(mock_db: AsyncMock, mock_gcp_client: AsyncMo
 
 
 @pytest.mark.unit
-async def test_provision_reprovision_from_stopped(
-    mock_db: AsyncMock, mock_gcp_client: AsyncMock
-) -> None:
+async def test_provision_reprovision_from_stopped(mock_db: AsyncMock, mock_gcp_client: AsyncMock) -> None:
     """Re-provisioning from stopped: bucket exists so not re-created."""
     ws = _make_workspace(state="stopped", gcs_bucket="existing-bucket")
     mock_gcp_client.bucket_exists.return_value = True
@@ -224,9 +222,7 @@ async def test_provision_reprovision_from_stopped(
 
 
 @pytest.mark.unit
-async def test_provision_gcs_failure_rolls_back(
-    mock_db: AsyncMock, mock_gcp_client: AsyncMock
-) -> None:
+async def test_provision_gcs_failure_rolls_back(mock_db: AsyncMock, mock_gcp_client: AsyncMock) -> None:
     """GCS creation fails: state rolls back to created."""
     ws = _make_workspace(state="created")
     mock_gcp_client.create_gcs_bucket.side_effect = RuntimeError("GCS unavailable")
@@ -242,9 +238,7 @@ async def test_provision_gcs_failure_rolls_back(
 
 
 @pytest.mark.unit
-async def test_provision_cloud_run_failure_rolls_back(
-    mock_db: AsyncMock, mock_gcp_client: AsyncMock
-) -> None:
+async def test_provision_cloud_run_failure_rolls_back(mock_db: AsyncMock, mock_gcp_client: AsyncMock) -> None:
     """Cloud Run deploy fails: state rolls back, bucket remains."""
     ws = _make_workspace(state="created")
     mock_gcp_client.deploy_cloud_run_service.side_effect = RuntimeError("Deploy failed")
@@ -263,9 +257,7 @@ async def test_provision_cloud_run_failure_rolls_back(
 
 
 @pytest.mark.unit
-async def test_provision_invalid_state(
-    mock_db: AsyncMock, mock_gcp_client: AsyncMock
-) -> None:
+async def test_provision_invalid_state(mock_db: AsyncMock, mock_gcp_client: AsyncMock) -> None:
     """Calling provision on a 'ready' workspace raises InvalidStateTransitionError."""
     from pattern_stack.atoms.patterns import InvalidStateTransitionError
 
@@ -325,9 +317,7 @@ async def test_teardown_happy_path(mock_db: AsyncMock, mock_gcp_client: AsyncMoc
 
 
 @pytest.mark.unit
-async def test_teardown_with_storage_deletion(
-    mock_db: AsyncMock, mock_gcp_client: AsyncMock
-) -> None:
+async def test_teardown_with_storage_deletion(mock_db: AsyncMock, mock_gcp_client: AsyncMock) -> None:
     """preserve_storage=False: both Cloud Run and GCS deleted."""
     ws = _make_workspace(
         state="ready",
@@ -351,9 +341,7 @@ async def test_teardown_with_storage_deletion(
 
 
 @pytest.mark.unit
-async def test_teardown_cloud_run_failure(
-    mock_db: AsyncMock, mock_gcp_client: AsyncMock
-) -> None:
+async def test_teardown_cloud_run_failure(mock_db: AsyncMock, mock_gcp_client: AsyncMock) -> None:
     """Cloud Run delete fails: stays in 'destroying' state."""
     ws = _make_workspace(
         state="ready",
@@ -400,9 +388,7 @@ async def test_stop_scales_to_zero(mock_db: AsyncMock, mock_gcp_client: AsyncMoc
 
 
 @pytest.mark.unit
-async def test_stop_no_cloud_run_service(
-    mock_db: AsyncMock, mock_gcp_client: AsyncMock
-) -> None:
+async def test_stop_no_cloud_run_service(mock_db: AsyncMock, mock_gcp_client: AsyncMock) -> None:
     """Workspace without cloud_run_service: just transitions state."""
     ws = _make_workspace(state="ready", cloud_run_service=None)
 

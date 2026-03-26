@@ -51,8 +51,14 @@ async def _create_project(db):
 
 
 async def _create_workspace(
-    db, project_id, name="test-ws", *, state="created",
-    cloud_run_url=None, cloud_run_service=None, gcs_bucket=None,
+    db,
+    project_id,
+    name="test-ws",
+    *,
+    state="created",
+    cloud_run_url=None,
+    cloud_run_service=None,
+    gcs_bucket=None,
 ):
     """Create a workspace with optional state transitions."""
     from features.workspaces import WorkspaceCreate, WorkspaceService
@@ -237,8 +243,12 @@ async def test_delete_workspace_teardown(client, app, db) -> None:
 
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="teardown-ws",
-        state="ready", cloud_run_service="ws-test", cloud_run_url="https://ws-test.run.app",
+        db,
+        project.id,
+        name="teardown-ws",
+        state="ready",
+        cloud_run_service="ws-test",
+        cloud_run_url="https://ws-test.run.app",
     )
     await db.commit()
 
@@ -273,9 +283,7 @@ async def test_provision_workspace(client, app, db) -> None:
 
     mock_gcp = AsyncMock()
     mock_gcp.bucket_exists.return_value = False
-    mock_gcp.create_gcs_bucket.return_value = GCSBucketInfo(
-        name="test-bucket", location="northamerica-northeast2"
-    )
+    mock_gcp.create_gcs_bucket.return_value = GCSBucketInfo(name="test-bucket", location="northamerica-northeast2")
     mock_gcp.deploy_cloud_run_service.return_value = CloudRunServiceInfo(
         name="ws-test1234",
         url="https://ws-test1234.run.app",
@@ -339,8 +347,11 @@ async def test_stop_workspace(client, app, db) -> None:
 
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="stop-ws",
-        state="ready", cloud_run_service="ws-stop",
+        db,
+        project.id,
+        name="stop-ws",
+        state="ready",
+        cloud_run_service="ws-stop",
     )
     await db.commit()
 
@@ -389,7 +400,9 @@ async def test_get_workspace_status(client, app, db) -> None:
 
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="status-ws",
+        db,
+        project.id,
+        name="status-ws",
         state="ready",
         cloud_run_service="ws-status",
         cloud_run_url="https://ws-status.run.app",
@@ -412,10 +425,13 @@ async def test_get_workspace_status(client, app, db) -> None:
 
 def _mock_httpx_client(mock_response):
     """Create patched httpx.AsyncClient context manager."""
-    return patch("organisms.api.routers.workspaces.httpx.AsyncClient", **{
-        "return_value.__aenter__": AsyncMock(return_value=mock_response),
-        "return_value.__aexit__": AsyncMock(return_value=False),
-    })
+    return patch(
+        "organisms.api.routers.workspaces.httpx.AsyncClient",
+        **{
+            "return_value.__aenter__": AsyncMock(return_value=mock_response),
+            "return_value.__aexit__": AsyncMock(return_value=False),
+        },
+    )
 
 
 def _make_mock_httpx_response(content=b'{"ok": true}', status_code=200, headers=None):
@@ -432,8 +448,11 @@ async def test_proxy_forwards_get(client, db) -> None:
     """Proxy forwards GET to workspace cloud_run_url."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="proxy-ws",
-        state="ready", cloud_run_url="https://ws-proxy.run.app",
+        db,
+        project.id,
+        name="proxy-ws",
+        state="ready",
+        cloud_run_url="https://ws-proxy.run.app",
     )
     await db.commit()
 
@@ -460,8 +479,11 @@ async def test_proxy_forwards_post_with_body(client, db) -> None:
     """Proxy forwards POST with request body."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="proxy-post-ws",
-        state="ready", cloud_run_url="https://ws-post.run.app",
+        db,
+        project.id,
+        name="proxy-post-ws",
+        state="ready",
+        cloud_run_url="https://ws-post.run.app",
     )
     await db.commit()
 
@@ -498,8 +520,11 @@ async def test_proxy_workspace_not_ready(client, db) -> None:
     """Proxy returns 409 when workspace state is not 'ready'."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="proxy-notready-ws",
-        state="stopped", cloud_run_url="https://ws-stopped.run.app",
+        db,
+        project.id,
+        name="proxy-notready-ws",
+        state="stopped",
+        cloud_run_url="https://ws-stopped.run.app",
     )
     await db.commit()
 
@@ -512,8 +537,11 @@ async def test_proxy_connection_error(client, db) -> None:
     """Proxy returns 502 on connection failure."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="proxy-conn-ws",
-        state="ready", cloud_run_url="https://ws-conn.run.app",
+        db,
+        project.id,
+        name="proxy-conn-ws",
+        state="ready",
+        cloud_run_url="https://ws-conn.run.app",
     )
     await db.commit()
 
@@ -532,8 +560,11 @@ async def test_proxy_timeout(client, db) -> None:
     """Proxy returns 504 on timeout."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="proxy-timeout-ws",
-        state="ready", cloud_run_url="https://ws-timeout.run.app",
+        db,
+        project.id,
+        name="proxy-timeout-ws",
+        state="ready",
+        cloud_run_url="https://ws-timeout.run.app",
     )
     await db.commit()
 
@@ -557,8 +588,11 @@ async def test_list_worktrees(client, db) -> None:
     """GET /workspaces/{id}/worktrees proxies to workspace server."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="wt-list-ws",
-        state="ready", cloud_run_url="https://ws-wt.run.app",
+        db,
+        project.id,
+        name="wt-list-ws",
+        state="ready",
+        cloud_run_url="https://ws-wt.run.app",
     )
     await db.commit()
 
@@ -579,8 +613,11 @@ async def test_create_worktree(client, db) -> None:
     """POST /workspaces/{id}/worktrees proxies with body."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="wt-create-ws",
-        state="ready", cloud_run_url="https://ws-wtc.run.app",
+        db,
+        project.id,
+        name="wt-create-ws",
+        state="ready",
+        cloud_run_url="https://ws-wtc.run.app",
     )
     await db.commit()
 
@@ -604,8 +641,11 @@ async def test_delete_worktree(client, db) -> None:
     """DELETE /workspaces/{id}/worktrees/{name} proxies delete."""
     project = await _create_project(db)
     ws = await _create_workspace(
-        db, project.id, name="wt-delete-ws",
-        state="ready", cloud_run_url="https://ws-wtd.run.app",
+        db,
+        project.id,
+        name="wt-delete-ws",
+        state="ready",
+        cloud_run_url="https://ws-wtd.run.app",
     )
     await db.commit()
 
