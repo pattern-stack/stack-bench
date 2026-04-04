@@ -54,6 +54,33 @@
 
   /* ── Spacing (for reference, Tailwind handles most) ──────── */
   --sidebar-width: 320px;
+
+  /* ── Chat Tokens ─────────────────────────────────────────── */
+
+  /* Category — role-based message colors */
+  --chat-agent: var(--accent-emerald);   /* Assistant/agent messages */
+  --chat-system: var(--fg-muted);        /* System messages */
+  --chat-tool: var(--purple);            /* Tool calls & results */
+  --chat-user: var(--accent);            /* User messages */
+
+  /* Status — state indicators */
+  --chat-success: var(--green);          /* Success */
+  --chat-error: var(--red);              /* Error */
+  --chat-warning: var(--yellow);         /* Warning */
+  --chat-info: var(--accent);            /* Informational */
+  --chat-running: var(--accent-emerald); /* Running / active */
+  --chat-muted: var(--fg-subtle);        /* Muted / dimmed */
+
+  /* Hierarchy — text emphasis levels */
+  --chat-text-primary: var(--fg-default);   /* Primary text */
+  --chat-text-secondary: var(--fg-muted);   /* Secondary text */
+  --chat-text-tertiary: var(--fg-subtle);   /* Timestamps, metadata */
+  --chat-text-quaternary: #3b424a;          /* Least prominent */
+
+  /* Layout / surface */
+  --chat-bg: var(--bg-canvas);           /* Chat area background */
+  --chat-bg-message: var(--bg-surface);  /* Message row background */
+  --chat-border: var(--border-muted);    /* Chat borders */
 }
 
 /* ── Animations ───────────────────────────────────────────── */
