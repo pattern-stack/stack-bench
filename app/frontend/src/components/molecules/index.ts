@@ -60,3 +60,6 @@ export type { MergeQueueListProps } from "./MergeQueueList";
 
 export { CascadeProgressBar } from "./CascadeProgressBar";
 export type { CascadeProgressBarProps } from "./CascadeProgressBar";
+
+export { ChatMarkdown } from "./ChatMarkdown";
+export type { ChatMarkdownProps } from "./ChatMarkdown";
