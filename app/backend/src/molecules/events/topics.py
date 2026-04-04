@@ -29,6 +29,11 @@ REVIEW_COMMENT_UPDATED = "review_comment.updated"
 MERGE_CASCADE_STARTED = "merge_cascade.started"
 MERGE_CASCADE_STEP_COMPLETED = "merge_cascade.step_completed"
 
+# --- Stack workflow operations ---
+STACK_PUSHED = "stack.pushed"
+STACK_SUBMITTED = "stack.submitted"
+STACK_MARKED_READY = "stack.marked_ready"
+
 
 @dataclass
 class DomainEvent:

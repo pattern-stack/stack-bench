@@ -85,6 +85,36 @@ async def get_user_github_token(user: CurrentUser, db: DatabaseSession) -> str:
 UserGitHubToken = Annotated[str, Depends(get_user_github_token)]
 
 
+async def get_user_github_adapter(
+    user: CurrentUser,
+    db: DatabaseSession,
+) -> GitHubAdapter:
+    """Resolve GitHubAdapter using the authenticated user's OAuth token.
+
+    Falls back to the settings GITHUB_TOKEN if the user has no connection
+    (for read-only operations like diffs). Raises 403 for write ops that
+    require a user token.
+    """
+    token = await _github_oauth.get_user_github_token(db, user.id)
+    if token:
+        return GitHubAdapter(token=token)
+    # Fallback for read ops (diff, tree, file content)
+    settings = get_settings()
+    if settings.GITHUB_TOKEN:
+        return GitHubAdapter(token=settings.GITHUB_TOKEN)
+    raise HTTPException(403, detail="GitHub account not connected — connect via Settings")
+
+
+UserGitHubAdapterDep = Annotated[GitHubAdapter, Depends(get_user_github_adapter)]
+
+
+def get_stack_api_with_user(db: DatabaseSession, github: UserGitHubAdapterDep) -> StackAPI:
+    return StackAPI(db, github)
+
+
+UserStackAPIDep = Annotated[StackAPI, Depends(get_stack_api_with_user)]
+
+
 def get_conversation_api(db: DatabaseSession) -> ConversationAPI:
     return ConversationAPI(db)
 

@@ -474,12 +474,109 @@ class GitHubAdapter:
         return data
 
     async def mark_pr_ready(self, owner: str, repo: str, pr_number: int) -> None:
-        """Remove draft status from a pull request."""
-        response = await self._client.patch(
+        """Remove draft status from a pull request.
+
+        GitHub REST API v3 does not support removing draft status via PATCH.
+        This requires the GraphQL mutation ``markPullRequestReadyForReview``.
+        We first look up the PR's GraphQL node ID via REST, then call the
+        mutation on api.github.com/graphql.
+        """
+        # Step 1: Get the node_id from the REST API
+        rest_response = await self._client.get(
             f"/repos/{owner}/{repo}/pulls/{pr_number}",
-            json={"draft": False},
+        )
+        self._raise_for_status(rest_response)
+        node_id = str(rest_response.json().get("node_id", ""))
+        if not node_id:
+            raise GitHubAPIError(500, "PR response missing node_id")
+
+        # Step 2: Call the GraphQL mutation
+        mutation = """
+            mutation MarkReady($pullRequestId: ID!) {
+                markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) {
+                    pullRequest { id }
+                }
+            }
+        """
+        gql_response = await self._client.post(
+            "https://api.github.com/graphql",
+            json={"query": mutation, "variables": {"pullRequestId": node_id}},
+        )
+        self._raise_for_status(gql_response)
+        gql_data = gql_response.json()
+        if "errors" in gql_data:
+            error_msg = gql_data["errors"][0].get("message", "GraphQL error")
+            raise GitHubAPIError(422, f"GraphQL markPullRequestReadyForReview failed: {error_msg}")
+
+    async def create_pull_request(
+        self,
+        owner: str,
+        repo: str,
+        title: str,
+        head: str,
+        base: str,
+        *,
+        body: str | None = None,
+        draft: bool = True,
+    ) -> dict[str, object]:
+        """Create a pull request on GitHub.
+
+        Args:
+            owner: Repository owner (org or user).
+            repo: Repository name.
+            title: PR title.
+            head: Head branch name.
+            base: Base branch name (parent branch or trunk).
+            body: Optional PR description/body.
+            draft: Whether to create as draft (default True).
+
+        Returns:
+            GitHub API response dict with at least 'number', 'html_url', 'state'.
+        """
+        payload: dict[str, object] = {
+            "title": title,
+            "head": head,
+            "base": base,
+            "draft": draft,
+        }
+        if body is not None:
+            payload["body"] = body
+        response = await self._client.post(
+            f"/repos/{owner}/{repo}/pulls",
+            json=payload,
         )
         self._raise_for_status(response)
+        data: dict[str, object] = response.json()
+        return data
+
+    async def update_pull_request(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        *,
+        title: str | None = None,
+        body: str | None = None,
+        base: str | None = None,
+    ) -> dict[str, object]:
+        """Update an existing pull request on GitHub.
+
+        Used when a branch's base changes after restack (need to update PR base).
+        """
+        payload: dict[str, object] = {}
+        if title is not None:
+            payload["title"] = title
+        if body is not None:
+            payload["body"] = body
+        if base is not None:
+            payload["base"] = base
+        response = await self._client.patch(
+            f"/repos/{owner}/{repo}/pulls/{pr_number}",
+            json=payload,
+        )
+        self._raise_for_status(response)
+        data: dict[str, object] = response.json()
+        return data
 
     async def create_review_comment(
         self,

@@ -74,6 +74,39 @@ def test_branch_full_lifecycle() -> None:
 
 
 @pytest.mark.unit
+def test_branch_direct_merge_from_pushed() -> None:
+    """Verify pushed branches can transition directly to merged."""
+    branch = Branch()
+    branch.transition_to("pushed")
+    assert branch.can_transition_to("merged")
+    branch.transition_to("merged")
+    assert branch.state == "merged"
+
+
+@pytest.mark.unit
+def test_branch_direct_merge_from_reviewing() -> None:
+    """Verify reviewing branches can transition directly to merged."""
+    branch = Branch()
+    branch.transition_to("pushed")
+    branch.transition_to("reviewing")
+    assert branch.can_transition_to("merged")
+    branch.transition_to("merged")
+    assert branch.state == "merged"
+
+
+@pytest.mark.unit
+def test_branch_direct_merge_from_ready() -> None:
+    """Verify ready branches can transition directly to merged."""
+    branch = Branch()
+    branch.transition_to("pushed")
+    branch.transition_to("reviewing")
+    branch.transition_to("ready")
+    assert branch.can_transition_to("merged")
+    branch.transition_to("merged")
+    assert branch.state == "merged"
+
+
+@pytest.mark.unit
 def test_branch_create_schema() -> None:
     """Verify create schema with minimal data."""
     data = BranchCreate(
