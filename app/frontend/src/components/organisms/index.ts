@@ -12,3 +12,6 @@ export type { MergeFlowPanelProps } from "./MergeFlowPanel";
 export { MergeFlowSkeleton } from "./MergeFlowPanel";
 
 export { ContentEmptyState } from "./ContentEmptyState";
+
+export { BrowserPanel } from "./BrowserPanel";
+export type { BrowserPanelProps } from "./BrowserPanel";

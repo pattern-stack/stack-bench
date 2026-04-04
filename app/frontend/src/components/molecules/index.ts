@@ -10,8 +10,8 @@ export type { StackConnectorProps, StackConnectorItem } from "./StackConnector";
 export { PRHeader } from "./PRHeader";
 export type { PRHeaderProps } from "./PRHeader";
 
-export { TabBar } from "./TabBar";
-export type { TabBarProps, TabItem } from "./TabBar";
+export { ContentTabBar } from "./ContentTabBar";
+export type { ContentTabBarProps } from "./ContentTabBar";
 
 export { ActionBar } from "./ActionBar";
 export type { ActionBarProps } from "./ActionBar";

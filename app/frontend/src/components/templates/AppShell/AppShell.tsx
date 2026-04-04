@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { StackSidebar } from "@/components/organisms/StackSidebar";
 import { StackSidebarEmpty } from "@/components/organisms/StackSidebar/StackSidebarEmpty";
 import { AgentPanel } from "@/components/organisms/AgentPanel";
@@ -6,10 +6,12 @@ import { MergeFlowPanel } from "@/components/organisms/MergeFlowPanel";
 import { PRHeader } from "@/components/molecules/PRHeader";
 import { PRHeaderEmpty } from "@/components/molecules/PRHeader/PRHeaderEmpty";
 import { HeaderSkeleton } from "@/components/molecules/PRHeader/HeaderSkeleton";
+import { ContentTabBar } from "@/components/molecules/ContentTabBar";
 import type { StackConnectorItem } from "@/components/molecules/StackConnector";
 import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { BranchWithPR, Stack } from "@/types/stack";
 import type { SidebarMode } from "@/types/sidebar";
+import type { ContentTab } from "@/types/content";
 import type { FileTreeNode } from "@/types/file-tree";
 import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 import type { StackSummary, ActivityLogEntry } from "@/types/activity";
@@ -67,6 +69,14 @@ interface AppShellProps {
   onToggleCommentMode?: () => void;
   diffLoading?: boolean;
   treeLoading?: boolean;
+
+  // Content tab props
+  contentTab?: ContentTab;
+  onContentTabChange?: (tab: ContentTab) => void;
+  browserUrl?: string;
+  onBrowserUrlChange?: (url: string) => void;
+  onBrowserUrlSubmit?: () => void;
+  urlInputRef?: Ref<HTMLInputElement>;
 }
 
 import { shortBranch } from "@/lib/short-branch";
@@ -111,6 +121,12 @@ function AppShell({
   onToggleCommentMode,
   diffLoading,
   treeLoading,
+  contentTab,
+  onContentTabChange,
+  browserUrl,
+  onBrowserUrlChange,
+  onBrowserUrlSubmit,
+  urlInputRef,
 }: AppShellProps) {
   // Derive PRHeader props from the active branch (only used in populated mode)
   const pr = activeBranch?.pull_request;
@@ -178,13 +194,24 @@ function AppShell({
             fullHeadBranch={fullHeadBranch}
             description={description}
             status={displayStatus}
-            fileCount={fileCount}
-            additions={additions}
-            deletions={deletions}
-            onCollapseAll={onCollapseAll}
-            onExpandAll={onExpandAll}
-            floatingComments={floatingComments}
-            onToggleCommentMode={onToggleCommentMode}
+            fileCount={contentTab === "diffs" ? fileCount : undefined}
+            additions={contentTab === "diffs" ? additions : undefined}
+            deletions={contentTab === "diffs" ? deletions : undefined}
+            onCollapseAll={contentTab === "diffs" ? onCollapseAll : undefined}
+            onExpandAll={contentTab === "diffs" ? onExpandAll : undefined}
+            floatingComments={contentTab === "diffs" ? floatingComments : undefined}
+            onToggleCommentMode={contentTab === "diffs" ? onToggleCommentMode : undefined}
+          />
+        )}
+        {!isEmpty && contentTab && onContentTabChange && (
+          <ContentTabBar
+            activeTab={contentTab}
+            onTabChange={onContentTabChange}
+            diffFileCount={diffFileCount}
+            browserUrl={browserUrl}
+            onBrowserUrlChange={onBrowserUrlChange}
+            onBrowserUrlSubmit={onBrowserUrlSubmit}
+            urlInputRef={urlInputRef}
           />
         )}
         <div className="flex-1 overflow-auto">

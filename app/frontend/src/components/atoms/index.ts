@@ -59,3 +59,6 @@ export type { MergeStepDotProps, MergeStepDotState } from "./MergeStepDot";
 
 export { BlockerBadge } from "./BlockerBadge";
 export type { BlockerBadgeProps, BlockerBadgeKind } from "./BlockerBadge";
+
+export { UrlInput } from "./UrlInput";
+export type { UrlInputProps } from "./UrlInput";
