@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { apiClient } from "@/generated/api/client";
 import { AppShell } from "@/components/templates";
 import { FilesChangedPanel } from "@/components/organisms/FilesChangedPanel";
+import { BrowserPanel } from "@/components/organisms/BrowserPanel";
 import { FileContent } from "@/components/molecules/FileContent";
 import { PathBar } from "@/components/molecules/PathBar";
 import { LoginPage } from "@/components/organisms/LoginPage";
@@ -19,6 +20,7 @@ import type { DiffFileListItem } from "@/components/molecules/DiffFileList";
 import type { ChangedFileInfo } from "@/components/organisms/FileTree";
 import type { DiffData } from "@/types/diff";
 import type { SidebarMode } from "@/types/sidebar";
+import type { ContentTab } from "@/types/content";
 import type { CIStatus, StackSummary, ActivityLogEntry } from "@/types/activity";
 import { DiffSkeleton } from "@/components/organisms/FilesChangedPanel/DiffSkeleton";
 import { ContentEmptyState } from "@/components/organisms/ContentEmptyState";
@@ -109,6 +111,11 @@ function AuthenticatedApp() {
   const [activityEntries, setActivityEntries] = useState<ActivityLogEntry[]>(mockActivityEntries);
   const [forceExpanded, setForceExpanded] = useState<boolean | null>(null);
   const [floatingComments, setFloatingComments] = useState(true);
+  const [contentTab, setContentTab] = useState<ContentTab>("diffs");
+  const [browserUrl, setBrowserUrl] = useState("http://localhost:3000");
+  const [submittedBrowserUrl, setSubmittedBrowserUrl] = useState("");
+  const [hasActivatedBrowser, setHasActivatedBrowser] = useState(false);
+  const urlInputRef = useRef<HTMLInputElement>(null);
 
   // TODO: Lift selectedLineCount from FilesChangedPanel in a future PR
   const selectedLineCount = 0;
@@ -117,7 +124,7 @@ function AuthenticatedApp() {
   const activeBranchId = data?.branches[activeIndex]?.branch.id;
   const { data: diffData, loading: diffLoading } = useBranchDiff(stackId, activeBranchId);
   const { data: fileTree, loading: treeLoading } = useFileTree(stackId, activeBranchId);
-  const { data: fileContent, loading: contentLoading } = useFileContent(stackId, activeBranchId, sidebarMode === "files" ? selectedPath : null);
+  const { data: fileContent, loading: contentLoading } = useFileContent(stackId, activeBranchId, contentTab === "code" ? selectedPath : null);
 
   // Fetch all stacks for the same project (for the stack switcher)
   const projectId = data?.stack.project_id;
@@ -127,9 +134,21 @@ function AuthenticatedApp() {
     setSelectedStackId(id);
     setActiveIndex(0);
     setSidebarMode("diffs");
+    setContentTab("diffs");
     setSelectedPath(null);
     setForceExpanded(null);
   };
+
+  // Track first browser activation to mount iframe lazily
+  useEffect(() => {
+    if (contentTab === "browser" && !hasActivatedBrowser) {
+      setHasActivatedBrowser(true);
+    }
+  }, [contentTab, hasActivatedBrowser]);
+
+  const handleBrowserUrlSubmit = useCallback(() => {
+    setSubmittedBrowserUrl(browserUrl);
+  }, [browserUrl]);
 
   // Subscribe reactively to all branch diffs
   const branchDiffQueries = useQueries({
@@ -141,12 +160,38 @@ function AuthenticatedApp() {
     })),
   });
 
-  // Reset sidebar mode and selection when branch changes
+  // Reset sidebar mode, content tab, and selection when branch changes
   useEffect(() => {
     setSidebarMode("diffs");
+    setContentTab("diffs");
     setSelectedPath(null);
     setForceExpanded(null);
   }, [activeIndex]);
+
+  // Keyboard shortcuts for content tab switching
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.shiftKey && e.key === "!") {
+        e.preventDefault();
+        setContentTab("diffs");
+      }
+      if (mod && e.shiftKey && e.key === "@") {
+        e.preventDefault();
+        setContentTab("code");
+      }
+      if (mod && e.shiftKey && e.key === "#") {
+        e.preventDefault();
+        setContentTab("browser");
+      }
+      if (mod && e.key === "l" && contentTab === "browser") {
+        e.preventDefault();
+        urlInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [contentTab]);
 
   // Build changed files map for dirty state in file explorer
   const changedFiles = useMemo(() => {
@@ -263,8 +308,14 @@ function AuthenticatedApp() {
       onToggleCommentMode={() => setFloatingComments((prev) => !prev)}
       diffLoading={diffLoading}
       treeLoading={treeLoading}
+      contentTab={contentTab}
+      onContentTabChange={setContentTab}
+      browserUrl={browserUrl}
+      onBrowserUrlChange={setBrowserUrl}
+      onBrowserUrlSubmit={handleBrowserUrlSubmit}
+      urlInputRef={urlInputRef}
     >
-      {sidebarMode === "diffs" && (
+      {contentTab === "diffs" && (
         diffLoading ? (
           <DiffSkeleton />
         ) : diffData ? (
@@ -282,7 +333,7 @@ function AuthenticatedApp() {
           </div>
         )
       )}
-      {sidebarMode === "files" && (
+      {contentTab === "code" && (
         contentLoading ? (
           <DiffSkeleton />
         ) : fileContent ? (
@@ -299,6 +350,12 @@ function AuthenticatedApp() {
             </p>
           </div>
         )
+      )}
+      {/* BrowserPanel: mount on first activation, then persist with display:none */}
+      {hasActivatedBrowser && (
+        <div style={{ display: contentTab === "browser" ? "contents" : "none" }}>
+          <BrowserPanel url={submittedBrowserUrl} />
+        </div>
       )}
     </AppShell>
   );
