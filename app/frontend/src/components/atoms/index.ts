@@ -65,3 +65,24 @@ export type { ChatCodeBlockProps } from "./ChatCodeBlock";
 
 export { ChatSpinner } from "./ChatSpinner";
 export type { ChatSpinnerProps } from "./ChatSpinner";
+
+export { ChatInlineCode } from "./ChatInlineCode";
+export type { ChatInlineCodeProps } from "./ChatInlineCode";
+
+export { ChatSeparator } from "./ChatSeparator";
+export type { ChatSeparatorProps } from "./ChatSeparator";
+
+export { ChatRoleIndicator } from "./ChatRoleIndicator";
+export type { ChatRoleIndicatorProps } from "./ChatRoleIndicator";
+
+export { ChatTimestamp, formatRelativeTime } from "./ChatTimestamp";
+export type { ChatTimestampProps } from "./ChatTimestamp";
+
+export { ChatPresenceIndicator } from "./ChatPresenceIndicator";
+export type { ChatPresenceIndicatorProps } from "./ChatPresenceIndicator";
+
+export { ChatInput } from "./ChatInput";
+export type { ChatInputProps } from "./ChatInput";
+
+export { ChatNotice } from "./ChatNotice";
+export type { ChatNoticeProps } from "./ChatNotice";
