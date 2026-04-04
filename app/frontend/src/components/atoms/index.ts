@@ -59,3 +59,9 @@ export type { MergeStepDotProps, MergeStepDotState } from "./MergeStepDot";
 
 export { BlockerBadge } from "./BlockerBadge";
 export type { BlockerBadgeProps, BlockerBadgeKind } from "./BlockerBadge";
+
+export { ChatCodeBlock } from "./ChatCodeBlock";
+export type { ChatCodeBlockProps } from "./ChatCodeBlock";
+
+export { ChatSpinner } from "./ChatSpinner";
+export type { ChatSpinnerProps } from "./ChatSpinner";
