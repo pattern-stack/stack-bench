@@ -25,6 +25,21 @@ services:
     networks:
       - stack_bench
 
+  adminer:
+    image: adminer:latest
+    container_name: stack-bench-adminer
+    profiles: ['ui']
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DEFAULT_DRIVER: pgsql
+      ADMINER_DESIGN: pepa-linha
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      - postgres
+    networks:
+      - stack_bench
+
 volumes:
   stack-bench_postgres_data:
     driver: local
