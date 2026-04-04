@@ -1,11 +1,11 @@
 # Stack Bench — cross-language orchestration
 
-# Start all services (secrets injected from 1Password)
-dev:
-    op run --env-file=.env.example -- pts dev
+# List available recipes
+default:
+    @just --list
 
-# Start without 1Password (requires app/backend/.env to have secrets)
-dev-local:
+# Start all services (secrets resolved natively by pts)
+dev:
     pts dev
 
 # Run all tests
@@ -22,15 +22,9 @@ quality-backend:
     cd app/backend && just quality
 
 migrate:
-    op run --env-file=.env.example -- just _migrate
-
-_migrate:
     cd app/backend && just migrate
 
 seed:
-    op run --env-file=.env.example -- just _seed
-
-_seed:
     cd app/backend && just seed
 
 # CLI

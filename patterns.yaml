@@ -1,4 +1,9 @@
 project: stack-bench
+secrets:
+  backend: 1password
+  onepassword:
+    vault: DugsApps
+    account: my.1password.com
 services:
   postgres:
     enabled: true
@@ -6,6 +11,8 @@ services:
     enabled: false
   minio:
     enabled: false
+  adminer:
+    enabled: true
 apps:
   backend:
     command: uv run uvicorn organisms.api.app:app --reload
