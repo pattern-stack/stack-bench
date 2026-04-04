@@ -63,3 +63,12 @@ export type { CascadeProgressBarProps } from "./CascadeProgressBar";
 
 export { ChatMarkdown } from "./ChatMarkdown";
 export type { ChatMarkdownProps } from "./ChatMarkdown";
+
+export { ChatMessageGroup } from "./ChatMessageGroup";
+export type { ChatMessageGroupProps } from "./ChatMessageGroup";
+
+export { SlashCommandAutocomplete, DEFAULT_COMMANDS } from "./SlashCommandAutocomplete";
+export type {
+  SlashCommand,
+  SlashCommandAutocompleteProps,
+} from "./SlashCommandAutocomplete";
