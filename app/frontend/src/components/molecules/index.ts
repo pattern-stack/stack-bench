@@ -72,3 +72,6 @@ export type {
   SlashCommand,
   SlashCommandAutocompleteProps,
 } from "./SlashCommandAutocomplete";
+
+export { MessagePartDispatcher } from "./MessagePartDispatcher";
+export type { MessagePartDispatcherProps } from "./MessagePartDispatcher";
