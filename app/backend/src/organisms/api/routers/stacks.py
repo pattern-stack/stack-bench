@@ -9,7 +9,7 @@ from features.review_comments.schemas.input import ReviewCommentCreate, ReviewCo
 from features.review_comments.schemas.output import ReviewCommentResponse
 from features.stacks.schemas.output import StackResponse
 from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode
-from organisms.api.dependencies import StackAPIDep
+from organisms.api.dependencies import StackAPIDep, UserStackAPIDep
 
 router = APIRouter(prefix="/stacks", tags=["stacks"])
 
@@ -53,6 +53,19 @@ class BranchSyncItem(BaseModel):
 class SyncStackRequest(BaseModel):
     workspace_id: UUID
     branches: list[BranchSyncItem]
+
+
+class PushStackRequest(BaseModel):
+    """Request body for stack push. Sent by the Go CLI after local git operations."""
+
+    workspace_id: UUID
+    branches: list[BranchSyncItem]
+
+
+class ReadyStackRequest(BaseModel):
+    """Optional: specify which branches to mark ready. If empty, marks all."""
+
+    branch_ids: list[UUID] | None = None
 
 
 class SyncBranchResult(BaseModel):
@@ -123,7 +136,7 @@ async def delete_stack(stack_id: UUID, api: StackAPIDep) -> None:
 
 
 @router.post("/{stack_id}/sync", response_model=SyncStackResponse)
-async def sync_stack(stack_id: UUID, data: SyncStackRequest, api: StackAPIDep) -> dict[str, object]:
+async def sync_stack(stack_id: UUID, data: SyncStackRequest, api: UserStackAPIDep) -> dict[str, object]:
     """Sync stack state from client-provided branch and PR data.
 
     Called after `st push`, after merges, or manually from the UI.
@@ -137,9 +150,64 @@ async def sync_stack(stack_id: UUID, data: SyncStackRequest, api: StackAPIDep) -
 
 
 @router.post("/{stack_id}/merge")
-async def merge_stack(stack_id: UUID, api: StackAPIDep) -> dict[str, object]:
+async def merge_stack(stack_id: UUID, api: UserStackAPIDep) -> dict[str, object]:
     """Merge all PRs in the stack bottom-up via GitHub API."""
     return await api.merge_stack(stack_id)
+
+
+# --- Workflow endpoints (push, submit, ready) ---
+
+
+@router.post("/{stack_id}/push")
+async def push_stack(
+    stack_id: UUID,
+    data: PushStackRequest,
+    api: UserStackAPIDep,
+) -> dict[str, object]:
+    """Push local branch state to the private workspace.
+
+    Called by the Go CLI after `git push`. Syncs branch names, positions,
+    and head SHAs to Postgres. Transitions branches to 'pushed' state.
+
+    CLI equivalent: `sb stack push`
+    """
+    branches = [b.model_dump() for b in data.branches]
+    return await api.push_stack(stack_id, data.workspace_id, branches)
+
+
+@router.post("/{stack_id}/submit")
+async def submit_stack(
+    stack_id: UUID,
+    api: UserStackAPIDep,
+) -> dict[str, object]:
+    """Submit: create GitHub draft PRs for pushed branches.
+
+    Creates draft pull requests on GitHub for each branch that has been
+    pushed but does not yet have a PR. Uses the authenticated user's
+    GitHub token.
+
+    CLI equivalent: `sb stack submit`
+    """
+    return await api.submit_stack(stack_id)
+
+
+@router.post("/{stack_id}/ready")
+async def ready_stack(
+    stack_id: UUID,
+    data: ReadyStackRequest | None = None,
+    *,
+    api: UserStackAPIDep,
+) -> dict[str, object]:
+    """Ready: mark draft PRs as ready for review on GitHub.
+
+    Removes draft status from pull requests, making them visible to
+    reviewers. Optionally specify branch_ids to mark only specific
+    branches ready.
+
+    CLI equivalent: `sb stack ready`
+    """
+    branch_ids = data.branch_ids if data else None
+    return await api.ready_stack(stack_id, branch_ids=branch_ids)
 
 
 # --- Branch endpoints (nested under stack) ---

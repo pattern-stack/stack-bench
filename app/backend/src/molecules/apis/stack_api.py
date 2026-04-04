@@ -13,6 +13,9 @@ from molecules.events import (
     PULL_REQUEST_MERGED,
     REVIEW_COMMENT_CREATED,
     REVIEW_COMMENT_UPDATED,
+    STACK_MARKED_READY,
+    STACK_PUSHED,
+    STACK_SUBMITTED,
     DomainEvent,
     publish,
 )
@@ -213,6 +216,92 @@ class StackAPI:
             "synced_count": result["synced_count"],
             "created_count": result["created_count"],
         }
+
+    # --- Workflow operations (push / submit / ready) ---
+
+    async def push_stack(
+        self,
+        stack_id: UUID,
+        workspace_id: UUID,
+        branches_data: list[dict[str, object]],
+    ) -> dict[str, Any]:
+        """Push: sync and transition branches to pushed state."""
+        result = await self.entity.push_stack(stack_id, workspace_id, branches_data)
+        await self.db.commit()
+
+        # Serialize
+        serialized_branches: list[dict[str, Any]] = []
+        for br in result["branches"]:
+            branch_resp = BranchResponse.model_validate(br["branch"]).model_dump()
+            pr_resp = (
+                PullRequestResponse.model_validate(br["pull_request"]).model_dump() if br["pull_request"] else None
+            )
+            serialized_branches.append({"branch": branch_resp, "pull_request": pr_resp})
+
+        await publish(
+            DomainEvent(
+                topic=STACK_PUSHED,
+                entity_type="stack",
+                entity_id=stack_id,
+                source="user_action",
+                payload={
+                    "synced_count": result["synced_count"],
+                    "created_count": result["created_count"],
+                },
+            )
+        )
+
+        return {
+            "stack_id": str(stack_id),
+            "branches": serialized_branches,
+            "synced_count": result["synced_count"],
+            "created_count": result["created_count"],
+        }
+
+    async def submit_stack(self, stack_id: UUID) -> dict[str, Any]:
+        """Submit: create GitHub draft PRs for all pushed branches."""
+        if self.github is None:
+            msg = "GitHubAdapter not configured"
+            raise RuntimeError(msg)
+        result = await self.entity.submit_stack(stack_id, self.github)
+        await self.db.commit()
+
+        await publish(
+            DomainEvent(
+                topic=STACK_SUBMITTED,
+                entity_type="stack",
+                entity_id=stack_id,
+                source="user_action",
+                payload={"results": result["results"]},
+            )
+        )
+
+        return result
+
+    async def ready_stack(
+        self,
+        stack_id: UUID,
+        *,
+        branch_ids: list[UUID] | None = None,
+    ) -> dict[str, Any]:
+        """Ready: mark draft PRs as ready for review."""
+        if self.github is None:
+            msg = "GitHubAdapter not configured"
+            raise RuntimeError(msg)
+        result = await self.entity.ready_stack(stack_id, self.github, branch_ids=branch_ids)
+        await self.db.commit()
+
+        await publish(
+            DomainEvent(
+                topic=STACK_MARKED_READY,
+                entity_type="stack",
+                entity_id=stack_id,
+                source="user_action",
+                payload={"results": result["results"]},
+            )
+        )
+
+        return result
 
     # --- Git data (read-through via GitHubAdapter) ---
 
