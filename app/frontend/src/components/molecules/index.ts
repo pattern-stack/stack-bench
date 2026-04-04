@@ -75,3 +75,6 @@ export type {
 
 export { MessagePartDispatcher } from "./MessagePartDispatcher";
 export type { MessagePartDispatcherProps } from "./MessagePartDispatcher";
+
+export { ChatMessageRow } from "./ChatMessageRow";
+export type { ChatMessageRowProps } from "./ChatMessageRow";
