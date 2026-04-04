@@ -156,6 +156,57 @@ Horizontal rule divider for chat sections.
   - Renders `<hr>` styled with `--chat-system` border token
   - Full width of chat container
 
+#### SB-140: ChatRoleIndicator Atom
+Visual role identity for message attribution.
+- Renders role label following CLI convention: `you:` (user), `sb:` (assistant), `sys:` (system)
+- Role-specific styling via category tokens (`--chat-user`, `--chat-agent`, `--chat-system`)
+- Optional agent name override for assistant role (e.g., `architect:` instead of `sb:`)
+- **Dependencies**: SB-121
+- **Acceptance Criteria**:
+  - Renders correct label per role
+  - Styled with role-appropriate category token
+  - Accepts custom agent name for assistant role
+  - Consistent fixed-width alignment across roles
+
+#### SB-141: ChatTimestamp Atom
+Relative time display for message metadata.
+- Renders relative time ("just now", "2m ago", "1h ago") with auto-update
+- Tertiary hierarchy styling — present but not prominent
+- **Dependencies**: SB-121
+- **Acceptance Criteria**:
+  - Renders human-readable relative time
+  - Updates periodically (every 30s) without re-render of parent
+  - Uses `--chat-text-tertiary` token
+  - Accepts `Date` or ISO string
+
+#### SB-142: ChatPresenceIndicator Atom
+Pre-response state indicator showing the agent is active before content streams.
+- Animated dots or subtle pulse indicating "agent is preparing a response"
+- Distinct from ChatSpinner (which shows mid-operation status with verb labels)
+- This is the idle-to-streaming transition state — appears after user sends, before first chunk arrives
+- **Dependencies**: SB-121
+- **Acceptance Criteria**:
+  - Animated indicator (CSS-only, no JS timers)
+  - Visually distinct from ChatSpinner
+  - Shows agent role indicator alongside (e.g., `sb:` + animation)
+  - Disappears once first stream chunk arrives
+
+---
+
+### Layer 1b: Conversational Molecules
+
+#### SB-143: ChatMessageGroup Molecule
+Groups consecutive messages from the same role with shared attribution.
+- When multiple messages from the same role appear in sequence, show the RoleIndicator once and group the message rows
+- Adds appropriate spacing between groups vs within groups (tighter within, looser between)
+- Date separators between messages from different sessions/days
+- **Dependencies**: SB-140, SB-141, SB-127
+- **Acceptance Criteria**:
+  - Consecutive same-role messages grouped under one RoleIndicator
+  - Timestamp shown on first message of each group
+  - Date separator rendered between different-day groups
+  - Correct spacing: tight within group, standard between groups
+
 ---
 
 ### Layer 2: Chat Molecules
@@ -247,15 +298,15 @@ Component that renders a single `ChatMessagePart` by dispatching to the correct 
 
 #### SB-135: ChatMessageRow Component
 Renders a single `ChatMessage` with role indicator and all its parts.
-- Role-based layout: user (right-aligned or distinct style), assistant (left with "sb:" label), system (centered/italic)
+- Uses ChatRoleIndicator for attribution, ChatTimestamp for metadata
 - Iterates `message.parts` and renders via MessagePart dispatcher
-- Streaming indicator: shows `ChatStatusBlock` when assistant message is still streaming
-- **Dependencies**: SB-134, SB-129
+- Streaming: shows ChatPresenceIndicator before first chunk, ChatStatusBlock during operations
+- **Dependencies**: SB-134, SB-129, SB-140, SB-141, SB-142
 - **Acceptance Criteria**:
-  - Visual distinction between user/assistant/system roles
+  - ChatRoleIndicator with correct role label
+  - ChatTimestamp displayed per message
   - Renders all parts in sequence via dispatcher
-  - Shows streaming status indicator for in-progress messages
-  - Timestamp or metadata display (optional)
+  - Shows ChatPresenceIndicator pre-stream, ChatStatusBlock mid-operation
 
 ---
 
@@ -292,11 +343,11 @@ Dropdown autocomplete for slash commands in chat input.
 
 #### SB-138: ChatRoom Organism
 Full chat experience replacing AgentPanel's message area.
-- Composes: message list (ChatMessageRow[]), streaming status, ChatInput with autocomplete
+- Composes: ChatMessageGroup[] (which contain ChatMessageRow[]), ChatInput with autocomplete
 - Manages scroll: auto-scroll on new messages, scroll-to-bottom button when scrolled up
 - Wires `useChatMessages` reducer to `useEventSource` hook
 - Header: conversation metadata (agent name, exchange count)
-- **Dependencies**: SB-123, SB-135, SB-136, SB-137
+- **Dependencies**: SB-123, SB-135, SB-143, SB-136, SB-137
 - **Acceptance Criteria**:
   - Renders full message history with multi-part messages
   - Auto-scrolls on new content, manual scroll override
@@ -307,7 +358,7 @@ Full chat experience replacing AgentPanel's message area.
 #### SB-139: AgentPanel Migration
 Replace AgentPanel internals with ChatRoom organism.
 - AgentPanel retains its collapsible sidebar shell but delegates rendering to ChatRoom
-- Remove mock message logic and plain text bubbles
+- Remove mock message logic and plain text rendering
 - Wire to real conversation API: create conversation on first message, stream via SSE
 - Quick action buttons become slash commands or preserved as UI shortcuts
 - **Dependencies**: SB-138
@@ -327,26 +378,32 @@ Layer 0 (parallel):
   SB-120 (types) ──┬──→ SB-122 (useEventSource) ──→ SB-123 (useChatMessages)
   SB-121 (tokens)  │
                    │
-Layer 1 (parallel, after SB-121):
-  SB-124 (CodeBlock) ──┐
-  SB-125 (Spinner)     │
-  SB-126 (InlineCode)  ├──→ Layer 2
-  SB-127 (Separator)   │
-                       │
-Layer 2 (after Layer 1):
+Layer 1a — Code Atoms (parallel, after SB-121):
+  SB-124 (CodeBlock)        ──┐
+  SB-125 (Spinner)            │
+  SB-126 (InlineCode)         ├──→ Layer 2
+  SB-127 (Separator)          │
+                              │
+Layer 1b — Conversational Atoms (parallel, after SB-121):
+  SB-140 (RoleIndicator)      │
+  SB-141 (Timestamp)          ├──→ SB-143 (MessageGroup) ──→ SB-138
+  SB-142 (PresenceIndicator)  │
+                              │
+Layer 2 — Molecules (after Layer 1a):
   SB-128 (Markdown) ────────┐
   SB-129 (StatusBlock)      │
   SB-130 (ToolCallBlock) ───┤
   SB-131 (DiffBlock)        ├──→ SB-134 (Dispatcher) → SB-135 (MessageRow)
   SB-132 (ThinkingBlock)    │
   SB-133 (ErrorBlock) ──────┘
-                              
+  SB-143 (MessageGroup) ────── (from Layer 1b atoms)
+
 Layer 3-4 (sequential):
-  SB-134 (Dispatcher) → SB-135 (MessageRow)
+  SB-134 (Dispatcher) → SB-135 (MessageRow, uses SB-140/141/142)
   SB-136 (ChatInput) → SB-137 (Autocomplete)
 
 Layer 5 (after all above):
-  SB-138 (ChatRoom) → SB-139 (AgentPanel Migration)
+  SB-138 (ChatRoom, uses SB-143) → SB-139 (AgentPanel Migration)
 ```
 
 ## Component Mapping Table
@@ -373,6 +430,10 @@ Layer 5 (after all above):
 | Autocomplete | SlashCommandAutocomplete | SB-137 | 4 |
 | Chat view | ChatRoom organism | SB-138 | 5 |
 | — | AgentPanel migration | SB-139 | 5 |
+| Role prefix (`you:`/`sb:`/`sys:`) | ChatRoleIndicator | SB-140 | 1b |
+| — | ChatTimestamp | SB-141 | 1b |
+| — | ChatPresenceIndicator | SB-142 | 1b |
+| Message grouping (view.go) | ChatMessageGroup | SB-143 | 1b |
 
 ## Scope Notes
 
