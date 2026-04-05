@@ -31,9 +31,11 @@ from organisms.api.routers.agents import router as agents_router
 from organisms.api.routers.auth import router as auth_router
 from organisms.api.routers.conversations import router as conversations_router
 from organisms.api.routers.events import router as events_router
+from organisms.api.routers.jobs import router as jobs_router
 from organisms.api.routers.onboarding import router as onboarding_router
 from organisms.api.routers.projects import router as projects_router
 from organisms.api.routers.stacks import router as stacks_router
+from organisms.api.routers.tasks import router as tasks_router
 from organisms.api.routers.workspaces import router as workspaces_router
 
 
@@ -121,6 +123,8 @@ def create_app() -> FastAPI:
     app.include_router(agents_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(stacks_router, prefix="/api/v1")
+    app.include_router(tasks_router, prefix="/api/v1")
+    app.include_router(jobs_router, prefix="/api/v1")
     app.include_router(events_router, prefix="/api/v1")
     app.include_router(onboarding_router, prefix="/api/v1")
     app.include_router(workspaces_router, prefix="/api/v1")

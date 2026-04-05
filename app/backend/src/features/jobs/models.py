@@ -39,6 +39,7 @@ class Job(EventPattern):
             expose_api=True,
         )
 
+    task_id = Field(UUID, foreign_key="tasks.id", nullable=True, index=True)
     repo_url = Field(str, required=True, max_length=500)
     repo_branch = Field(str, required=True, max_length=200, default="main")
     issue_number = Field(int, nullable=True, index=True)

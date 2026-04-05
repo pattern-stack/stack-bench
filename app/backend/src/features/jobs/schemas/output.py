@@ -9,6 +9,7 @@ class JobResponse(BaseModel):
     id: UUID
     reference_number: str | None = None
     state: str
+    task_id: UUID | None = None
     repo_url: str
     repo_branch: str
     issue_number: int | None = None
