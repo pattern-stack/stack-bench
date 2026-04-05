@@ -11,6 +11,7 @@ class ConversationCreate(BaseModel):
     project_id: UUID | None = None
     metadata_: dict[str, Any] | None = None
     agent_config: dict[str, Any] | None = None
+    conversation_type: str | None = None
     branched_from_id: UUID | None = None
     branched_at_sequence: int | None = None
 

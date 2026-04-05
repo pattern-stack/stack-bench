@@ -21,6 +21,7 @@ class ConversationDetailResponse(BaseModel):
     agent_name: str
     model: str
     state: str
+    conversation_type: str = "execution"
     exchange_count: int
     total_input_tokens: int
     total_output_tokens: int
@@ -93,6 +94,7 @@ class ConversationAPI:
             agent_name=conv.agent_name,
             model=conv.model,
             state=conv.state,
+            conversation_type=getattr(conv, "conversation_type", "execution"),
             exchange_count=conv.exchange_count,
             total_input_tokens=conv.total_input_tokens,
             total_output_tokens=conv.total_output_tokens,

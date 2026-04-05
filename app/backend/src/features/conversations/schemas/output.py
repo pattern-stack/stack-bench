@@ -14,6 +14,7 @@ class ConversationResponse(BaseModel):
     exchange_count: int
     total_input_tokens: int
     total_output_tokens: int
+    conversation_type: str = "execution"
     project_id: UUID | None = None
     branched_from_id: UUID | None = None
     branched_at_sequence: int | None = None

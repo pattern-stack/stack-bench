@@ -36,3 +36,10 @@ class Conversation(EventPattern):
     project_id = Field(UUID, foreign_key="projects.id", nullable=True, index=True)
     branched_from_id = Field(UUID, foreign_key="conversations.id", nullable=True, index=True)
     branched_at_sequence = Field(int, nullable=True)
+    conversation_type = Field(
+        str,
+        default="execution",
+        choices=["planning", "execution", "review"],
+        max_length=20,
+        index=True,
+    )

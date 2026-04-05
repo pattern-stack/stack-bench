@@ -164,6 +164,7 @@ async def test_conversation_api_branch_facade() -> None:
     mock_conv.agent_name = "architect"
     mock_conv.model = "claude-sonnet-4-20250514"
     mock_conv.state = "created"
+    mock_conv.conversation_type = "execution"
     mock_conv.error_message = None
     mock_conv.exchange_count = 0
     mock_conv.total_input_tokens = 0
