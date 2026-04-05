@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import { Badge } from "@/components/atoms/Badge";
 
 interface ChatDiffBlockProps {
   diff: string;
@@ -18,29 +17,51 @@ function lineBg(line: string): string | undefined {
   return undefined;
 }
 
+/** Try to extract a file path from the first line (e.g. "--- a/src/foo.ts") */
+function extractFilePath(lines: string[]): string | null {
+  for (const line of lines.slice(0, 4)) {
+    const match = line.match(/^(?:---|\+\+\+)\s+[ab]\/(.+)/);
+    if (match?.[1]) return match[1];
+    const diffMatch = line.match(/^diff\s+--git\s+a\/(.+)\s+b\//);
+    if (diffMatch?.[1]) return diffMatch[1];
+  }
+  return null;
+}
+
 const ChatDiffBlock: FC<ChatDiffBlockProps> = ({ diff, fileName }) => {
   const lines = diff.split("\n");
+  const label = fileName || extractFilePath(lines) || "diff";
+  const gutterWidth = `${String(lines.length).length + 1}ch`;
 
   return (
     <div className="rounded-[var(--chat-radius-lg)] border border-[var(--chat-border)] overflow-hidden font-[family-name:var(--font-mono)] text-[length:var(--chat-font-sm)] leading-[1.6]">
-      {fileName && (
-        <div className="px-[var(--chat-gap-md)] py-[var(--chat-tool-py)] border-b border-[var(--chat-border)] bg-[var(--chat-bg-message)]">
-          <Badge size="sm">{fileName}</Badge>
-        </div>
-      )}
-      <pre className="m-0 px-[var(--chat-gap-md)] py-[var(--chat-gap-sm)] whitespace-pre-wrap break-all bg-[var(--chat-bg-message)]">
+      <div className="px-[var(--chat-gap-md)] py-[var(--chat-tool-py)] border-b border-[var(--chat-border)] bg-[var(--chat-bg-message)] flex items-center justify-between">
+        <span className="text-[length:var(--chat-font-xs)] text-[var(--chat-text-secondary)] truncate">
+          {label}
+        </span>
+        <span className="text-[length:var(--chat-font-xs)] text-[var(--chat-text-tertiary)] select-none uppercase tracking-[0.5px]">
+          diff
+        </span>
+      </div>
+      <pre className="m-0 py-[var(--chat-gap-sm)] whitespace-pre-wrap break-all bg-[var(--chat-bg-message)]">
         {lines.map((line, i) => (
           <div
             key={i}
+            className="flex"
             style={{
               color: lineColor(line),
               background: lineBg(line),
-              padding: "0 4px",
-              marginLeft: -4,
-              marginRight: -4,
             }}
           >
-            {line || "\u00A0"}
+            <span
+              className="inline-block text-right pr-[var(--chat-gap-sm)] pl-[var(--chat-gap-sm)] text-[var(--chat-text-quaternary)] select-none shrink-0 border-r border-r-[var(--chat-border)]"
+              style={{ width: gutterWidth }}
+            >
+              {i + 1}
+            </span>
+            <span className="px-[var(--chat-gap-sm)]">
+              {line || "\u00A0"}
+            </span>
           </div>
         ))}
       </pre>
