@@ -2,15 +2,13 @@ module github.com/dugshub/stack-bench/app/cli
 
 go 1.25.0
 
-require (
-	charm.land/bubbletea/v2 v2.0.2
-	charm.land/lipgloss/v2 v2.0.2
-	github.com/dugshub/agent-tui v0.0.0
-)
+require github.com/dugshub/agent-tui v0.0.0
 
 replace github.com/dugshub/agent-tui => ../../packages/agent-tui
 
 require (
+	charm.land/bubbletea/v2 v2.0.2 // indirect
+	charm.land/lipgloss/v2 v2.0.2 // indirect
 	github.com/charmbracelet/colorprofile v0.4.2 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260205113103-524a6607adb8 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect

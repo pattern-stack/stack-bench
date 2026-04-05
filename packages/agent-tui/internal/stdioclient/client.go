@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -34,6 +35,7 @@ type Client struct {
 	mu       sync.Mutex
 	pending  map[int64]chan *Response
 	streamCh chan sse.StreamChunk
+	closeOnce atomic.Pointer[sync.Once] // guards streamCh close
 	closed   bool
 }
 
@@ -88,9 +90,12 @@ func (c *Client) readLoop() {
 				close(ch)
 			}
 			c.pending = make(map[int64]chan *Response)
-			if c.streamCh != nil {
-				close(c.streamCh)
-				c.streamCh = nil
+			streamCh := c.streamCh
+			c.streamCh = nil
+			if streamCh != nil {
+				if once := c.closeOnce.Load(); once != nil {
+					once.Do(func() { close(streamCh) })
+				}
 			}
 			c.mu.Unlock()
 			return
@@ -136,6 +141,9 @@ func (c *Client) handleStreamEvent(notif *Notification) {
 			c.mu.Lock()
 			c.streamCh = nil
 			c.mu.Unlock()
+			if once := c.closeOnce.Load(); once != nil {
+				once.Do(func() { close(ch) })
+			}
 		}
 	}
 }
@@ -288,9 +296,11 @@ func (c *Client) CreateConversation(ctx context.Context, agentID string) (string
 // SendMessage sends a sendMessage request and returns a channel of stream chunks.
 func (c *Client) SendMessage(ctx context.Context, conversationID string, content string) (<-chan sse.StreamChunk, error) {
 	ch := make(chan sse.StreamChunk, 16)
+	once := &sync.Once{}
 
 	c.mu.Lock()
 	c.streamCh = ch
+	c.closeOnce.Store(once)
 	c.mu.Unlock()
 
 	params := map[string]string{
@@ -317,6 +327,7 @@ func (c *Client) SendMessage(ctx context.Context, conversationID string, content
 	go func() {
 		resp, ok := <-respCh
 		if !ok {
+			once.Do(func() { close(ch) })
 			return
 		}
 		// If there's an error in the response, send it
@@ -333,13 +344,13 @@ func (c *Client) SendMessage(ctx context.Context, conversationID string, content
 				}
 			}
 		}
-		// Close the stream channel if it's still ours
+		// Clean up and close the channel
 		c.mu.Lock()
 		if c.streamCh == ch {
 			c.streamCh = nil
 		}
 		c.mu.Unlock()
-		// Don't close ch here - it may already be closed by a done event
+		once.Do(func() { close(ch) })
 	}()
 
 	return ch, nil

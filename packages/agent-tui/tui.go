@@ -34,6 +34,9 @@ func New(cfg Config) (*App, error) {
 	}
 
 	// Set theme
+	// TODO(v0.2): theme.SetActive mutates a package-level global, so two App
+	// instances with different themes in the same process would conflict.
+	// Acceptable for v0.1 since a single TUI per process is the expected use.
 	if cfg.Theme != nil {
 		theme.SetActive(cfg.Theme)
 	}

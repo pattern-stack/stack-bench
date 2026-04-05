@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -137,24 +138,22 @@ func (c *HTTPClient) ListAgents(ctx context.Context) ([]sse.AgentSummary, error)
 		return nil, fmt.Errorf("list agents: HTTP %d", resp.StatusCode)
 	}
 
+	// Read body once, try both formats
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read agents response: %w", err)
+	}
+
 	// Try decoding as []AgentSummary first (canonical format)
 	var agents []sse.AgentSummary
-	if err := json.NewDecoder(resp.Body).Decode(&agents); err == nil && len(agents) > 0 && agents[0].ID != "" {
+	if err := json.Unmarshal(body, &agents); err == nil && len(agents) > 0 && agents[0].ID != "" {
 		return agents, nil
 	}
 
 	// Fallback: try as []string (Stack Bench legacy format)
-	// Re-fetch since body was consumed
-	req2, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	resp2, err := c.HTTPClient.Do(req2)
-	if err != nil {
-		return agents, nil // return what we got
-	}
-	defer resp2.Body.Close()
-
 	var names []string
-	if err := json.NewDecoder(resp2.Body).Decode(&names); err != nil {
-		return agents, nil
+	if err := json.Unmarshal(body, &names); err != nil {
+		return nil, fmt.Errorf("list agents: unexpected response format")
 	}
 
 	result := make([]sse.AgentSummary, 0, len(names))
