@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { WorkspaceDetailPage } from "@/pages/WorkspaceDetailPage";
 import { StackDetailPage } from "@/pages/StackDetailPage";
+import { StacksListPage } from "@/pages/StacksListPage";
 
 export function AppRouter() {
   return (
@@ -36,6 +37,7 @@ export function AppRouter() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="workspaces/:taskId" element={<WorkspaceDetailPage />} />
+        <Route path="stacks" element={<StacksListPage />} />
         <Route path="stacks/:stackId" element={<StackDetailPage />} />
         {/* Fallback: legacy route sends to dashboard */}
         <Route path="*" element={<DashboardPage />} />

@@ -11,6 +11,18 @@ const COLUMNS = [
   { key: "done", label: "Done", states: ["done"] },
 ] as const;
 
+/** Shorten "TSK-2026-000042" → "TSK-042" */
+function shortRef(ref: string | null, fallbackId: string): string {
+  if (ref) {
+    // Extract the trailing number segment after the last hyphen
+    const lastSegment = ref.split("-").pop() ?? "";
+    const num = parseInt(lastSegment, 10);
+    if (!isNaN(num)) return `TSK-${String(num).padStart(3, "0")}`;
+    return ref;
+  }
+  return fallbackId.slice(0, 6);
+}
+
 function DashboardPage() {
   const { data: projects } = useProjectList();
   const projectId = projects[0]?.id;
@@ -86,30 +98,56 @@ function TaskCard({ task }: { task: Task }) {
         : "transparent";
 
   const isDone = task.state === "done";
+  const isActive = task.state === "in_progress" || task.state === "in_review";
+  const taskId = shortRef(task.reference_number, task.id);
 
   return (
     <Link
       to={`/workspaces/${task.id}`}
-      className={`block rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] px-3 py-2.5 hover:border-[var(--border)] transition-colors ${
-        isDone ? "opacity-60" : ""
+      className={`block rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] px-3 py-2 hover:border-[var(--border)] transition-colors ${
+        isDone ? "opacity-50" : ""
       }`}
       style={{
         borderLeftColor: stateColor,
-        borderLeftWidth: stateColor !== "transparent" ? 2 : undefined,
+        borderLeftWidth: stateColor !== "transparent" ? 3 : undefined,
       }}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-mono text-[var(--fg-subtle)]">
-          {task.reference_number ?? task.id.slice(0, 8)}
+      {/* Row 1: Task ID + Title */}
+      <div className="flex gap-2 items-start">
+        <span className="text-[9px] font-mono text-[var(--fg-subtle)] shrink-0 mt-0.5">
+          {taskId}
         </span>
-        <span className={`text-sm text-[var(--fg-default)] leading-snug truncate ${isDone ? "line-through" : ""}`}>
+        <span
+          className={`text-xs font-medium text-[var(--fg-default)] leading-snug line-clamp-2 ${
+            isDone ? "line-through text-[var(--fg-muted)]" : ""
+          }`}
+        >
           {task.title}
         </span>
       </div>
-      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-[var(--fg-subtle)]">
-        <span className="px-1.5 py-0.5 rounded bg-[var(--bg-canvas)] capitalize">
+
+      {/* Row 2: Agent status */}
+      {isActive && (
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
+          <span className="text-[9px] text-[var(--fg-muted)]">
+            claude working...
+          </span>
+        </div>
+      )}
+
+      {/* Row 3: Priority + metadata */}
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <span className="px-1.5 py-0.5 rounded bg-[var(--bg-canvas)] text-[9px] text-[var(--fg-muted)] capitalize">
           {task.priority !== "none" ? task.priority : task.issue_type}
         </span>
+        {/* Placeholder diff stats — will be real when Task↔Stack linked */}
+        {isActive && (
+          <span className="text-[9px] ml-auto">
+            <span className="text-[var(--green)]">+42</span>{" "}
+            <span className="text-[var(--red)]">-8</span>
+          </span>
+        )}
       </div>
     </Link>
   );
