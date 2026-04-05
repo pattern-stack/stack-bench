@@ -227,6 +227,24 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       continue;
     }
 
+    // Blockquote
+    if (/^>\s?/.test(line)) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) {
+        quoteLines.push(lines[i].replace(/^>\s?/, ""));
+        i++;
+      }
+      elements.push(
+        <blockquote
+          key={key++}
+          className="my-[0.5em] ml-[var(--chat-gap-sm)] pl-[var(--chat-gap-md)] py-[var(--chat-gap-xs)] border-l-[length:var(--chat-tool-border-width)] border-l-[var(--chat-warning)] bg-[var(--chat-bg-message)] rounded-r-[var(--chat-radius)] font-[family-name:var(--font-sans)] text-[var(--chat-text-secondary)]"
+        >
+          {parseInline(quoteLines.join(" "))}
+        </blockquote>
+      );
+      continue;
+    }
+
     // Paragraph — collect consecutive non-empty, non-special lines
     const paraLines: string[] = [];
     while (
@@ -234,7 +252,8 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       lines[i].trim() !== "" &&
       !/^#{1,3}\s/.test(lines[i]) &&
       !/^\s*[-*+]\s+/.test(lines[i]) &&
-      !/^\s*\d+[.)]\s+/.test(lines[i])
+      !/^\s*\d+[.)]\s+/.test(lines[i]) &&
+      !/^>\s?/.test(lines[i])
     ) {
       paraLines.push(lines[i]);
       i++;
