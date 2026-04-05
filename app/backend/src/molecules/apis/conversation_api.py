@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from features.conversations.schemas.output import ConversationResponse
 from molecules.agents.assembler import AgentAssembler
+from features.conversations.link_service import ConversationLinkService
 from molecules.entities.conversation_entity import ConversationEntity
 
 if TYPE_CHECKING:
@@ -55,6 +56,7 @@ class ConversationAPI:
         self.db = db
         self.entity = ConversationEntity(db)
         self.assembler = AgentAssembler(db)
+        self.link_service = ConversationLinkService()
 
     async def create(self, agent_name: str, model: str | None = None) -> ConversationResponse:
         """Create a new conversation."""
@@ -136,6 +138,25 @@ class ConversationAPI:
         """Branch a conversation at a given message sequence."""
         conv = await self.entity.branch_conversation(conversation_id, at_sequence)
         await self.db.commit()
+        return ConversationResponse.model_validate(conv)
+
+    async def get_by_entity(
+        self,
+        *,
+        entity_type: str,
+        entity_id: UUID,
+        role: str,
+    ) -> ConversationResponse | None:
+        """Get the active conversation linked to an entity with a specific role."""
+        link = await self.link_service.get_conversation_for_entity(
+            self.db,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            role=role,
+        )
+        if link is None:
+            return None
+        conv = await self.entity.get_conversation(link.entity_a_id)
         return ConversationResponse.model_validate(conv)
 
     async def list_agents(self) -> list[str]:  # type: ignore[valid-type]
