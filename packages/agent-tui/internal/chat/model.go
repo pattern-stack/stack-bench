@@ -102,15 +102,6 @@ type ResponseMsg struct {
 	Chunk sse.StreamChunk
 }
 
-// ClientInterface matches the internal client interface methods we need.
-type ClientInterface interface {
-	ListAgents(ctx context.Context) ([]sse.AgentSummary, error)
-	SendMessage(ctx context.Context, conversationID string, content string) (<-chan sse.StreamChunk, error)
-	CreateConversation(ctx context.Context, agentID string) (string, error)
-	ListConversations(ctx context.Context, agentName string) ([]sse.Conversation, error)
-	GetConversation(ctx context.Context, id string) (*sse.ConversationDetail, error)
-}
-
 // Model holds the state for the chat view.
 type Model struct {
 	messages       []Message
@@ -119,7 +110,7 @@ type Model struct {
 	conversationID string
 	agentName      string
 	assistantLabel string
-	client         ClientInterface
+	client         sse.Client
 	streaming      bool
 	streamCh       <-chan sse.StreamChunk
 	registry       *command.Registry
@@ -129,7 +120,7 @@ type Model struct {
 }
 
 // New creates a fresh chat model.
-func New(client ClientInterface, agentName string, registry *command.Registry, assistantLabel string) Model {
+func New(client sse.Client, agentName string, registry *command.Registry, assistantLabel string) Model {
 	return Model{
 		client:         client,
 		agentName:      agentName,

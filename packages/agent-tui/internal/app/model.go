@@ -46,7 +46,7 @@ type ConversationCreatedMsg struct {
 type Model struct {
 	width, height int
 	phase         Phase
-	client        chat.ClientInterface
+	client        sse.Client
 	manager       *service.ServiceManager
 	cfg           Config
 
@@ -64,7 +64,7 @@ type Model struct {
 }
 
 // New creates the initial app model.
-func New(client chat.ClientInterface, mgr *service.ServiceManager, reg *command.Registry, cfg Config) Model {
+func New(client sse.Client, mgr *service.ServiceManager, reg *command.Registry, cfg Config) Model {
 	return Model{
 		width:    80,
 		height:   24,

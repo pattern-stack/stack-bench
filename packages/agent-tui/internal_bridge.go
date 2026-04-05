@@ -6,7 +6,7 @@ import (
 	"github.com/dugshub/agent-tui/internal/sse"
 )
 
-// internalClientAdapter wraps a public Client to satisfy chat.ClientInterface.
+// internalClientAdapter wraps a public Client to satisfy sse.Client.
 // This bridges the public types back to internal sse types for the app model.
 type internalClientAdapter struct {
 	client Client

@@ -12,15 +12,19 @@ import (
 
 	"github.com/dugshub/agent-tui/internal/app"
 	"github.com/dugshub/agent-tui/internal/command"
+	"github.com/dugshub/agent-tui/internal/httpclient"
 	"github.com/dugshub/agent-tui/internal/service"
+	"github.com/dugshub/agent-tui/internal/sse"
+	"github.com/dugshub/agent-tui/internal/stdioclient"
 	"github.com/dugshub/agent-tui/internal/ui/theme"
 )
 
 // App is a configured TUI application.
 type App struct {
-	cfg    Config
-	client Client
-	mgr    *service.ServiceManager
+	cfg            Config
+	internalClient sse.Client         // used for built-in backends (no conversion)
+	customClient   Client             // non-nil only when consumer provides a custom Client
+	mgr            *service.ServiceManager
 }
 
 // New creates a configured TUI application.
@@ -57,7 +61,7 @@ func (a *App) resolveBackend() error {
 	// Check env override first
 	if cfg.EnvOverride != "" {
 		if url := os.Getenv(cfg.EnvOverride); url != "" {
-			a.client = newHTTPClient(url, cfg.Endpoints)
+			a.internalClient = newInternalHTTPClient(url, cfg.Endpoints)
 			return nil
 		}
 	}
@@ -82,22 +86,37 @@ func (a *App) resolveBackend() error {
 
 	switch {
 	case cfg.BackendURL != "":
-		a.client = newHTTPClient(cfg.BackendURL, cfg.Endpoints)
+		a.internalClient = newInternalHTTPClient(cfg.BackendURL, cfg.Endpoints)
 	case cfg.BackendService != nil:
 		a.mgr = service.NewServiceManager(cfg.BackendService)
-		a.client = newHTTPClient(cfg.BackendService.BaseURL(), cfg.Endpoints)
+		a.internalClient = newInternalHTTPClient(cfg.BackendService.BaseURL(), cfg.Endpoints)
 	case cfg.BackendStdio != nil:
-		client, err := newStdioClient(*cfg.BackendStdio)
+		c, err := stdioclient.New(stdioclient.Config{
+			Command: cfg.BackendStdio.Command,
+			Args:    cfg.BackendStdio.Args,
+			Dir:     cfg.BackendStdio.Dir,
+			Env:     cfg.BackendStdio.Env,
+		})
 		if err != nil {
 			return fmt.Errorf("agent-tui: stdio client: %w", err)
 		}
-		a.client = client
+		a.internalClient = c
 	case cfg.EnvOverride != "":
 		// Env var was set but empty — use stub
-		a.client = newStubClient()
+		a.internalClient = &httpclient.StubClient{}
 	}
 
 	return nil
+}
+
+// sseClient returns the sse.Client to pass to the app model.
+// For built-in backends, this is the internal client directly (no conversion).
+// For custom Client implementations, it wraps via internalClientAdapter.
+func (a *App) sseClient() sse.Client {
+	if a.internalClient != nil {
+		return a.internalClient
+	}
+	return &internalClientAdapter{client: a.customClient}
 }
 
 // Run starts the TUI. Blocks until the user quits.
@@ -128,13 +147,12 @@ func (a *App) Run() error {
 	// Build command registry
 	reg := a.buildRegistry()
 
-	// Create app model
+	// Create app model — pass sse.Client directly, no double conversion
 	appCfg := app.Config{
 		AppName:        a.cfg.AppName,
 		AssistantLabel: a.cfg.AssistantLabel,
 	}
-	internalClient := &internalClientAdapter{client: a.client}
-	model := app.New(internalClient, a.mgr, reg, appCfg)
+	model := app.New(a.sseClient(), a.mgr, reg, appCfg)
 
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
@@ -173,4 +191,20 @@ func (a *App) buildRegistry() *command.Registry {
 	}
 
 	return reg
+}
+
+// newInternalHTTPClient creates an sse.Client backed by HTTP.
+func newInternalHTTPClient(baseURL string, endpoints *EndpointConfig) sse.Client {
+	var epCfg *httpclient.EndpointConfig
+	if endpoints != nil {
+		epCfg = &httpclient.EndpointConfig{
+			ListAgents:         endpoints.ListAgents,
+			CreateConversation: endpoints.CreateConversation,
+			SendMessage:        endpoints.SendMessage,
+			ListConversations:  endpoints.ListConversations,
+			GetConversation:    endpoints.GetConversation,
+			Health:             endpoints.Health,
+		}
+	}
+	return httpclient.New(baseURL, epCfg)
 }
