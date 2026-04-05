@@ -3,29 +3,17 @@ interface ChatNoticeProps {
   variant?: "info" | "warning" | "error";
 }
 
-const variantColors = {
-  info: "var(--chat-info)",
-  warning: "var(--chat-warning)",
-  error: "var(--chat-error)",
+const variantClasses = {
+  info: "text-[var(--chat-info)]",
+  warning: "text-[var(--chat-warning)]",
+  error: "text-[var(--chat-error)]",
 } as const;
 
 function ChatNotice({ message, variant = "info" }: ChatNoticeProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        padding: "4px 0",
-      }}
-    >
+    <div className="flex justify-center py-[var(--chat-gap-xs)]">
       <span
-        style={{
-          fontSize: "0.8rem",
-          lineHeight: 1.4,
-          color: variantColors[variant],
-          opacity: 0.7,
-          fontFamily: "var(--font-sans)",
-        }}
+        className={`text-[length:var(--chat-font-xs)] leading-[1.4] opacity-70 font-[family-name:var(--font-sans)] ${variantClasses[variant]}`}
       >
         {message}
       </span>

@@ -7,14 +7,14 @@ interface ChatDiffBlockProps {
 }
 
 function lineColor(line: string): string {
-  if (line.startsWith("+")) return "var(--green, #22c55e)";
-  if (line.startsWith("-")) return "var(--red, var(--chat-error))";
+  if (line.startsWith("+")) return "var(--chat-success)";
+  if (line.startsWith("-")) return "var(--chat-error)";
   return "var(--chat-text-primary)";
 }
 
 function lineBg(line: string): string | undefined {
-  if (line.startsWith("+")) return "rgba(34,197,94,0.08)";
-  if (line.startsWith("-")) return "rgba(239,68,68,0.08)";
+  if (line.startsWith("+")) return "var(--green-bg)";
+  if (line.startsWith("-")) return "var(--red-bg)";
   return undefined;
 }
 
@@ -22,36 +22,13 @@ const ChatDiffBlock: FC<ChatDiffBlockProps> = ({ diff, fileName }) => {
   const lines = diff.split("\n");
 
   return (
-    <div
-      style={{
-        borderRadius: 8,
-        border: "1px solid var(--chat-border)",
-        overflow: "hidden",
-        fontFamily: "var(--font-mono)",
-        fontSize: 13,
-        lineHeight: 1.6,
-      }}
-    >
+    <div className="rounded-[var(--chat-radius-lg)] border border-[var(--chat-border)] overflow-hidden font-[family-name:var(--font-mono)] text-[length:var(--chat-font-sm)] leading-[1.6]">
       {fileName && (
-        <div
-          style={{
-            padding: "6px 12px",
-            borderBottom: "1px solid var(--chat-border)",
-            background: "var(--chat-bg-message)",
-          }}
-        >
+        <div className="px-[var(--chat-gap-md)] py-[var(--chat-tool-py)] border-b border-[var(--chat-border)] bg-[var(--chat-bg-message)]">
           <Badge size="sm">{fileName}</Badge>
         </div>
       )}
-      <pre
-        style={{
-          margin: 0,
-          padding: "8px 12px",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-all",
-          background: "var(--chat-bg-message)",
-        }}
-      >
+      <pre className="m-0 px-[var(--chat-gap-md)] py-[var(--chat-gap-sm)] whitespace-pre-wrap break-all bg-[var(--chat-bg-message)]">
         {lines.map((line, i) => (
           <div
             key={i}

@@ -150,7 +150,7 @@ function AppShell({
   const isEmpty = !stackName;
 
   return (
-    <div className="flex h-screen bg-[var(--bg-canvas)] text-[var(--fg-default)] font-[family-name:var(--font-sans)]">
+    <div className="flex h-full bg-[var(--bg-canvas)] text-[var(--fg-default)] font-[family-name:var(--font-sans)]">
       {isEmpty ? (
         <StackSidebarEmpty />
       ) : (

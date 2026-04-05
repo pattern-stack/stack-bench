@@ -69,8 +69,8 @@ function ChatInput({
       placeholder={placeholder}
       disabled={disabled}
       className={cn(
-        "w-full resize-none rounded-md px-3 py-2 text-sm",
-        "font-[var(--font-sans)]",
+        "w-full resize-none rounded-[var(--chat-radius-lg)] px-[var(--chat-tool-px)] py-[var(--chat-input-py)]",
+        "text-[length:var(--chat-font-base)] font-[family-name:var(--font-sans)]",
         "bg-[var(--chat-bg)] text-[var(--chat-text-primary)]",
         "border border-[var(--chat-border)]",
         "placeholder:text-[var(--chat-text-primary)]/50",

@@ -48,20 +48,14 @@ const MessagePartDispatcher: FC<MessagePartDispatcherProps> = ({
 
       default:
         return (
-          <span
-            style={{
-              color: "var(--chat-text-secondary, #888)",
-              fontSize: 12,
-              fontFamily: "var(--font-sans)",
-            }}
-          >
+          <span className="text-[var(--chat-text-secondary)] text-[length:var(--chat-font-xs)] font-[family-name:var(--font-sans)]">
             Unknown message part
           </span>
         );
     }
   };
 
-  return <div style={{ marginBottom: 8 }}>{renderPart()}</div>;
+  return <div className="mb-[var(--chat-gap-sm)]">{renderPart()}</div>;
 };
 
 MessagePartDispatcher.displayName = "MessagePartDispatcher";

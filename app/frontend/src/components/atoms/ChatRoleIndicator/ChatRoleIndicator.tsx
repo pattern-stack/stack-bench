@@ -5,10 +5,10 @@ interface ChatRoleIndicatorProps {
   agentName?: string;
 }
 
-const roleConfig: Record<ChatRole, { label: string; color: string }> = {
-  user: { label: "you:", color: "var(--chat-user)" },
-  assistant: { label: "sb:", color: "var(--chat-agent)" },
-  system: { label: "sys:", color: "var(--chat-system)" },
+const roleConfig: Record<ChatRole, { label: string; colorClass: string }> = {
+  user: { label: "you:", colorClass: "text-[var(--chat-user)]" },
+  assistant: { label: "sb:", colorClass: "text-[var(--chat-agent)]" },
+  system: { label: "sys:", colorClass: "text-[var(--chat-system)]" },
 };
 
 function ChatRoleIndicator({ role, agentName }: ChatRoleIndicatorProps) {
@@ -18,14 +18,7 @@ function ChatRoleIndicator({ role, agentName }: ChatRoleIndicatorProps) {
 
   return (
     <span
-      style={{
-        display: "inline-block",
-        width: 48,
-        fontFamily: "var(--font-mono)",
-        fontWeight: 700,
-        color: config.color,
-        flexShrink: 0,
-      }}
+      className={`inline-block min-w-[var(--chat-label-width)] font-[family-name:var(--font-mono)] font-bold text-[length:var(--chat-font-sm)] shrink-0 ${config.colorClass}`}
     >
       {label}
     </span>
