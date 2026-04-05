@@ -20,9 +20,10 @@ function ChatRoleIndicator({ role, agentName }: ChatRoleIndicatorProps) {
     <span
       style={{
         display: "inline-block",
-        width: 48,
+        minWidth: 48,
         fontFamily: "var(--font-mono)",
         fontWeight: 700,
+        fontSize: 13,
         color: config.color,
         flexShrink: 0,
       }}

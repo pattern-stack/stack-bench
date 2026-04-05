@@ -38,7 +38,7 @@ function ChatMessageRow({
       )}
       <div
         style={{
-          paddingLeft: 48,
+          paddingLeft: 8,
           display: "flex",
           flexDirection: "column",
           gap: 8,
