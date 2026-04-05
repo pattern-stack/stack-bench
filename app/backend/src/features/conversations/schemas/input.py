@@ -8,7 +8,6 @@ from pydantic import Field as PydanticField
 class ConversationCreate(BaseModel):
     agent_name: str = PydanticField(..., min_length=1, max_length=100)
     model: str | None = None
-    project_id: UUID | None = None
     metadata_: dict[str, Any] | None = None
     agent_config: dict[str, Any] | None = None
     conversation_type: str | None = None

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from features.conversations.schemas.output import ConversationResponse
 from molecules.agents.assembler import AgentAssembler
-from features.conversations.link_service import ConversationLinkService
+from features.conversations.service import ConversationService
 from molecules.entities.conversation_entity import ConversationEntity
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ class ConversationAPI:
         self.db = db
         self.entity = ConversationEntity(db)
         self.assembler = AgentAssembler(db)
-        self.link_service = ConversationLinkService()
+        self.link_service = ConversationService()
 
     async def create(self, agent_name: str, model: str | None = None) -> ConversationResponse:
         """Create a new conversation."""

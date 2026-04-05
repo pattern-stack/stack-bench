@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from features.agent_runs.schemas.output import AgentRunResponse
 from features.agent_runs.service import AgentRunService
-from features.conversations.link_service import ConversationLinkService
+from features.conversations.service import ConversationService
 from features.conversations.schemas.input import ConversationCreate
 from features.conversations.service import ConversationService
 from features.jobs.schemas.output import JobResponse
@@ -40,7 +40,7 @@ class TaskAPI:
         self._job_svc = JobService()
         self._agent_run_svc = AgentRunService()
         self._conv_svc = ConversationService()
-        self._link_svc = ConversationLinkService()
+        self._link_svc = ConversationService()
 
     async def create_task(self, data: TaskCreate) -> TaskResponse:
         """Create a new task."""
@@ -178,7 +178,6 @@ class TaskAPI:
             ConversationCreate(
                 agent_name="orchestrator",
                 conversation_type="execution",
-                project_id=task.project_id,
             ),
         )
 
