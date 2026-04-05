@@ -245,6 +245,64 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       continue;
     }
 
+    // GFM table — detect header row + separator row pattern
+    if (
+      /^\|/.test(line) &&
+      i + 1 < lines.length &&
+      /^\|[\s:]*-+/.test(lines[i + 1])
+    ) {
+      const tableLines: string[] = [];
+      while (i < lines.length && /^\|/.test(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // Parse cells: split by |, trim, remove empty first/last from leading/trailing |
+      const parseCells = (row: string) =>
+        row
+          .split("|")
+          .map((c) => c.trim())
+          .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+
+      const headerCells = parseCells(tableLines[0]);
+      // Skip separator row (index 1)
+      const bodyRows = tableLines.slice(2).map(parseCells);
+
+      elements.push(
+        <table
+          key={key++}
+          className="my-[0.5em] w-full border-collapse font-[family-name:var(--font-sans)] text-[length:var(--chat-font-sm)]"
+        >
+          <thead>
+            <tr>
+              {headerCells.map((cell, ci) => (
+                <th
+                  key={ci}
+                  className="text-left px-[var(--chat-gap-sm)] py-[var(--chat-gap-xs)] border border-[var(--chat-border)] bg-[var(--chat-bg-message)] text-[var(--chat-text-secondary)] font-medium"
+                >
+                  {parseInline(cell)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td
+                    key={ci}
+                    className="px-[var(--chat-gap-sm)] py-[var(--chat-gap-xs)] border border-[var(--chat-border)] text-[var(--chat-text-primary)]"
+                  >
+                    {parseInline(cell)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+      continue;
+    }
+
     // Paragraph — collect consecutive non-empty, non-special lines
     const paraLines: string[] = [];
     while (
@@ -253,7 +311,8 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       !/^#{1,3}\s/.test(lines[i]) &&
       !/^\s*[-*+]\s+/.test(lines[i]) &&
       !/^\s*\d+[.)]\s+/.test(lines[i]) &&
-      !/^>\s?/.test(lines[i])
+      !/^>\s?/.test(lines[i]) &&
+      !/^\|/.test(lines[i])
     ) {
       paraLines.push(lines[i]);
       i++;
