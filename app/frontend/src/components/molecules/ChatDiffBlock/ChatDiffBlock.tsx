@@ -31,7 +31,7 @@ function extractFilePath(lines: string[]): string | null {
 const ChatDiffBlock: FC<ChatDiffBlockProps> = ({ diff, fileName }) => {
   const lines = diff.split("\n");
   const label = fileName || extractFilePath(lines) || "diff";
-  const gutterWidth = `${String(lines.length).length + 1}ch`;
+  const gutterWidth = `${Math.max(3, String(lines.length).length + 1)}ch`;
 
   return (
     <div className="rounded-[var(--chat-radius-lg)] border border-[var(--chat-border)] overflow-hidden font-[family-name:var(--font-mono)] text-[length:var(--chat-font-sm)] leading-[1.6]">
