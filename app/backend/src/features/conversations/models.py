@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pattern_stack.atoms.patterns import EventPattern, Field, StatePhase
+from pattern_stack.atoms.patterns import EventPattern, Field, RelationalPattern, StatePhase
 
 
 class Conversation(EventPattern):
@@ -43,3 +43,12 @@ class Conversation(EventPattern):
         max_length=20,
         index=True,
     )
+
+
+class ConversationLink(RelationalPattern):
+    __tablename__ = "conversation_links"
+
+    class Pattern:
+        entity = "conversation_link"
+        reference_prefix = "CL"
+        track_changes = True
