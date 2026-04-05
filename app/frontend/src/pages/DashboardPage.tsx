@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useProjectList } from "@/hooks/useProjectList";
 import { useTaskList } from "@/hooks/useTaskList";
 import type { Task } from "@/types/task";
@@ -54,7 +55,7 @@ function KanbanColumn({
   tasks: Task[];
 }) {
   return (
-    <div className="flex-1 min-w-[240px] max-w-[320px] flex flex-col">
+    <div className="flex-1 min-w-[220px] flex flex-col">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-[var(--fg-muted)]">
           {label}
@@ -84,26 +85,33 @@ function TaskCard({ task }: { task: Task }) {
         ? "var(--purple)"
         : "transparent";
 
+  const isDone = task.state === "done";
+
   return (
-    <a
-      href={`/workspaces/${task.id}`}
-      className="block rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] p-3 hover:border-[var(--border)] transition-colors"
-      style={{ borderLeftColor: stateColor, borderLeftWidth: stateColor !== "transparent" ? 2 : undefined }}
+    <Link
+      to={`/workspaces/${task.id}`}
+      className={`block rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] px-3 py-2.5 hover:border-[var(--border)] transition-colors ${
+        isDone ? "opacity-60" : ""
+      }`}
+      style={{
+        borderLeftColor: stateColor,
+        borderLeftWidth: stateColor !== "transparent" ? 2 : undefined,
+      }}
     >
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2">
         <span className="text-[10px] font-mono text-[var(--fg-subtle)]">
           {task.reference_number ?? task.id.slice(0, 8)}
         </span>
+        <span className={`text-sm text-[var(--fg-default)] leading-snug truncate ${isDone ? "line-through" : ""}`}>
+          {task.title}
+        </span>
       </div>
-      <div className="text-sm text-[var(--fg-default)] leading-snug">
-        {task.title}
-      </div>
-      <div className="mt-2 flex items-center gap-2 text-[10px] text-[var(--fg-subtle)]">
+      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-[var(--fg-subtle)]">
         <span className="px-1.5 py-0.5 rounded bg-[var(--bg-canvas)] capitalize">
           {task.priority !== "none" ? task.priority : task.issue_type}
         </span>
       </div>
-    </a>
+    </Link>
   );
 }
 
