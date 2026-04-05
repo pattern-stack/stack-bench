@@ -1,6 +1,8 @@
 import { type FC, type ReactNode } from "react";
 import { ChatCodeBlock } from "@/components/atoms/ChatCodeBlock";
 import { ChatInlineCode } from "@/components/atoms/ChatInlineCode";
+import { ChatChecklist } from "@/components/molecules/ChatChecklist";
+import type { ChecklistItem } from "@/components/molecules/ChatChecklist";
 
 export interface ChatMarkdownProps {
   content: string;
@@ -186,6 +188,21 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
         </h1>
       );
       i++;
+      continue;
+    }
+
+    // Checklist — must be checked before unordered list
+    const checklistPattern = /^\s*(?:[-*+]\s+)?\[(x| )\]\s+/;
+    if (checklistPattern.test(line)) {
+      const items: ChecklistItem[] = [];
+      while (i < lines.length && checklistPattern.test(lines[i])) {
+        const match = lines[i].match(checklistPattern);
+        const checked = match?.[1] === "x";
+        const text = lines[i].replace(checklistPattern, "");
+        items.push({ checked, text });
+        i++;
+      }
+      elements.push(<ChatChecklist key={key++} items={items} />);
       continue;
     }
 
