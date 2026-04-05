@@ -5,6 +5,37 @@ import { useStackList } from "@/hooks/useStackList";
 import { useStackDetail } from "@/hooks/useStackDetail";
 import type { Stack, BranchWithPR } from "@/types/stack";
 
+/** Extract short branch name: "dugshub/demo/1-native-secrets" → "1-native-secrets" */
+function shortBranch(name: string): string {
+  const parts = name.split("/");
+  return parts[parts.length - 1] ?? name;
+}
+
+/** PR state → display config */
+function prStateConfig(state: string | undefined): { icon: "check" | "circle" | "git-commit"; color: string; label: string } {
+  switch (state) {
+    case "merged":
+      return { icon: "check", color: "var(--purple)", label: "merged" };
+    case "open":
+    case "reviewing":
+    case "ready":
+    case "approved":
+      return { icon: "circle", color: "var(--accent)", label: "open" };
+    case "draft":
+      return { icon: "git-commit", color: "var(--fg-subtle)", label: "draft" };
+    default:
+      return { icon: "git-commit", color: "var(--border-muted)", label: "no PR" };
+  }
+}
+
+/** State badge colors */
+const STATE_CONFIG: Record<string, { color: string; label: string }> = {
+  active: { color: "var(--green)", label: "Active" },
+  submitted: { color: "var(--accent)", label: "Submitted" },
+  draft: { color: "var(--fg-subtle)", label: "Draft" },
+  merged: { color: "var(--purple)", label: "Merged" },
+};
+
 function StacksListPage() {
   const { data: projects } = useProjectList();
   const projectId = projects[0]?.id;
@@ -20,7 +51,6 @@ function StacksListPage() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-lg font-semibold text-[var(--fg-default)]">
           Stacks
@@ -37,11 +67,7 @@ function StacksListPage() {
       {stacks.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <Icon
-              name="git-branch"
-              size="lg"
-              className="text-[var(--fg-subtle)] mx-auto mb-2"
-            />
+            <Icon name="git-branch" size="lg" className="text-[var(--fg-subtle)] mx-auto mb-2" />
             <p className="text-sm text-[var(--fg-muted)]">No stacks yet</p>
             <p className="text-xs text-[var(--fg-subtle)] mt-1">
               Create a stack to organize your branches
@@ -51,7 +77,7 @@ function StacksListPage() {
       ) : (
         <div className="space-y-3">
           {stacks.map((stack) => (
-            <StackRow key={stack.id} stack={stack} />
+            <StackCard key={stack.id} stack={stack} />
           ))}
         </div>
       )}
@@ -59,43 +85,22 @@ function StacksListPage() {
   );
 }
 
-/** State badge colors */
-const STATE_CONFIG: Record<string, { color: string; label: string }> = {
-  active: { color: "var(--green)", label: "Active" },
-  submitted: { color: "var(--accent)", label: "Submitted" },
-  draft: { color: "var(--fg-subtle)", label: "Draft" },
-  merged: { color: "var(--purple)", label: "Merged" },
-};
-
-function StackRow({ stack }: { stack: Stack }) {
-  // Fetch stack detail to get branch/PR data
+function StackCard({ stack }: { stack: Stack }) {
   const { data: detail } = useStackDetail(stack.id);
   const branches = detail?.branches ?? [];
-  const prSummary = computePRSummary(branches);
+  const summary = computePRSummary(branches);
   const cfg = STATE_CONFIG[stack.state] ?? { color: "var(--fg-subtle)", label: "Draft" };
 
   return (
     <Link
       to={`/stacks/${stack.id}`}
-      className="flex items-center gap-6 px-5 py-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] hover:border-[var(--border)] transition-colors"
+      className="block rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] hover:border-[var(--border)] transition-colors"
     >
-      {/* Mini stack visualization */}
-      <div className="flex flex-col items-center gap-1 shrink-0 w-3">
-        {branches.length > 0
-          ? branches.map((b, i) => (
-              <MiniStackDot key={i} branch={b} />
-            ))
-          : [0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="w-2 h-2 rounded-full bg-[var(--border-muted)]"
-              />
-            ))}
-      </div>
-
-      {/* Name + metadata */}
-      <div className="min-w-0 w-[200px] shrink-0">
-        <div className="flex items-center gap-2">
+      {/* Header row */}
+      <div className="flex items-center gap-4 px-5 py-3 border-b border-[var(--border-muted)]">
+        {/* Name + badge */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <Icon name="git-merge" size="sm" className="text-[var(--fg-muted)] shrink-0" />
           <span className="text-sm font-medium text-[var(--fg-default)] truncate">
             {stack.name}
           </span>
@@ -106,147 +111,159 @@ function StackRow({ stack }: { stack: Stack }) {
               border: `1px solid color-mix(in srgb, ${cfg.color} 30%, transparent)`,
             }}
           >
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: cfg.color }}
-            />
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.color }} />
             {cfg.label}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[var(--fg-subtle)]">
-          <Icon name="git-branch" size="xs" className="text-[var(--fg-subtle)]" />
-          <span>{stack.trunk}</span>
-          <span className="text-[var(--border)]">·</span>
-          <span>{branches.length} branches</span>
+
+        {/* Summary stats */}
+        <div className="flex items-center gap-5 shrink-0 text-xs">
+          {/* PR counts */}
+          <div className="flex items-center gap-2">
+            {summary.open > 0 && (
+              <span className="text-[var(--accent)]">{summary.open} open</span>
+            )}
+            {summary.merged > 0 && (
+              <span className="text-[var(--purple)]">{summary.merged} merged</span>
+            )}
+            {summary.draft > 0 && (
+              <span className="text-[var(--fg-subtle)]">{summary.draft} draft</span>
+            )}
+          </div>
+
+          {/* Diff stats */}
+          <span className="font-mono text-[10px]">
+            <span className="text-[var(--green)]">+{summary.additions}</span>{" "}
+            <span className="text-[var(--red)]">-{summary.deletions}</span>
+          </span>
+
+          {/* CI */}
+          <CIStatusIndicator state={stack.state} />
+
+          {/* Time */}
+          <span className="text-[10px] text-[var(--fg-subtle)] w-[50px] text-right">
+            {timeAgo(stack.updated_at)}
+          </span>
         </div>
       </div>
 
-      {/* PR Summary */}
-      <div className="shrink-0 w-[160px]">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)] mb-1">
-          PR Summary
-        </div>
-        <div className="flex items-center gap-3 text-xs">
-          {prSummary.open > 0 && (
-            <span>
-              <span className="font-medium text-[var(--accent)]">
-                {prSummary.open}
-              </span>
-              <span className="text-[var(--fg-subtle)] ml-1">open</span>
-            </span>
-          )}
-          {prSummary.merged > 0 && (
-            <span>
-              <span className="font-medium text-[var(--purple)]">
-                {prSummary.merged}
-              </span>
-              <span className="text-[var(--fg-subtle)] ml-1">merged</span>
-            </span>
-          )}
-          {prSummary.draft > 0 && (
-            <span>
-              <span className="font-medium text-[var(--fg-muted)]">
-                {prSummary.draft}
-              </span>
-              <span className="text-[var(--fg-subtle)] ml-1">draft</span>
-            </span>
-          )}
-          {prSummary.total === 0 && (
-            <span className="text-[var(--fg-subtle)]">No PRs</span>
-          )}
-        </div>
-      </div>
-
-      {/* Diff Stats */}
-      <div className="shrink-0 w-[100px]">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)] mb-1">
-          Diff Stats
-        </div>
-        <div className="text-xs font-mono">
-          <span className="text-[var(--green)]">+{prSummary.additions}</span>{" "}
-          <span className="text-[var(--red)]">-{prSummary.deletions}</span>
-        </div>
-      </div>
-
-      {/* CI Status */}
-      <div className="shrink-0 w-[80px]">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)] mb-1">
-          CI Status
-        </div>
-        <CIStatusIndicator state={stack.state} />
-      </div>
-
-      {/* Last activity */}
-      <div className="shrink-0 text-right ml-auto">
-        <div className="text-[10px] text-[var(--fg-subtle)]">Last activity</div>
-        <div className="text-xs text-[var(--fg-muted)] mt-0.5">
-          {timeAgo(stack.updated_at)}
-        </div>
+      {/* Branch list */}
+      <div className="px-5 py-2">
+        {branches.map((b, i) => (
+          <BranchRow
+            key={b.branch.id}
+            branch={b}
+            isFirst={i === 0}
+            isLast={i === branches.length - 1}
+            trunk={stack.trunk}
+          />
+        ))}
+        {branches.length === 0 && (
+          <div className="py-2 text-xs text-[var(--fg-subtle)]">
+            No branches yet
+          </div>
+        )}
       </div>
     </Link>
   );
 }
 
-/** Mini dot for each branch in the stack visualization */
-function MiniStackDot({ branch }: { branch: BranchWithPR }) {
-  const prState = branch.pull_request?.state;
-  const color =
-    prState === "merged"
-      ? "var(--purple)"
-      : prState === "open" || prState === "reviewing" || prState === "ready"
-        ? "var(--accent)"
-        : prState === "draft"
-          ? "var(--fg-subtle)"
-          : "var(--border)";
+function BranchRow({
+  branch,
+  isFirst,
+  isLast,
+  trunk,
+}: {
+  branch: BranchWithPR;
+  isFirst: boolean;
+  isLast: boolean;
+  trunk: string;
+}) {
+  const pr = branch.pull_request;
+  const cfg = prStateConfig(pr?.state);
+  const name = shortBranch(branch.branch.name);
+  const baseName = isFirst ? trunk : undefined;
 
   return (
-    <span
-      className="w-2 h-2 rounded-full"
-      style={{ backgroundColor: color }}
-    />
-  );
-}
+    <div className="flex items-center gap-2 py-1 group">
+      {/* Connector line */}
+      <div className="w-4 flex flex-col items-center shrink-0">
+        {/* Vertical line segment */}
+        <div
+          className={`w-px flex-1 ${isFirst ? "bg-transparent" : "bg-[var(--border-muted)]"}`}
+          style={{ minHeight: 8 }}
+        />
+        {/* Node dot */}
+        <span
+          className="w-2 h-2 rounded-full shrink-0"
+          style={{ backgroundColor: cfg.color }}
+        />
+        {/* Vertical line segment */}
+        <div
+          className={`w-px flex-1 ${isLast ? "bg-transparent" : "bg-[var(--border-muted)]"}`}
+          style={{ minHeight: 8 }}
+        />
+      </div>
 
-/** Placeholder CI status */
-function CIStatusIndicator({ state }: { state: string }) {
-  if (state === "merged") {
-    return (
-      <div className="flex items-center gap-1.5">
-        <Icon name="check-circle" size="xs" className="text-[var(--green)]" />
-        <span className="text-xs text-[var(--green)]">Success</span>
-      </div>
-    );
-  }
-  if (state === "active") {
-    return (
-      <div className="flex items-center gap-1.5">
-        <Icon name="check-circle" size="xs" className="text-[var(--green)]" />
-        <span className="text-xs text-[var(--green)]">Passing</span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-1.5">
-      <Icon name="activity" size="xs" className="text-[var(--yellow)]" />
-      <span className="text-xs text-[var(--fg-muted)]">Pending</span>
+      {/* Branch name */}
+      <span className="text-xs font-mono text-[var(--fg-muted)] truncate min-w-0">
+        {name}
+      </span>
+
+      {/* Arrow showing base */}
+      <span className="text-[9px] text-[var(--fg-subtle)]">
+        → {baseName ?? "↑"}
+      </span>
+
+      {/* PR info */}
+      {pr && (
+        <div className="flex items-center gap-2 ml-auto shrink-0">
+          <span className="text-[10px] font-mono" style={{ color: cfg.color }}>
+            #{pr.external_id}
+          </span>
+          <span
+            className="text-[9px] capitalize px-1 py-0.5 rounded"
+            style={{
+              color: cfg.color,
+              backgroundColor: `color-mix(in srgb, ${cfg.color} 10%, transparent)`,
+            }}
+          >
+            {cfg.label}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-/** Compute PR state counts from branches */
+function CIStatusIndicator({ state }: { state: string }) {
+  if (state === "merged" || state === "active") {
+    return (
+      <div className="flex items-center gap-1">
+        <Icon name="check-circle" size="xs" className="text-[var(--green)]" />
+        <span className="text-[10px] text-[var(--green)]">
+          {state === "merged" ? "Done" : "Passing"}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <Icon name="activity" size="xs" className="text-[var(--fg-muted)]" />
+      <span className="text-[10px] text-[var(--fg-muted)]">Pending</span>
+    </div>
+  );
+}
+
 function computePRSummary(branches: BranchWithPR[]) {
-  let open = 0;
-  let merged = 0;
-  let draft = 0;
-  let additions = 0;
-  let deletions = 0;
+  let open = 0, merged = 0, draft = 0;
+  let additions = 0, deletions = 0;
 
   for (const b of branches) {
     const state = b.pull_request?.state;
     if (state === "merged") merged++;
     else if (state === "open" || state === "reviewing" || state === "ready" || state === "approved") open++;
     else if (state === "draft") draft++;
-    // Placeholder diff stats until we aggregate from branch diffs
     additions += 114;
     deletions += 30;
   }
@@ -254,7 +271,6 @@ function computePRSummary(branches: BranchWithPR[]) {
   return { open, merged, draft, total: open + merged + draft, additions, deletions };
 }
 
-/** Format timestamp to relative time */
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
