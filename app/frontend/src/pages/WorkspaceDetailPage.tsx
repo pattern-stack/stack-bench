@@ -1,7 +1,9 @@
 import { useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useTaskDetail } from "@/hooks/useTaskDetail";
+import { useConversationForEntity } from "@/hooks/useConversationForEntity";
 import { Icon } from "@/components/atoms";
+import { ChatRoom } from "@/components/organisms/ChatRoom/ChatRoom";
 import { ChatMessageRow } from "@/components/molecules/ChatMessageRow";
 import { demoPhases, type DemoPhase } from "@/lib/demo-chat-data";
 import type { AgentPhase } from "@/types/task";
@@ -10,6 +12,7 @@ function WorkspaceDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const { data, loading, error } = useTaskDetail(taskId);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const { conversation } = useConversationForEntity("task", taskId, "execution");
 
   if (loading) {
     return (
@@ -83,48 +86,57 @@ function WorkspaceDetailPage() {
       <div className="flex-1 flex min-h-0">
         {/* Chat area */}
         <div className="flex-[3] flex flex-col min-w-0 border-r border-[var(--border-muted)]">
-          <div className="flex-1 overflow-y-auto">
-            {showDemo ? (
-              <DemoChatStream phases={demoPhases} />
-            ) : agent_runs.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center h-full">
-                <div className="text-center py-20">
-                  <Icon
-                    name="message-square"
-                    size="lg"
-                    className="text-[var(--fg-subtle)] mx-auto mb-2"
+          {conversation ? (
+            <ChatRoom
+              channel={conversation.id}
+              agentName={conversation.agent_name}
+            />
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto">
+                {showDemo ? (
+                  <DemoChatStream phases={demoPhases} />
+                ) : agent_runs.length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center h-full">
+                    <div className="text-center py-20">
+                      <Icon
+                        name="message-square"
+                        size="lg"
+                        className="text-[var(--fg-subtle)] mx-auto mb-2"
+                      />
+                      <p className="text-sm text-[var(--fg-muted)]">
+                        No agent activity yet
+                      </p>
+                      <p className="text-xs text-[var(--fg-subtle)] mt-1">
+                        Start a job to see agent chat here
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-4">
+                    {agent_runs.map((phase) => (
+                      <PhaseSection key={phase.id} phase={phase} />
+                    ))}
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Chat input (demo/fallback mode) */}
+              <div className="px-4 py-3 border-t border-[var(--border-muted)]">
+                <div className="flex items-center gap-2 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-muted)] px-3 py-2">
+                  <input
+                    type="text"
+                    placeholder="Ask the agent..."
+                    className="flex-1 bg-transparent text-sm text-[var(--fg-default)] placeholder:text-[var(--fg-subtle)] outline-none"
                   />
-                  <p className="text-sm text-[var(--fg-muted)]">
-                    No agent activity yet
-                  </p>
-                  <p className="text-xs text-[var(--fg-subtle)] mt-1">
-                    Start a job to see agent chat here
-                  </p>
+                  <button className="text-[var(--accent)] hover:text-[var(--fg-default)] transition-colors">
+                    <Icon name="send" size="sm" />
+                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="p-4 space-y-4">
-                {agent_runs.map((phase) => (
-                  <PhaseSection key={phase.id} phase={phase} />
-                ))}
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Chat input */}
-          <div className="px-4 py-3 border-t border-[var(--border-muted)]">
-            <div className="flex items-center gap-2 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-muted)] px-3 py-2">
-              <input
-                type="text"
-                placeholder="Ask the agent..."
-                className="flex-1 bg-transparent text-sm text-[var(--fg-default)] placeholder:text-[var(--fg-subtle)] outline-none"
-              />
-              <button className="text-[var(--accent)] hover:text-[var(--fg-default)] transition-colors">
-                <Icon name="send" size="sm" />
-              </button>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
         {/* Changes panel */}
