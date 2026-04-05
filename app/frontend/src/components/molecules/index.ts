@@ -60,3 +60,21 @@ export type { MergeQueueListProps } from "./MergeQueueList";
 
 export { CascadeProgressBar } from "./CascadeProgressBar";
 export type { CascadeProgressBarProps } from "./CascadeProgressBar";
+
+export { ChatMarkdown } from "./ChatMarkdown";
+export type { ChatMarkdownProps } from "./ChatMarkdown";
+
+export { ChatMessageGroup } from "./ChatMessageGroup";
+export type { ChatMessageGroupProps } from "./ChatMessageGroup";
+
+export { SlashCommandAutocomplete, DEFAULT_COMMANDS } from "./SlashCommandAutocomplete";
+export type {
+  SlashCommand,
+  SlashCommandAutocompleteProps,
+} from "./SlashCommandAutocomplete";
+
+export { MessagePartDispatcher } from "./MessagePartDispatcher";
+export type { MessagePartDispatcherProps } from "./MessagePartDispatcher";
+
+export { ChatMessageRow } from "./ChatMessageRow";
+export type { ChatMessageRowProps } from "./ChatMessageRow";
