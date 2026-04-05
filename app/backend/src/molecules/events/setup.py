@@ -35,6 +35,9 @@ ALL_TOPICS = [
     topics.REVIEW_COMMENT_UPDATED,
     topics.MERGE_CASCADE_STARTED,
     topics.MERGE_CASCADE_STEP_COMPLETED,
+    topics.STACK_PUSHED,
+    topics.STACK_SUBMITTED,
+    topics.STACK_MARKED_READY,
 ]
 
 

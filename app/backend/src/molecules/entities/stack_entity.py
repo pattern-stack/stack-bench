@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from features.branches.models import Branch
     from features.pull_requests.models import PullRequest
     from features.stacks.models import Stack
+    from molecules.providers.github_adapter import GitHubAdapter
 
 
 class StackEntity:
@@ -342,6 +343,240 @@ class StackEntity:
             "branches": branch_results,
             "synced_count": synced_count,
             "created_count": created_count,
+        }
+
+    # --- Workflow operations (push / submit / ready) ---
+
+    async def push_stack(
+        self,
+        stack_id: UUID,
+        workspace_id: UUID,
+        branches_data: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Push: sync branch data from client and transition to pushed state.
+
+        Each entry in branches_data:
+          - name: str (git branch name)
+          - position: int
+          - head_sha: str (current HEAD)
+          - pr_number: int | None (existing GitHub PR, if any)
+          - pr_url: str | None
+
+        State transitions:
+          - Branch: created -> pushed (first push)
+          - Branch: pushed stays pushed (subsequent pushes update head_sha)
+          - Stack: draft -> active (first push with any branch)
+        """
+        result = await self.sync_stack(stack_id, workspace_id, branches_data)
+
+        # Transition branches to pushed state
+        for br in result["branches"]:
+            branch = br["branch"]
+            if branch.state == "created":
+                branch.transition_to("pushed")
+
+        # Transition stack to active on first push
+        stack = await self.get_stack(stack_id)
+        if stack.state == "draft":
+            stack.transition_to("active")
+
+        return result
+
+    async def submit_stack(
+        self,
+        stack_id: UUID,
+        github: GitHubAdapter,
+    ) -> dict[str, Any]:
+        """Submit: create GitHub draft PRs for pushed branches without PRs.
+
+        For each branch in the stack (ordered by position):
+          1. Skip if branch already has a PR with external_id
+          2. Resolve owner/repo from workspace
+          3. Determine base branch (previous branch name, or trunk for position 1)
+          4. Create draft PR via GitHub API
+          5. Create/update PullRequest record with external_id and external_url
+          6. Transition branch: pushed -> reviewing
+
+        State transitions:
+          - Branch: pushed -> reviewing
+          - Stack: active -> submitted (when all branches have PRs)
+        """
+        data = await self.get_stack_with_branches(stack_id)
+        stack = data["stack"]
+        branch_list = data["branches"]
+        results: list[dict[str, Any]] = []
+
+        for i, bd in enumerate(branch_list):
+            branch = bd["branch"]
+            pr = bd.get("pull_request")
+
+            # Skip branches that already have GitHub PRs
+            if pr is not None and pr.external_id is not None:
+                results.append(
+                    {
+                        "branch": branch.name,
+                        "action": "skipped",
+                        "pr_number": pr.external_id,
+                    }
+                )
+                continue
+
+            # Skip branches not yet pushed
+            if branch.state == "created":
+                results.append(
+                    {
+                        "branch": branch.name,
+                        "action": "skipped",
+                        "reason": "not_pushed",
+                    }
+                )
+                continue
+
+            # Resolve repo context
+            workspace = await self.workspace_service.get(self.db, branch.workspace_id)
+            if workspace is None:
+                continue
+            owner, repo = parse_owner_repo(workspace.repo_url)
+
+            # Determine base branch
+            if branch.position == 1:
+                base = stack.trunk
+            else:
+                prev_branch = branch_list[i - 1]["branch"]
+                base = prev_branch.name
+
+            # Create draft PR on GitHub
+            gh_pr = await github.create_pull_request(
+                owner,
+                repo,
+                title=branch.name,
+                head=branch.name,
+                base=base,
+                body=pr.description if pr else None,
+                draft=True,
+            )
+
+            pr_number = int(str(gh_pr["number"]))
+            pr_url = str(gh_pr["html_url"])
+
+            # Create or update PullRequest record
+            if pr is None:
+                pr = await self.pr_service.create(
+                    self.db,
+                    PullRequestCreate(
+                        branch_id=branch.id,
+                        title=branch.name,
+                        external_id=pr_number,
+                        external_url=pr_url,
+                    ),
+                )
+            else:
+                pr = await self.pr_service.update(
+                    self.db,
+                    pr.id,
+                    PullRequestUpdate(
+                        external_id=pr_number,
+                        external_url=pr_url,
+                    ),
+                )
+
+            # Transition branch state
+            if branch.state == "pushed":
+                branch.transition_to("reviewing")
+
+            results.append(
+                {
+                    "branch": branch.name,
+                    "action": "created",
+                    "pr_number": pr_number,
+                    "pr_url": pr_url,
+                }
+            )
+
+        # Transition stack state if all branches submitted
+        all_submitted = all(
+            bd.get("pull_request") is not None
+            and (
+                bd["pull_request"].external_id is not None
+                or any(r.get("branch") == bd["branch"].name and r.get("action") == "created" for r in results)
+            )
+            for bd in branch_list
+            if bd["branch"].state != "created"
+        )
+        if all_submitted and stack.state == "active":
+            stack.transition_to("submitted")
+
+        return {
+            "stack_id": str(stack_id),
+            "results": results,
+        }
+
+    async def ready_stack(
+        self,
+        stack_id: UUID,
+        github: GitHubAdapter,
+        *,
+        branch_ids: list[UUID] | None = None,
+    ) -> dict[str, Any]:
+        """Ready: mark draft PRs as ready for review on GitHub.
+
+        If branch_ids is provided, only those branches are marked ready.
+        Otherwise, all draft PRs in the stack are marked.
+
+        State transitions:
+          - PR: draft -> open
+          - Branch: reviewing -> ready
+        """
+        data = await self.get_stack_with_branches(stack_id)
+        results: list[dict[str, Any]] = []
+
+        for bd in data["branches"]:
+            branch = bd["branch"]
+            pr = bd.get("pull_request")
+
+            # Filter to requested branches if specified
+            if branch_ids and branch.id not in branch_ids:
+                continue
+
+            if pr is None or pr.external_id is None:
+                continue
+
+            # Only mark draft PRs ready
+            if pr.state != "draft":
+                results.append(
+                    {
+                        "branch": branch.name,
+                        "action": "skipped",
+                        "reason": f"pr_state={pr.state}",
+                    }
+                )
+                continue
+
+            # Resolve repo context
+            workspace = await self.workspace_service.get(self.db, branch.workspace_id)
+            if workspace is None:
+                continue
+            owner, repo = parse_owner_repo(workspace.repo_url)
+
+            # Mark ready on GitHub
+            await github.mark_pr_ready(owner, repo, pr.external_id)
+
+            # Transition states
+            pr.transition_to("open")
+            if branch.state == "reviewing":
+                branch.transition_to("ready")
+
+            results.append(
+                {
+                    "branch": branch.name,
+                    "action": "marked_ready",
+                    "pr_number": pr.external_id,
+                }
+            )
+
+        return {
+            "stack_id": str(stack_id),
+            "results": results,
         }
 
     # --- DAG validation ---

@@ -608,3 +608,150 @@ class TestDTOSerialization:
         d = fc.model_dump()
         assert d["language"] == "python"
         assert d["truncated"] is False
+
+
+# ---------------------------------------------------------------------------
+# Write operations: create_pull_request, update_pull_request, mark_pr_ready
+# ---------------------------------------------------------------------------
+
+
+class TestGitHubAdapterCreatePullRequest:
+    @pytest.mark.unit
+    async def test_sends_correct_payload(self) -> None:
+        """Verify POST to /repos/{owner}/{repo}/pulls with draft=True."""
+        captured_body: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            import json as _json
+
+            captured_body.update(_json.loads(request.content))
+            return _make_response({"number": 42, "html_url": "https://github.com/o/r/pull/42", "state": "open"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.create_pull_request("o", "r", title="My PR", head="feature", base="main", draft=True)
+
+        assert captured_body["title"] == "My PR"
+        assert captured_body["head"] == "feature"
+        assert captured_body["base"] == "main"
+        assert captured_body["draft"] is True
+        assert result["number"] == 42
+        assert result["html_url"] == "https://github.com/o/r/pull/42"
+
+    @pytest.mark.unit
+    async def test_includes_body_when_provided(self) -> None:
+        captured_body: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            import json as _json
+
+            captured_body.update(_json.loads(request.content))
+            return _make_response({"number": 1, "html_url": "url", "state": "open"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        await adapter.create_pull_request("o", "r", title="T", head="h", base="b", body="Description here")
+
+        assert captured_body["body"] == "Description here"
+
+    @pytest.mark.unit
+    async def test_omits_body_when_none(self) -> None:
+        captured_body: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            import json as _json
+
+            captured_body.update(_json.loads(request.content))
+            return _make_response({"number": 1, "html_url": "url", "state": "open"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        await adapter.create_pull_request("o", "r", title="T", head="h", base="b")
+
+        assert "body" not in captured_body
+
+    @pytest.mark.unit
+    async def test_raises_on_error(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=422, json={"message": "Validation Failed"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubAPIError):
+            await adapter.create_pull_request("o", "r", title="T", head="h", base="b")
+
+
+class TestGitHubAdapterUpdatePullRequest:
+    @pytest.mark.unit
+    async def test_sends_patch_with_base(self) -> None:
+        captured: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            import json as _json
+
+            captured["method"] = request.method
+            captured["body"] = _json.loads(request.content)
+            return _make_response({"number": 10, "html_url": "url"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        result = await adapter.update_pull_request("o", "r", 10, base="new-base")
+
+        assert captured["method"] == "PATCH"
+        assert captured["body"]["base"] == "new-base"
+        assert result["number"] == 10
+
+    @pytest.mark.unit
+    async def test_sends_title_and_body(self) -> None:
+        captured_body: dict[str, object] = {}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            import json as _json
+
+            captured_body.update(_json.loads(request.content))
+            return _make_response({"number": 10, "html_url": "url"})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        await adapter.update_pull_request("o", "r", 10, title="New Title", body="New Body")
+
+        assert captured_body["title"] == "New Title"
+        assert captured_body["body"] == "New Body"
+
+
+class TestGitHubAdapterMarkPrReady:
+    @pytest.mark.unit
+    async def test_uses_graphql_mutation(self) -> None:
+        """Verify mark_pr_ready uses GraphQL, not REST PATCH with draft=false."""
+        requests_made: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests_made.append(request)
+            url_path = str(request.url.path) if hasattr(request.url, "path") else str(request.url)
+
+            # REST GET for node_id
+            if request.method == "GET" and "/pulls/" in url_path:
+                return _make_response({"node_id": "PR_node123", "number": 42})
+
+            # GraphQL mutation
+            if "graphql" in str(request.url):
+                return _make_response(
+                    {"data": {"markPullRequestReadyForReview": {"pullRequest": {"id": "PR_node123"}}}}
+                )
+
+            return httpx.Response(status_code=404, json={})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        await adapter.mark_pr_ready("o", "r", 42)
+
+        # Should have made exactly 2 requests: GET (node_id) + POST (GraphQL)
+        assert len(requests_made) == 2
+        assert requests_made[0].method == "GET"
+        assert requests_made[1].method == "POST"
+        assert "graphql" in str(requests_made[1].url)
+
+    @pytest.mark.unit
+    async def test_raises_on_graphql_error(self) -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return _make_response({"node_id": "PR_node123"})
+            # GraphQL error response
+            return _make_response({"errors": [{"message": "Insufficient permissions"}]})
+
+        adapter = _make_adapter(httpx.MockTransport(handler))
+        with pytest.raises(GitHubAPIError, match="GraphQL"):
+            await adapter.mark_pr_ready("o", "r", 42)

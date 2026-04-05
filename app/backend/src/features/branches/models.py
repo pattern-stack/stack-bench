@@ -15,9 +15,9 @@ class Branch(EventPattern):
         initial_state = "created"
         states = {
             "created": ["pushed"],
-            "pushed": ["reviewing"],
-            "reviewing": ["ready"],
-            "ready": ["submitted"],
+            "pushed": ["reviewing", "merged"],
+            "reviewing": ["ready", "merged"],
+            "ready": ["submitted", "merged"],
             "submitted": ["merged"],
             "merged": [],
         }
