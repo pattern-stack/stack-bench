@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pattern_stack.atoms.patterns import EventPattern, Field, StatePhase
+from pattern_stack.atoms.patterns import EventPattern, Field, RelationalPattern, StatePhase
 
 
 class Conversation(EventPattern):
@@ -36,3 +36,19 @@ class Conversation(EventPattern):
     project_id = Field(UUID, foreign_key="projects.id", nullable=True, index=True)
     branched_from_id = Field(UUID, foreign_key="conversations.id", nullable=True, index=True)
     branched_at_sequence = Field(int, nullable=True)
+    conversation_type = Field(
+        str,
+        default="execution",
+        choices=["planning", "execution", "review"],
+        max_length=20,
+        index=True,
+    )
+
+
+class ConversationLink(RelationalPattern):
+    __tablename__ = "conversation_links"
+
+    class Pattern:
+        entity = "conversation_link"
+        reference_prefix = "CL"
+        track_changes = True

@@ -10,6 +10,9 @@ from typing import TYPE_CHECKING, Any
 
 from features.agent_runs.schemas.output import AgentRunResponse
 from features.agent_runs.service import AgentRunService
+from features.conversations.link_service import ConversationLinkService
+from features.conversations.schemas.input import ConversationCreate
+from features.conversations.service import ConversationService
 from features.jobs.schemas.output import JobResponse
 from features.jobs.service import JobService
 from features.tasks.schemas.output import TaskResponse
@@ -20,6 +23,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from features.jobs.schemas.input import JobCreate
     from features.tasks.schemas.input import TaskCreate, TaskUpdate
 
 
@@ -35,6 +39,8 @@ class TaskAPI:
         self._task_svc = TaskService()
         self._job_svc = JobService()
         self._agent_run_svc = AgentRunService()
+        self._conv_svc = ConversationService()
+        self._link_svc = ConversationLinkService()
 
     async def create_task(self, data: TaskCreate) -> TaskResponse:
         """Create a new task."""
@@ -148,3 +154,52 @@ class TaskAPI:
             "job": JobResponse.model_validate(job).model_dump(),
             "agent_runs": [r.model_dump() for r in agent_runs],
         }
+
+
+    async def create_job_for_task(
+        self, task_id: UUID, data: JobCreate
+    ) -> tuple[JobResponse, UUID]:
+        """Create a job for a task and auto-link an execution conversation.
+
+        Returns the job response and the conversation ID.
+        """
+        task = await self._task_svc.get(self.db, task_id)
+        if task is None:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        # Create the job
+        job = await self._job_svc.create(self.db, data)
+
+        # Create an execution conversation
+        conv = await self._conv_svc.create(
+            self.db,
+            ConversationCreate(
+                agent_name="orchestrator",
+                conversation_type="execution",
+                project_id=task.project_id,
+            ),
+        )
+
+        # Link conversation to task
+        await self._link_svc.link_conversation(
+            self.db,
+            conversation_id=conv.id,
+            entity_type="task",
+            entity_id=task_id,
+            relationship_type="execution",
+        )
+
+        # Link conversation to job
+        await self._link_svc.link_conversation(
+            self.db,
+            conversation_id=conv.id,
+            entity_type="job",
+            entity_id=job.id,
+            relationship_type="execution",
+        )
+
+        await self.db.commit()
+        await self.db.refresh(job)
+        return JobResponse.model_validate(job), conv.id

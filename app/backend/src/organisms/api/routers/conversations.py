@@ -47,6 +47,21 @@ async def list_conversations(
     )
 
 
+@router.get("/by-entity", response_model=ConversationResponse | None)
+async def get_conversation_by_entity(
+    api: ConversationAPIDep,
+    entity_type: str = Query(..., min_length=1),
+    entity_id: UUID = Query(...),
+    role: str = Query(..., min_length=1),
+) -> ConversationResponse | None:
+    """Get the active conversation linked to an entity with a specific role."""
+    return await api.get_by_entity(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        role=role,
+    )
+
+
 @router.get("/{conversation_id}", response_model=ConversationDetailResponse)
 async def get_conversation(
     conversation_id: UUID,

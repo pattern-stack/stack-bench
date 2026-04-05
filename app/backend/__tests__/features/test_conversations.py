@@ -155,3 +155,36 @@ def test_conversation_create_without_project_id() -> None:
     """Verify create schema works without project_id."""
     data = ConversationCreate(agent_name="test")
     assert data.project_id is None
+
+
+@pytest.mark.unit
+def test_conversation_has_conversation_type() -> None:
+    """Verify conversation model has conversation_type field."""
+    assert hasattr(Conversation, "conversation_type")
+
+
+@pytest.mark.unit
+def test_conversation_type_default() -> None:
+    """Verify conversation_type can be set on construction."""
+    conv = Conversation(conversation_type="planning")
+    assert conv.conversation_type == "planning"
+
+
+@pytest.mark.unit
+def test_conversation_create_with_conversation_type() -> None:
+    """Verify create schema accepts conversation_type."""
+    data = ConversationCreate(agent_name="test", conversation_type="planning")
+    assert data.conversation_type == "planning"
+
+
+@pytest.mark.unit
+def test_conversation_create_without_conversation_type() -> None:
+    """Verify create schema works without conversation_type."""
+    data = ConversationCreate(agent_name="test")
+    assert data.conversation_type is None
+
+
+@pytest.mark.unit
+def test_conversation_response_has_conversation_type() -> None:
+    """Verify response schema includes conversation_type."""
+    assert "conversation_type" in ConversationResponse.model_fields

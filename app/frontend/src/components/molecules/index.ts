@@ -64,6 +64,9 @@ export type { CascadeProgressBarProps } from "./CascadeProgressBar";
 export { ChatMarkdown } from "./ChatMarkdown";
 export type { ChatMarkdownProps } from "./ChatMarkdown";
 
+export { ChatChecklist } from "./ChatChecklist";
+export type { ChatChecklistProps, ChecklistItem } from "./ChatChecklist";
+
 export { ChatMessageGroup } from "./ChatMessageGroup";
 export type { ChatMessageGroupProps } from "./ChatMessageGroup";
 
