@@ -31,56 +31,20 @@ const ChatCodeBlock: FC<ChatCodeBlockProps> = ({
   const lines = code.split("\n");
 
   return (
-    <div
-      style={{
-        borderLeft: "3px solid var(--chat-tool)",
-        background: "var(--chat-bg-message)",
-        borderRadius: "4px",
-        margin: "8px 0",
-        position: "relative",
-        fontFamily: "var(--font-mono)",
-        fontSize: "13px",
-        lineHeight: "1.5",
-      }}
-    >
+    <div className="border-l-[length:var(--chat-tool-border-width)] border-l-[var(--chat-tool)] bg-[var(--chat-bg-message)] rounded-[var(--chat-radius)] my-[var(--chat-gap-sm)] relative font-[family-name:var(--font-mono)] text-[length:var(--chat-font-sm)] leading-[1.5]">
       {language && (
-        <span
-          style={{
-            position: "absolute",
-            top: "6px",
-            right: "10px",
-            fontSize: "11px",
-            color: "var(--chat-text-tertiary)",
-            userSelect: "none",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-          }}
-        >
+        <span className="absolute top-[var(--chat-tool-py)] right-[var(--chat-tool-px)] text-[length:var(--chat-font-xs)] text-[var(--chat-text-tertiary)] select-none uppercase tracking-[0.5px]">
           {language}
         </span>
       )}
-      <pre
-        style={{
-          margin: 0,
-          padding: "12px 16px",
-          overflowX: "auto",
-          color: "var(--chat-text-primary)",
-        }}
-      >
+      <pre className="m-0 px-[var(--chat-gap-lg)] py-[var(--chat-gap-md)] overflow-x-auto text-[var(--chat-text-primary)]">
         <code>
           {lines.map((line, i) => (
-            <div key={i} style={{ display: "flex" }}>
+            <div key={i} className="flex">
               {showLineNumbers && (
                 <span
-                  style={{
-                    display: "inline-block",
-                    width: `${String(lines.length).length + 1}ch`,
-                    textAlign: "right",
-                    marginRight: "16px",
-                    color: "var(--chat-text-quaternary)",
-                    userSelect: "none",
-                    flexShrink: 0,
-                  }}
+                  className="inline-block text-right mr-[var(--chat-gap-lg)] text-[var(--chat-text-quaternary)] select-none shrink-0"
+                  style={{ width: `${String(lines.length).length + 1}ch` }}
                 >
                   {i + 1}
                 </span>

@@ -21,14 +21,7 @@ const ChatThinkingBlock: FC<ChatThinkingBlockProps> = ({
   const label = isStreaming ? "thinking..." : "thought";
 
   return (
-    <div
-      style={{
-        color: "var(--chat-text-tertiary)",
-        opacity: 0.75,
-        fontSize: 13,
-        fontFamily: "var(--font-sans)",
-      }}
-    >
+    <div className="text-[var(--chat-text-tertiary)] opacity-75 text-[length:var(--chat-font-sm)] font-[family-name:var(--font-sans)]">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
@@ -37,16 +30,15 @@ const ChatThinkingBlock: FC<ChatThinkingBlockProps> = ({
           cursor: "pointer",
           display: "inline-flex",
           alignItems: "center",
-          gap: 6,
+          gap: "var(--chat-gap-xs)",
           color: "var(--chat-text-tertiary)",
           fontStyle: "italic",
-          fontSize: 13,
+          fontSize: "var(--chat-font-sm)",
         }}
       >
         <span
+          className="inline-block transition-transform duration-[120ms] ease-in-out"
           style={{
-            display: "inline-block",
-            transition: "transform 120ms ease",
             transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
           }}
         >
@@ -54,25 +46,12 @@ const ChatThinkingBlock: FC<ChatThinkingBlockProps> = ({
         </span>
         <span>{label}</span>
         {!expanded && (
-          <span style={{ opacity: 0.6, fontStyle: "normal" }}>{preview}</span>
+          <span className="opacity-60 not-italic">{preview}</span>
         )}
       </button>
 
       {expanded && (
-        <div
-          style={{
-            marginTop: 6,
-            padding: "8px 12px",
-            background: "var(--chat-bg-message)",
-            border: "1px solid var(--chat-border)",
-            borderRadius: 6,
-            whiteSpace: "pre-wrap",
-            fontFamily: "var(--font-sans)",
-            fontSize: 13,
-            lineHeight: 1.5,
-            color: "var(--chat-text-tertiary)",
-          }}
-        >
+        <div className="mt-[var(--chat-tool-py)] px-[var(--chat-gap-md)] py-[var(--chat-gap-sm)] bg-[var(--chat-bg-message)] border border-[var(--chat-border)] rounded-[var(--chat-radius)] whitespace-pre-wrap font-[family-name:var(--font-sans)] text-[length:var(--chat-font-sm)] leading-[1.5] text-[var(--chat-text-tertiary)]">
           {content}
         </div>
       )}

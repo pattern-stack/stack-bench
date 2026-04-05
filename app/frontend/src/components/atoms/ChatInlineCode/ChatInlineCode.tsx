@@ -6,14 +6,7 @@ interface ChatInlineCodeProps {
 
 function ChatInlineCode({ children }: ChatInlineCodeProps) {
   return (
-    <code
-      className="inline rounded-[3px] px-1.5 py-0.5 text-[0.9em] leading-none"
-      style={{
-        fontFamily: "var(--font-mono)",
-        backgroundColor: "var(--chat-bg-message)",
-        color: "var(--chat-tool)",
-      }}
-    >
+    <code className="inline rounded-[3px] px-1.5 py-0.5 text-[0.9em] leading-none font-[family-name:var(--font-mono)] bg-[var(--chat-bg-message)] text-[var(--chat-tool)]">
       {children}
     </code>
   );
