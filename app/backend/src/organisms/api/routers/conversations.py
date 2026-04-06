@@ -126,7 +126,7 @@ async def _broadcast_sse_chunk(
     except json.JSONDecodeError:
         data = {"raw": data_str}
 
-    await broadcast.broadcast(  # type: ignore[union-attr]
+    await broadcast.broadcast(  # type: ignore[attr-defined]
         f"conversation:{conversation_id}",
         event_type,
         data,

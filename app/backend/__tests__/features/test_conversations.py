@@ -135,7 +135,6 @@ def test_conversation_service_model() -> None:
     assert service.model is Conversation
 
 
-
 @pytest.mark.unit
 def test_conversation_has_conversation_type() -> None:
     """Verify conversation model has conversation_type field."""

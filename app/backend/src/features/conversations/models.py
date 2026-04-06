@@ -70,16 +70,16 @@ class ConversationContext(RelationalPattern):
 
     @property
     def conversation_id(self) -> UUID:
-        return self.entity_a_id  # type: ignore[return-value]
+        return self.entity_a_id
 
     @property
     def entity_type(self) -> str:
-        return self.entity_b_type  # type: ignore[return-value]
+        return self.entity_b_type
 
     @property
     def entity_id(self) -> UUID:
-        return self.entity_b_id  # type: ignore[return-value]
+        return self.entity_b_id
 
     @property
     def role(self) -> str:
-        return self.relationship_type  # type: ignore[return-value]
+        return self.relationship_type

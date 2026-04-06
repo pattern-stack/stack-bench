@@ -40,6 +40,9 @@ async def execute_job_conversation(
     # Load the job for its input_text
     job_svc = JobService()
     job = await job_svc.get(db, job_id)
+    if job is None:
+        logger.warning("Job %s not found", job_id)
+        return
     prompt = job.input_text or f"Execute job {job.reference_number}"
 
     # Run through ConversationRunner (drain the stream — events are broadcast)
