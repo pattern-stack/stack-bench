@@ -15,22 +15,9 @@ const ChatStatusBlock: FC<ChatStatusBlockProps> = ({
   count,
   isActive = false,
 }) => (
-  <span
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 8,
-    }}
-  >
+  <span className="inline-flex items-center gap-[var(--chat-gap-sm)]">
     {isActive && <ChatSpinner size="sm" />}
-    <span
-      style={{
-        color: "var(--chat-text-primary)",
-        fontFamily: "var(--font-sans)",
-        fontSize: 13,
-        fontWeight: 500,
-      }}
-    >
+    <span className="text-[var(--chat-text-primary)] font-[family-name:var(--font-sans)] text-[length:var(--chat-font-sm)] font-medium">
       {label}
     </span>
     {elapsed && <Badge size="sm">{elapsed}</Badge>}

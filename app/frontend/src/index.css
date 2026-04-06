@@ -81,6 +81,29 @@
   --chat-bg: var(--bg-canvas);           /* Chat area background */
   --chat-bg-message: var(--bg-surface);  /* Message row background */
   --chat-border: var(--border-muted);    /* Chat borders */
+
+  /* Spacing — consistent gaps and indents */
+  --chat-gap-xs: 4px;                    /* Tight gaps (label→body) */
+  --chat-gap-sm: 8px;                    /* Standard gaps (between parts, label→timestamp) */
+  --chat-gap-md: 12px;                   /* Medium gaps (between messages) */
+  --chat-gap-lg: 16px;                   /* Large gaps (between groups) */
+  --chat-body-indent: 8px;              /* Message body left indent */
+  --chat-label-width: 48px;             /* Min-width for role labels */
+  --chat-tool-border-width: 3px;        /* Tool call left border */
+
+  /* Typography — font sizes */
+  --chat-font-xs: 11px;                 /* Timestamps, metadata */
+  --chat-font-sm: 13px;                 /* Role labels, tool names, code */
+  --chat-font-base: 14px;              /* Message body text */
+
+  /* Radii */
+  --chat-radius: 4px;                   /* Tool blocks, code blocks */
+  --chat-radius-lg: 8px;               /* Input, larger containers */
+
+  /* Sizing */
+  --chat-input-py: 10px;               /* Input field vertical padding */
+  --chat-tool-py: 6px;                 /* Tool call header padding */
+  --chat-tool-px: 10px;               /* Tool call horizontal padding */
 }
 
 /* ── Animations ───────────────────────────────────────────── */

@@ -13,6 +13,7 @@ from config.settings import get_settings
 from molecules.apis.conversation_api import ConversationAPI
 from molecules.apis.github_oauth_api import GitHubOAuthAPI
 from molecules.apis.stack_api import StackAPI
+from molecules.apis.task_api import TaskAPI
 from molecules.providers.github_adapter import GitHubAdapter
 from molecules.runtime.conversation_runner import ConversationRunner
 from molecules.services.clone_manager import CloneManager
@@ -174,3 +175,10 @@ def get_workspace_manager(db: DatabaseSession, gcp_client: GCPClientDep) -> Work
 
 
 WorkspaceManagerDep = Annotated[WorkspaceManager, Depends(get_workspace_manager)]
+
+
+def get_task_api(db: DatabaseSession) -> TaskAPI:
+    return TaskAPI(db)
+
+
+TaskAPIDep = Annotated[TaskAPI, Depends(get_task_api)]

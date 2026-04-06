@@ -29,12 +29,7 @@ function ChatTimestamp({ timestamp }: ChatTimestampProps) {
     <time
       dateTime={date.toISOString()}
       title={date.toLocaleString()}
-      style={{
-        color: "var(--chat-text-tertiary)",
-        fontSize: "0.75rem",
-        fontFamily: "var(--font-sans)",
-        whiteSpace: "nowrap",
-      }}
+      className="text-[var(--chat-text-tertiary)] text-[length:var(--chat-font-xs)] font-[family-name:var(--font-sans)] whitespace-nowrap"
     >
       {formatRelativeTime(timestamp)}
     </time>

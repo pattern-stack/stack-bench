@@ -25,24 +25,11 @@ function ChatMessageGroup({
   return (
     <div>
       {showDateSeparator && <ChatSeparator label={dateSeparatorLabel} />}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 8,
-          marginBottom: 4,
-        }}
-      >
+      <div className="flex items-baseline gap-[var(--chat-gap-sm)] mb-[var(--chat-gap-xs)]">
         <ChatRoleIndicator role={role} agentName={agentName} />
         <ChatTimestamp timestamp={timestamp} />
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-        }}
-      >
+      <div className="flex flex-col gap-[var(--chat-gap-xs)]">
         {children}
       </div>
     </div>

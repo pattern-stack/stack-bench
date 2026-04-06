@@ -109,16 +109,7 @@ function parseInline(text: string): ReactNode[] {
             href={linkMatch[2]}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              color: "var(--chat-agent)",
-              textDecoration: "none",
-            }}
-            onMouseEnter={(e) => {
-              (e.target as HTMLAnchorElement).style.textDecoration = "underline";
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLAnchorElement).style.textDecoration = "none";
-            }}
+            className="text-[var(--chat-agent)] no-underline hover:underline"
           >
             {linkMatch[1]}
           </a>
@@ -161,13 +152,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <h3
           key={key++}
-          style={{
-            fontSize: "1.1em",
-            fontWeight: "bold",
-            color: "var(--chat-text-secondary)",
-            margin: "0.6em 0 0.3em",
-            fontFamily: "var(--font-sans)",
-          }}
+          className="text-[1.1em] font-bold text-[var(--chat-text-secondary)] my-[0.3em] mt-[0.6em] font-[family-name:var(--font-sans)]"
         >
           {parseInline(h3Match[1])}
         </h3>
@@ -181,13 +166,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <h2
           key={key++}
-          style={{
-            fontSize: "1.2em",
-            fontWeight: "bold",
-            color: "var(--chat-text-primary)",
-            margin: "0.6em 0 0.3em",
-            fontFamily: "var(--font-sans)",
-          }}
+          className="text-[1.2em] font-bold text-[var(--chat-text-primary)] my-[0.3em] mt-[0.6em] font-[family-name:var(--font-sans)]"
         >
           {parseInline(h2Match[1])}
         </h2>
@@ -201,13 +180,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <h1
           key={key++}
-          style={{
-            fontSize: "1.4em",
-            fontWeight: "bold",
-            color: "var(--chat-text-primary)",
-            margin: "0.6em 0 0.3em",
-            fontFamily: "var(--font-sans)",
-          }}
+          className="text-[1.4em] font-bold text-[var(--chat-text-primary)] my-[0.3em] mt-[0.6em] font-[family-name:var(--font-sans)]"
         >
           {parseInline(h1Match[1])}
         </h1>
@@ -227,11 +200,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <ul
           key={key++}
-          style={{
-            margin: "0.5em 0",
-            paddingLeft: "1.5em",
-            fontFamily: "var(--font-sans)",
-          }}
+          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)]"
         >
           {items}
         </ul>
@@ -250,11 +219,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <ol
           key={key++}
-          style={{
-            margin: "0.5em 0",
-            paddingLeft: "1.5em",
-            fontFamily: "var(--font-sans)",
-          }}
+          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)]"
         >
           {items}
         </ol>
@@ -278,10 +243,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <p
           key={key++}
-          style={{
-            margin: "0.5em 0",
-            fontFamily: "var(--font-sans)",
-          }}
+          className="my-[0.5em] font-[family-name:var(--font-sans)]"
         >
           {parseInline(paraLines.join(" "))}
         </p>
@@ -315,13 +277,7 @@ const ChatMarkdown: FC<ChatMarkdownProps> = ({ content }) => {
   }
 
   return (
-    <div
-      style={{
-        lineHeight: 1.6,
-        color: "var(--chat-text-primary)",
-        fontFamily: "var(--font-sans)",
-      }}
-    >
+    <div className="leading-[1.6] text-[var(--chat-text-primary)] font-[family-name:var(--font-sans)]">
       {children}
     </div>
   );

@@ -33,32 +33,20 @@ const ChatToolCallBlock: FC<ChatToolCallBlockProps> = ({
 
   const hasBody = !!(input || output || error);
 
+  const statusColorClass =
+    state === "complete"
+      ? "text-[var(--chat-success)]"
+      : state === "failed"
+        ? "text-[var(--chat-error)]"
+        : "text-[var(--chat-text-secondary)]";
+
   return (
-    <div
-      style={{
-        borderLeft: "3px solid var(--chat-tool)",
-        borderRadius: 4,
-        margin: "6px 0",
-      }}
-    >
+    <div className="border-l-[length:var(--chat-tool-border-width)] border-l-[var(--chat-tool)] rounded-[var(--chat-radius)] my-[var(--chat-tool-py)]">
       {/* Header */}
       <button
         type="button"
         onClick={() => hasBody && setExpanded((prev) => !prev)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          width: "100%",
-          padding: "6px 10px",
-          background: "none",
-          border: "none",
-          cursor: hasBody ? "pointer" : "default",
-          fontFamily: "var(--font-sans)",
-          fontSize: 13,
-          color: "var(--chat-text-primary)",
-          textAlign: "left",
-        }}
+        className={`flex items-center gap-[var(--chat-gap-sm)] w-full px-[var(--chat-tool-px)] py-[var(--chat-tool-py)] bg-transparent border-none text-left font-[family-name:var(--font-sans)] text-[length:var(--chat-font-sm)] text-[var(--chat-text-primary)] ${hasBody ? "cursor-pointer" : "cursor-default"}`}
       >
         {/* Status icon */}
         {state === "running" && <ChatSpinner size="sm" />}
@@ -66,14 +54,14 @@ const ChatToolCallBlock: FC<ChatToolCallBlockProps> = ({
           <Icon
             name="check"
             size="sm"
-            style={{ color: "var(--chat-success)" }}
+            className="text-[var(--chat-success)]"
           />
         )}
         {state === "failed" && (
           <Icon
             name="x"
             size="sm"
-            style={{ color: "var(--chat-error)" }}
+            className="text-[var(--chat-error)]"
           />
         )}
 
@@ -86,17 +74,7 @@ const ChatToolCallBlock: FC<ChatToolCallBlockProps> = ({
         </Badge>
 
         {/* Status text */}
-        <span
-          style={{
-            color:
-              state === "complete"
-                ? "var(--chat-success)"
-                : state === "failed"
-                  ? "var(--chat-error)"
-                  : "var(--chat-text-secondary)",
-            fontSize: 12,
-          }}
-        >
+        <span className={`${statusColorClass} text-[length:var(--chat-font-xs)]`}>
           {state === "running" && "running"}
           {state === "complete" && "done"}
           {state === "failed" && "failed"}
@@ -107,27 +85,16 @@ const ChatToolCallBlock: FC<ChatToolCallBlockProps> = ({
           <Icon
             name={expanded ? "chevron-down" : "chevron-right"}
             size="xs"
-            style={{
-              color: "var(--chat-text-secondary)",
-              marginLeft: "auto",
-            }}
+            className="text-[var(--chat-text-secondary)] ml-auto"
           />
         )}
       </button>
 
       {/* Expandable body */}
       {expanded && hasBody && (
-        <div style={{ padding: "0 10px 8px" }}>
+        <div className="px-[var(--chat-tool-px)] pb-[var(--chat-gap-sm)]">
           {error && (
-            <div
-              style={{
-                color: "var(--chat-error)",
-                fontFamily: "var(--font-mono)",
-                fontSize: 13,
-                padding: "6px 0",
-                whiteSpace: "pre-wrap",
-              }}
-            >
+            <div className="text-[var(--chat-error)] font-[family-name:var(--font-mono)] text-[length:var(--chat-font-sm)] py-[var(--chat-tool-py)] whitespace-pre-wrap">
               {error}
             </div>
           )}

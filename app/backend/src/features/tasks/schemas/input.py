@@ -28,6 +28,9 @@ class TaskUpdate(BaseModel):
     issue_type: str | None = PydanticField(None, pattern="^(story|bug|task|spike|epic)$")
     work_phase: str | None = PydanticField(None, pattern="^(design|build|test|deploy|review)$")
     status_category: str | None = PydanticField(None, pattern="^(todo|in_progress|done)$")
+    state: str | None = PydanticField(
+        None, pattern="^(backlog|ready|in_progress|in_review|done|cancelled)$"
+    )
     project_id: UUID | None = None
     assignee_id: UUID | None = None
     sprint_id: UUID | None = None

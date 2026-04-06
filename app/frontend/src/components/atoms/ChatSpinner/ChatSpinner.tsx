@@ -39,11 +39,7 @@ function ChatSpinner({ label, size = "md" }: ChatSpinnerProps) {
         />
         {label && (
           <span
-            style={{
-              color: "var(--chat-text-secondary)",
-              fontFamily: "var(--font-sans)",
-              fontSize: size === "sm" ? 12 : 13,
-            }}
+            className={`text-[var(--chat-text-secondary)] font-[family-name:var(--font-sans)] ${size === "sm" ? "text-[length:var(--chat-font-xs)]" : "text-[length:var(--chat-font-sm)]"}`}
           >
             {label}
           </span>

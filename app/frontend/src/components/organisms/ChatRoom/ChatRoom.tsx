@@ -213,30 +213,10 @@ function ChatRoom({
   const isEmpty = allMessages.length === 0;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        background: "var(--chat-bg)",
-        color: "var(--chat-text-primary)",
-      }}
-    >
+    <div className="flex flex-col h-full bg-[var(--chat-bg)] text-[var(--chat-text-primary)]">
       {/* Header */}
-      <div
-        style={{
-          padding: "12px 16px",
-          borderBottom: "1px solid var(--chat-border)",
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            color: "var(--chat-text-primary)",
-          }}
-        >
+      <div className="px-[var(--chat-gap-lg)] py-[var(--chat-gap-md)] border-b border-[var(--chat-border)] shrink-0">
+        <span className="text-[length:var(--chat-font-base)] font-semibold text-[var(--chat-text-primary)]">
           {agentName ?? "Chat"}
         </span>
       </div>
@@ -245,29 +225,14 @@ function ChatRoom({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px",
-          position: "relative",
-        }}
+        className="flex-1 overflow-y-auto p-[var(--chat-gap-lg)] relative"
       >
         {isEmpty ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: "var(--chat-text-tertiary)",
-              fontSize: "0.875rem",
-              fontStyle: "italic",
-            }}
-          >
+          <div className="flex items-center justify-center h-full text-[var(--chat-text-tertiary)] text-[length:var(--chat-font-base)] italic">
             Start a conversation
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="flex flex-col gap-[var(--chat-gap-lg)]">
             {messageGroups.map((group, groupIndex) => (
               <ChatMessageGroup
                 key={`group-${groupIndex}-${group.timestamp}`}
@@ -315,26 +280,7 @@ function ChatRoom({
         {!isAtBottom && (
           <button
             onClick={scrollToBottom}
-            style={{
-              position: "sticky",
-              bottom: 8,
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: "1px solid var(--chat-border)",
-              background: "var(--chat-bg)",
-              color: "var(--chat-text-primary)",
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-              fontSize: "1rem",
-              lineHeight: 1,
-              margin: "0 auto",
-            }}
+            className="sticky bottom-[var(--chat-gap-sm)] left-1/2 -translate-x-1/2 flex items-center justify-center w-8 h-8 rounded-full border border-[var(--chat-border)] bg-[var(--chat-bg)] text-[var(--chat-text-primary)] cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.15)] text-base leading-none mx-auto"
             aria-label="Scroll to bottom"
           >
             ↓
@@ -343,14 +289,7 @@ function ChatRoom({
       </div>
 
       {/* Input area */}
-      <div
-        style={{
-          flexShrink: 0,
-          borderTop: "1px solid var(--chat-border)",
-          padding: "12px 16px",
-          position: "relative",
-        }}
-      >
+      <div className="shrink-0 border-t border-[var(--chat-border)] px-[var(--chat-gap-lg)] py-[var(--chat-gap-md)] relative">
         <SlashCommandAutocomplete
           query={slashQuery}
           commands={SLASH_COMMANDS}

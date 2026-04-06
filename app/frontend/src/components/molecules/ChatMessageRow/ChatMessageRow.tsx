@@ -24,26 +24,12 @@ function ChatMessageRow({
   return (
     <div>
       {showAttribution && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 8,
-            marginBottom: 4,
-          }}
-        >
+        <div className="flex items-baseline gap-[var(--chat-gap-sm)] mb-[var(--chat-gap-xs)]">
           <ChatRoleIndicator role={message.role} agentName={agentName} />
           <ChatTimestamp timestamp={message.timestamp} />
         </div>
       )}
-      <div
-        style={{
-          paddingLeft: 48,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
-      >
+      <div className="pl-[var(--chat-body-indent)] flex flex-col gap-[var(--chat-gap-sm)]">
         {showPresence ? (
           <ChatPresenceIndicator />
         ) : (
