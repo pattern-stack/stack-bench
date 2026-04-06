@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from pattern_stack.atoms.patterns.services import BaseService
 
@@ -9,6 +8,8 @@ from .models import Conversation, ConversationContext
 from .schemas.input import ConversationCreate, ConversationUpdate
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -44,7 +45,7 @@ class ConversationService(BaseService[Conversation, ConversationCreate, Conversa
         role: str,
     ) -> ConversationContext | None:
         """Find the active context link for a specific entity and role."""
-        links = await ConversationContext.get_active_relations(db, entity_id, entity_type)
+        links: list[ConversationContext] = await ConversationContext.get_active_relations(db, entity_id, entity_type)  # type: ignore[assignment]
         for link in links:
             if link.relationship_type == role and link.entity_a_type == "conversation":
                 return link
@@ -57,4 +58,4 @@ class ConversationService(BaseService[Conversation, ConversationCreate, Conversa
         conversation_id: UUID,
     ) -> list[ConversationContext]:
         """Get all active context links for a conversation."""
-        return await ConversationContext.get_active_relations(db, conversation_id, "conversation")
+        return await ConversationContext.get_active_relations(db, conversation_id, "conversation")  # type: ignore[return-value]

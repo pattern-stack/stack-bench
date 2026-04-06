@@ -7,8 +7,8 @@ from uuid import UUID  # noqa: TCH003
 from pydantic import BaseModel
 
 from features.conversations.schemas.output import ConversationResponse
-from molecules.agents.assembler import AgentAssembler
 from features.conversations.service import ConversationService
+from molecules.agents.assembler import AgentAssembler
 from molecules.entities.conversation_entity import ConversationEntity
 
 if TYPE_CHECKING:

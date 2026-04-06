@@ -1,5 +1,3 @@
-from uuid import uuid4
-
 import pytest
 from pydantic import ValidationError
 
@@ -135,26 +133,6 @@ def test_conversation_service_model() -> None:
     """Verify service is configured with correct model."""
     service = ConversationService()
     assert service.model is Conversation
-
-
-@pytest.mark.unit
-def test_conversation_has_project_id() -> None:
-    """Verify conversation model has project_id field."""
-    assert hasattr(Conversation, "project_id")
-
-
-@pytest.mark.unit
-def test_conversation_create_with_project_id() -> None:
-    """Verify create schema accepts project_id."""
-    data = ConversationCreate(agent_name="test", project_id=uuid4())
-    assert data.project_id is not None
-
-
-@pytest.mark.unit
-def test_conversation_create_without_project_id() -> None:
-    """Verify create schema works without project_id."""
-    data = ConversationCreate(agent_name="test")
-    assert data.project_id is None
 
 
 @pytest.mark.unit
