@@ -46,19 +46,15 @@ Replace the single-stack-only frontend with a three-screen app: kanban task dash
 - [x] useConversationForEntity frontend hook
 - [x] WorkspaceDetailPage wired to real ChatRoom with demo fallback
 - [x] 7 chat component fixes (thinking blocks, blockquotes, tables, checklists, diffs, tool previews)
-- [x] Conversation persistence promoted to agentic-patterns (local, not pushed)
+- [x] Conversation persistence promoted to agentic-patterns (merged as PR #18)
+- [x] Agent execution pipeline (send endpoint, SSE broadcast, job bridge, stub runner)
+- [x] Visual polish (list spacing, DONE cards, sidebar truncation, branch label)
+- [x] Orchestrator agent seed data
 
 ## Open Items
 
-### Visual Polish (from QA)
-- [ ] Markdown numbered list spacing still feels off
-- [ ] DONE column task cards too cramped
-- [ ] Sidebar task names aggressively truncated
-- [ ] Done workspace shows wrong branch label
-- [ ] Diff line numbers fixed but needs re-verification
-
 ### Feature Gaps
-- [ ] Wire real agent execution to conversations (currently demo data)
+- [ ] Plug in real agent (replace StubRunner with Claude-backed agent)
 - [ ] Task↔Stack linking (task cards show placeholder diff stats + PR numbers)
 - [ ] Drag-and-drop on kanban (currently click-to-move via state transition API)
 - [ ] Real-time updates via SSE (event bus infrastructure exists, needs wiring)

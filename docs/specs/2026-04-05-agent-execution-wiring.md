@@ -1,7 +1,7 @@
 ---
 title: Agent Execution Wiring
 date: 2026-04-05
-status: draft
+status: implemented
 branch: dugshub/dashboard-redesign/2-conversation-associations
 depends_on: [2026-04-05-conversation-associations]
 adrs: [ADR-005]
