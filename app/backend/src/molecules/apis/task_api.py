@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 from features.agent_runs.schemas.output import AgentRunResponse
 from features.agent_runs.service import AgentRunService
-from features.conversations.service import ConversationService
 from features.conversations.schemas.input import ConversationCreate
 from features.conversations.service import ConversationService
 from features.jobs.schemas.output import JobResponse

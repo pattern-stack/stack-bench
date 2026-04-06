@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID  # noqa: TCH003
 
 from fastapi import APIRouter, Query
 from pattern_stack.atoms.broadcast import get_broadcast
@@ -12,7 +12,7 @@ from starlette.responses import StreamingResponse
 
 from features.conversations.schemas.output import ConversationResponse
 from molecules.apis.conversation_api import ConversationDetailResponse
-from organisms.api.dependencies import ConversationAPIDep, ConversationRunnerDep
+from organisms.api.dependencies import ConversationAPIDep, ConversationRunnerDep  # noqa: TCH001
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -63,7 +63,7 @@ async def list_conversations(
 async def get_conversation_by_entity(
     api: ConversationAPIDep,
     entity_type: str = Query(..., min_length=1),
-    entity_id: UUID = Query(...),
+    entity_id: UUID = Query(...),  # noqa: B008
     role: str = Query(..., min_length=1),
 ) -> ConversationResponse | None:
     """Get the active conversation linked to an entity with a specific role."""

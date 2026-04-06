@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from pattern_stack.atoms.patterns.services import BaseService
 
@@ -9,6 +8,8 @@ from .models import Conversation, ConversationContext
 from .schemas.input import ConversationCreate, ConversationUpdate
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
