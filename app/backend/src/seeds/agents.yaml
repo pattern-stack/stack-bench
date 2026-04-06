@@ -64,6 +64,19 @@ role_templates:
       - Verify test coverage
     description: "Reviews implementations for quality, correctness, and compliance."
 
+  - seed_key: orchestrator
+    name: orchestrator
+    source: library
+    archetype: Coordinator
+    default_model: claude-sonnet-4-20250514
+    persona:
+      traits: ["strategic", "decisive", "adaptive"]
+    responsibilities:
+      - Coordinate task execution across agent phases
+      - Monitor progress and adjust plans
+      - Synthesize outputs from specialist agents
+    description: "Orchestrates task execution by coordinating specialist agents."
+
 agent_definitions:
   - seed_key: agent-understander
     name: understander
@@ -94,3 +107,9 @@ agent_definitions:
     role_template: reviewer
     mission: "Validate the implementation against the specification, architecture rules, and quality standards."
     background: "Staff engineer focused on code quality and architecture compliance."
+
+  - seed_key: agent-orchestrator
+    name: orchestrator
+    role_template: orchestrator
+    mission: "Orchestrate task execution by coordinating specialist agents through planning, implementation, and review phases."
+    background: "Senior engineering lead experienced in multi-agent coordination and task decomposition."

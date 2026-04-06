@@ -93,7 +93,7 @@ def configure_subsystems(
     )
 
     # 4. Job handlers — register after queue is configured
-    register_job_handlers()
+    register_job_handlers(session_factory=session_factory)
     logger.info("Job handlers registered")
 
     return refs

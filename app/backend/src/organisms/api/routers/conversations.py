@@ -1,11 +1,23 @@
+from __future__ import annotations
+
+import json
+import logging
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import APIRouter, Query
+from pattern_stack.atoms.broadcast import get_broadcast
 from pydantic import BaseModel, Field
+from starlette.responses import StreamingResponse
 
 from features.conversations.schemas.output import ConversationResponse
 from molecules.apis.conversation_api import ConversationDetailResponse
-from organisms.api.dependencies import ConversationAPIDep
+from organisms.api.dependencies import ConversationAPIDep, ConversationRunnerDep
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -74,15 +86,51 @@ async def get_conversation(
 async def send_message(
     conversation_id: UUID,
     data: SendMessageRequest,
-    api: ConversationAPIDep,
-) -> dict[str, str]:
-    """Send message — placeholder until Claude integration in SB-007."""
-    await api.get(conversation_id)
-    return {
-        "status": "received",
-        "conversation_id": str(conversation_id),
-        "message": data.message,
-    }
+    runner: ConversationRunnerDep,
+) -> StreamingResponse:
+    """Send a message and stream SSE events from the agent runner."""
+
+    async def generate() -> AsyncGenerator[str, None]:
+        broadcast = get_broadcast()
+        async for sse_chunk in runner.send(conversation_id, data.message):
+            yield sse_chunk
+            await _broadcast_sse_chunk(broadcast, conversation_id, sse_chunk)
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+async def _broadcast_sse_chunk(
+    broadcast: object,
+    conversation_id: UUID,
+    sse_chunk: str,
+) -> None:
+    """Parse an SSE-formatted string and broadcast to the conversation channel."""
+    event_type = "message"
+    data_str = ""
+    for line in sse_chunk.strip().split("\n"):
+        if line.startswith("event: "):
+            event_type = line[7:]
+        elif line.startswith("data: "):
+            data_str = line[6:]
+
+    try:
+        data = json.loads(data_str) if data_str else {}
+    except json.JSONDecodeError:
+        data = {"raw": data_str}
+
+    await broadcast.broadcast(  # type: ignore[union-attr]
+        f"conversation:{conversation_id}",
+        event_type,
+        data,
+    )
 
 
 @router.post(

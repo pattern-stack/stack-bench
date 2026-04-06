@@ -217,7 +217,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <ul
           key={key++}
-          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)] [&>li]:mb-[var(--chat-gap-xs)]"
+          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)] [&>li]:mb-[var(--chat-gap-sm)]"
         >
           {items}
         </ul>
@@ -236,7 +236,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <ol
           key={key++}
-          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)] list-decimal [&>li]:mb-[var(--chat-gap-xs)]"
+          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)] list-decimal [&>li]:mb-[var(--chat-gap-sm)]"
         >
           {items}
         </ol>

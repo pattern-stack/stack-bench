@@ -64,3 +64,47 @@ async def test_broadcast_bridge_global_only_when_no_stack_id() -> None:
 
         mock_broadcast.broadcast.assert_called_once()
         assert mock_broadcast.broadcast.call_args[0][0] == "global"
+
+
+@pytest.mark.unit
+async def test_broadcast_bridge_routes_to_conversation_channel() -> None:
+    """Events with conversation_id in payload broadcast to conversation channel."""
+    mock_broadcast = AsyncMock()
+    conv_id = str(uuid4())
+
+    with patch(
+        "molecules.events.handlers.broadcast_bridge.get_broadcast",
+        return_value=mock_broadcast,
+    ):
+        event = _make_bus_event(
+            BRANCH_SYNCED,
+            {"conversation_id": conv_id, "action": "message"},
+        )
+        await handle_for_broadcast(event)
+
+        # Should broadcast to global + conversation channel
+        channels = {c[0][0] for c in mock_broadcast.broadcast.call_args_list}
+        assert "global" in channels
+        assert f"conversation:{conv_id}" in channels
+
+
+@pytest.mark.unit
+async def test_broadcast_bridge_routes_to_both_stack_and_conversation() -> None:
+    """Events with both stack_id and conversation_id route to all three channels."""
+    mock_broadcast = AsyncMock()
+    conv_id = str(uuid4())
+
+    with patch(
+        "molecules.events.handlers.broadcast_bridge.get_broadcast",
+        return_value=mock_broadcast,
+    ):
+        event = _make_bus_event(
+            BRANCH_SYNCED,
+            {"stack_id": "abc-123", "conversation_id": conv_id},
+        )
+        await handle_for_broadcast(event)
+
+        channels = {c[0][0] for c in mock_broadcast.broadcast.call_args_list}
+        assert "global" in channels
+        assert "stack:abc-123" in channels
+        assert f"conversation:{conv_id}" in channels

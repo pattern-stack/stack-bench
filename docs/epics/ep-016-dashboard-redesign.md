@@ -64,7 +64,7 @@ Replace the single-stack-only frontend with a three-screen app: kanban task dash
 - [ ] Real-time updates via SSE (event bus infrastructure exists, needs wiring)
 
 ### Architecture / Upstream
-- [ ] Push conversation persistence to agentic-patterns remote (local changes only)
+- [x] Push conversation persistence to agentic-patterns remote (merged as PR #18)
 - [ ] Messages/MessageParts/ToolCalls features not yet promoted to agentic-patterns
 - [ ] Frontend component extraction to @pattern-stack/agentic-ui (future)
 - [ ] Pattern-stack framework: declarative RelationalPattern on model definitions

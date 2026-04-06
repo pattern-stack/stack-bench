@@ -11,6 +11,7 @@ class Job(EventPattern):
     class Pattern:
         entity = "job"
         reference_prefix = "JOB"
+        emit_state_transitions = True
 
         states: ClassVar = {
             "queued": ["running", "cancelled"],

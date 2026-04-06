@@ -155,10 +155,7 @@ class TaskAPI:
             "agent_runs": [r.model_dump() for r in agent_runs],
         }
 
-
-    async def create_job_for_task(
-        self, task_id: UUID, data: JobCreate
-    ) -> tuple[JobResponse, UUID]:
+    async def create_job_for_task(self, task_id: UUID, data: JobCreate) -> tuple[JobResponse, UUID]:
         """Create a job for a task and auto-link an execution conversation.
 
         Returns the job response and the conversation ID.

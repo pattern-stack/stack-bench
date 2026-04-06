@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useTaskDetail } from "@/hooks/useTaskDetail";
 import { useConversationForEntity } from "@/hooks/useConversationForEntity";
+import { apiClient } from "@/generated/api/client";
 import { Icon } from "@/components/atoms";
 import { ChatRoom } from "@/components/organisms/ChatRoom/ChatRoom";
 import { ChatMessageRow } from "@/components/molecules/ChatMessageRow";
@@ -13,6 +14,16 @@ function WorkspaceDetailPage() {
   const { data, loading, error } = useTaskDetail(taskId);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { conversation } = useConversationForEntity("task", taskId, "execution");
+
+  const handleSendMessage = useCallback(
+    (text: string) => {
+      if (!conversation) return;
+      apiClient.post(`/api/v1/conversations/${conversation.id}/send`, {
+        message: text,
+      });
+    },
+    [conversation],
+  );
 
   if (loading) {
     return (
@@ -88,8 +99,9 @@ function WorkspaceDetailPage() {
         <div className="flex-[3] flex flex-col min-w-0 border-r border-[var(--border-muted)]">
           {conversation ? (
             <ChatRoom
-              channel={conversation.id}
+              channel={`conversation:${conversation.id}`}
               agentName={conversation.agent_name}
+              onSendMessage={handleSendMessage}
             />
           ) : (
             <>
@@ -201,7 +213,7 @@ function WorkspaceDetailPage() {
             <div className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
               <Icon name="git-branch" size="xs" />
               <span className="font-mono">
-                {job?.repo_branch ?? "feature/oauth-2.1-migration"}
+                {job?.repo_branch ?? (task?.title ? `task/${task.title.toLowerCase().replace(/\s+/g, '-').slice(0, 40)}` : "—")}
               </span>
             </div>
             <div className="flex items-center gap-2">

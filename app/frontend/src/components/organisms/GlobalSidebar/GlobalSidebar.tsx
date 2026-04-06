@@ -48,7 +48,7 @@ function WorkspaceCard({
         <span className="text-xs font-mono text-[var(--fg-muted)] shrink-0">
           {task.reference_number ?? task.id.slice(0, 8)}
         </span>
-        <span className="text-sm text-[var(--fg-default)] truncate">
+        <span className="text-sm text-[var(--fg-default)] line-clamp-2">
           {task.title}
         </span>
       </div>
