@@ -146,7 +146,7 @@ function KanbanColumn({
           {tasks.length}
         </span>
       </div>
-      <div className="flex-1 space-y-3 overflow-y-auto">
+      <div className="flex-1 space-y-3.5 overflow-y-auto">
         {tasks.length === 0 ? (
           <div className="text-xs text-[var(--fg-subtle)] py-8 text-center">
             No tasks
@@ -183,8 +183,8 @@ function TaskCard({ task }: { task: Task }) {
   return (
     <Link
       to={`/workspaces/${task.id}`}
-      className={`block rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] px-3.5 py-3 hover:border-[var(--border)] transition-colors ${
-        isDone ? "opacity-50" : ""
+      className={`block rounded-lg bg-[var(--bg-surface)] border border-[var(--border-muted)] px-4 py-3.5 hover:border-[var(--border)] transition-colors ${
+        isDone ? "opacity-60" : ""
       }`}
       style={{
         borderLeftColor: stateColor,

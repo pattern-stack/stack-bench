@@ -1,6 +1,6 @@
 ---
 title: Conversation Associations via RelationalPattern
-status: draft
+status: in-progress
 created: 2026-04-05
 epic: EP-016
 depends_on: [ADR-005]

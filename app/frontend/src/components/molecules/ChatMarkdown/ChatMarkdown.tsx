@@ -1,6 +1,8 @@
 import { type FC, type ReactNode } from "react";
 import { ChatCodeBlock } from "@/components/atoms/ChatCodeBlock";
 import { ChatInlineCode } from "@/components/atoms/ChatInlineCode";
+import { ChatChecklist } from "@/components/molecules/ChatChecklist";
+import type { ChecklistItem } from "@/components/molecules/ChatChecklist";
 
 export interface ChatMarkdownProps {
   content: string;
@@ -189,6 +191,21 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       continue;
     }
 
+    // Checklist — must be checked before unordered list
+    const checklistPattern = /^\s*(?:[-*+]\s+)?\[(x| )\]\s+/;
+    if (checklistPattern.test(line)) {
+      const items: ChecklistItem[] = [];
+      while (i < lines.length && checklistPattern.test(lines[i])) {
+        const match = lines[i].match(checklistPattern);
+        const checked = match?.[1] === "x";
+        const text = lines[i].replace(checklistPattern, "");
+        items.push({ checked, text });
+        i++;
+      }
+      elements.push(<ChatChecklist key={key++} items={items} />);
+      continue;
+    }
+
     // Unordered list
     if (/^\s*[-*+]\s+/.test(line)) {
       const items: ReactNode[] = [];
@@ -200,7 +217,7 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <ul
           key={key++}
-          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)]"
+          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)] [&>li]:mb-[var(--chat-gap-sm)]"
         >
           {items}
         </ul>
@@ -219,10 +236,86 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       elements.push(
         <ol
           key={key++}
-          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)]"
+          className="my-[0.5em] pl-[1.5em] font-[family-name:var(--font-sans)] list-decimal [&>li]:mb-[var(--chat-gap-sm)]"
         >
           {items}
         </ol>
+      );
+      continue;
+    }
+
+    // Blockquote
+    if (/^>\s?/.test(line)) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) {
+        quoteLines.push(lines[i].replace(/^>\s?/, ""));
+        i++;
+      }
+      elements.push(
+        <blockquote
+          key={key++}
+          className="my-[0.5em] ml-[var(--chat-gap-sm)] pl-[var(--chat-gap-md)] py-[var(--chat-gap-xs)] border-l-[length:var(--chat-tool-border-width)] border-l-[var(--chat-warning)] bg-[var(--chat-bg-message)] rounded-r-[var(--chat-radius)] font-[family-name:var(--font-sans)] text-[var(--chat-text-secondary)]"
+        >
+          {parseInline(quoteLines.join(" "))}
+        </blockquote>
+      );
+      continue;
+    }
+
+    // GFM table — detect header row + separator row pattern
+    if (
+      /^\|/.test(line) &&
+      i + 1 < lines.length &&
+      /^\|[\s:]*-+/.test(lines[i + 1])
+    ) {
+      const tableLines: string[] = [];
+      while (i < lines.length && /^\|/.test(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // Parse cells: split by |, trim, remove empty first/last from leading/trailing |
+      const parseCells = (row: string) =>
+        row
+          .split("|")
+          .map((c) => c.trim())
+          .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+
+      const headerCells = parseCells(tableLines[0]);
+      // Skip separator row (index 1)
+      const bodyRows = tableLines.slice(2).map(parseCells);
+
+      elements.push(
+        <table
+          key={key++}
+          className="my-[0.5em] w-full border-collapse font-[family-name:var(--font-sans)] text-[length:var(--chat-font-sm)]"
+        >
+          <thead>
+            <tr>
+              {headerCells.map((cell, ci) => (
+                <th
+                  key={ci}
+                  className="text-left px-[var(--chat-gap-sm)] py-[var(--chat-gap-xs)] border border-[var(--chat-border)] bg-[var(--chat-bg-message)] text-[var(--chat-text-secondary)] font-medium"
+                >
+                  {parseInline(cell)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td
+                    key={ci}
+                    className="px-[var(--chat-gap-sm)] py-[var(--chat-gap-xs)] border border-[var(--chat-border)] text-[var(--chat-text-primary)]"
+                  >
+                    {parseInline(cell)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       );
       continue;
     }
@@ -234,7 +327,9 @@ function parseTextBlock(text: string, baseKey: number): ReactNode[] {
       lines[i].trim() !== "" &&
       !/^#{1,3}\s/.test(lines[i]) &&
       !/^\s*[-*+]\s+/.test(lines[i]) &&
-      !/^\s*\d+[.)]\s+/.test(lines[i])
+      !/^\s*\d+[.)]\s+/.test(lines[i]) &&
+      !/^>\s?/.test(lines[i]) &&
+      !/^\|/.test(lines[i])
     ) {
       paraLines.push(lines[i]);
       i++;

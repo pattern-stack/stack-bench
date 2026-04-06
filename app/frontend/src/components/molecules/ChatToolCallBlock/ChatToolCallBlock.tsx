@@ -80,12 +80,19 @@ const ChatToolCallBlock: FC<ChatToolCallBlockProps> = ({
           {state === "failed" && "failed"}
         </span>
 
+        {/* Collapsed input preview */}
+        {!expanded && input && (
+          <span className="text-[var(--chat-text-tertiary)] text-[length:var(--chat-font-xs)] font-[family-name:var(--font-mono)] truncate">
+            — {input.length > 60 ? input.slice(0, 60) + "..." : input}
+          </span>
+        )}
+
         {/* Expand chevron */}
         {hasBody && (
           <Icon
             name={expanded ? "chevron-down" : "chevron-right"}
             size="xs"
-            className="text-[var(--chat-text-secondary)] ml-auto"
+            className="text-[var(--chat-text-secondary)] ml-auto shrink-0"
           />
         )}
       </button>

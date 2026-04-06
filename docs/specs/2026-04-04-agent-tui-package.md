@@ -11,7 +11,7 @@ adrs: [ADR-001]
 
 ## Goal
 
-Extract the Stack Bench Go CLI into a reusable, importable Go package called `agent-tui` that any developer can use to build a terminal-based agent interface for their Python, TypeScript, Go, or any-language backend. The backend communicates over a standardized HTTP/SSE contract. Consumers `go get` the package, write ~50 lines of configuration, and get a production-quality agent TUI with streaming chat, slash commands, markdown rendering, theming, and optional local service management.
+Extract the Stack Bench Go CLI into a reusable, importable Go package called `agent-tui` (packaged within the agentic-patterns monorepo) that any developer can use to build a terminal-based agent interface for their Python, TypeScript, Go, or any-language backend. The backend communicates over **two supported transports**: HTTP/SSE (for backends with a web server) and JSON-RPC over stdio (for scripts and CLIs with no server). Consumers `go get` the package, write ~50 lines of configuration, and get a production-quality agent TUI with streaming chat, slash commands, markdown rendering, theming, and optional local service management.
 
 ## Problem Statement
 
@@ -19,9 +19,10 @@ The Stack Bench CLI at `app/cli/` contains approximately 5,400 lines of Go code 
 
 This package extraction enables:
 
-1. **The `dugshub/agent-tui` open-source project** -- anyone building an AI agent with any backend can get a polished TUI in minutes.
+1. **The `agent-tui` package** (built in stack-bench, relocatable to agentic-patterns or standalone later) -- anyone building an AI agent with any backend can get a polished TUI in minutes.
 2. **Stack Bench itself becomes a thin consumer** -- `app/cli/main.go` shrinks to configuration only.
 3. **Other projects at dugshub** (pattern-stack dev tools, agentic-patterns demos) can reuse the same TUI.
+4. **Two transport options** -- HTTP/SSE for web-server-backed agents, JSON-RPC over stdio for scripts and CLIs with no server.
 
 ## Analysis: What Is Generic vs. What Is Stack-Bench-Specific
 
@@ -239,6 +240,156 @@ func TestBackendContract(t *testing.T) {
 
 This runs a standard test suite: list agents, create conversation, send message, validate SSE event format, check error handling.
 
+## JSON-RPC over stdio Transport
+
+The second supported transport. For backends that are scripts or CLI tools with no web server — the TUI spawns the backend as a subprocess and communicates via stdin/stdout using the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) protocol.
+
+### Why JSON-RPC (not raw stdio)
+
+Raw stdin/stdout would require inventing ad-hoc message framing, error formats, and request correlation — effectively a worse JSON-RPC. JSON-RPC provides all of this as a standard, has libraries in every language, and aligns with MCP (Model Context Protocol) which uses the same wire format.
+
+### Wire Format
+
+The TUI writes JSON-RPC **requests** to the subprocess's stdin (one JSON object per line). The subprocess writes JSON-RPC **responses** and **notifications** to stdout (one JSON object per line).
+
+Streaming is implemented via JSON-RPC **notifications** (no `id` field, no response expected) — the same event types as SSE, but wrapped in JSON-RPC envelope.
+
+### Methods
+
+#### `listAgents` (request → response)
+
+```json
+--> {"jsonrpc": "2.0", "method": "listAgents", "id": 1}
+<-- {"jsonrpc": "2.0", "result": [{"id": "default", "name": "Assistant", "role": "General purpose"}], "id": 1}
+```
+
+#### `createConversation` (request → response)
+
+```json
+--> {"jsonrpc": "2.0", "method": "createConversation", "params": {"agent_id": "default"}, "id": 2}
+<-- {"jsonrpc": "2.0", "result": {"id": "conv-1", "agent_id": "default"}, "id": 2}
+```
+
+#### `sendMessage` (request → streaming notifications → completion response)
+
+```json
+--> {"jsonrpc": "2.0", "method": "sendMessage", "params": {"conversation_id": "conv-1", "content": "Hello"}, "id": 3}
+<-- {"jsonrpc": "2.0", "method": "stream.event", "params": {"type": "message.delta", "data": {"delta": "Hi "}}}
+<-- {"jsonrpc": "2.0", "method": "stream.event", "params": {"type": "message.delta", "data": {"delta": "there!"}}}
+<-- {"jsonrpc": "2.0", "method": "stream.event", "params": {"type": "thinking", "data": {"content": "The user greeted me."}}}
+<-- {"jsonrpc": "2.0", "method": "stream.event", "params": {"type": "tool.start", "data": {"id": "tc-1", "name": "search", "input": "query=hello"}}}
+<-- {"jsonrpc": "2.0", "method": "stream.event", "params": {"type": "tool.end", "data": {"id": "tc-1", "name": "search", "output": "results..."}}}
+<-- {"jsonrpc": "2.0", "method": "stream.event", "params": {"type": "done", "data": {}}}
+<-- {"jsonrpc": "2.0", "result": {"status": "complete"}, "id": 3}
+```
+
+The `stream.event` notifications use the **same event types and data schemas** as the SSE transport (`message.delta`, `thinking`, `tool.start`, `tool.end`, `error`, `done`). This means backend developers learn one set of event types regardless of transport.
+
+The final response (with matching `id`) signals the stream is complete. The TUI considers the exchange done when it receives either a `done` notification or the response — whichever comes first.
+
+#### `listConversations` (optional, request → response)
+
+```json
+--> {"jsonrpc": "2.0", "method": "listConversations", "params": {"agent_id": "default"}, "id": 4}
+<-- {"jsonrpc": "2.0", "result": [...], "id": 4}
+```
+
+If the backend doesn't support this, it returns a JSON-RPC error with code `-32601` (Method not found). The TUI skips the picker.
+
+### Error Handling
+
+Backends signal errors using standard JSON-RPC error responses:
+
+```json
+<-- {"jsonrpc": "2.0", "error": {"code": -32603, "message": "Model rate limited"}, "id": 3}
+```
+
+Or via a `stream.event` notification with type `error` (same as SSE):
+
+```json
+<-- {"jsonrpc": "2.0", "method": "stream.event", "params": {"type": "error", "data": {"type": "rate_limit", "message": "Too many requests"}}}
+```
+
+### Process Lifecycle
+
+1. TUI spawns the subprocess via `exec.Command` with the configured command + args
+2. TUI sends JSON-RPC requests to stdin
+3. Backend writes JSON-RPC responses/notifications to stdout
+4. Backend's stderr is captured and displayed on error (not part of the protocol)
+5. On TUI quit: TUI closes stdin, waits 5s for graceful exit, then sends SIGTERM
+
+### Minimal Python Backend Example (stdio)
+
+```python
+#!/usr/bin/env python3
+"""Minimal agent-tui stdio backend. Zero dependencies."""
+import sys, json
+
+def handle(method, params, req_id):
+    if method == "listAgents":
+        return {"result": [{"id": "default", "name": "Assistant", "role": "Helpful assistant"}], "id": req_id}
+    elif method == "createConversation":
+        return {"result": {"id": "conv-1", "agent_id": params.get("agent_id", "default")}, "id": req_id}
+    elif method == "sendMessage":
+        content = params["content"]
+        # Stream notifications
+        for word in f"You said: {content}".split():
+            notify({"type": "message.delta", "data": {"delta": word + " "}})
+        notify({"type": "done", "data": {}})
+        return {"result": {"status": "complete"}, "id": req_id}
+    else:
+        return {"error": {"code": -32601, "message": f"Method not found: {method}"}, "id": req_id}
+
+def notify(params):
+    write({"jsonrpc": "2.0", "method": "stream.event", "params": params})
+
+def write(obj):
+    print(json.dumps(obj), flush=True)
+
+for line in sys.stdin:
+    req = json.loads(line.strip())
+    resp = handle(req["method"], req.get("params", {}), req.get("id"))
+    if resp:
+        write({"jsonrpc": "2.0", **resp})
+```
+
+### Minimal TypeScript Backend Example (stdio)
+
+```typescript
+#!/usr/bin/env npx tsx
+/** Minimal agent-tui stdio backend. Zero dependencies beyond Node. */
+import * as readline from 'readline';
+
+const rl = readline.createInterface({ input: process.stdin });
+
+function write(obj: any) {
+  process.stdout.write(JSON.stringify(obj) + '\n');
+}
+
+function notify(params: any) {
+  write({ jsonrpc: '2.0', method: 'stream.event', params });
+}
+
+rl.on('line', (line) => {
+  const req = JSON.parse(line);
+  const { method, params = {}, id } = req;
+
+  if (method === 'listAgents') {
+    write({ jsonrpc: '2.0', result: [{ id: 'default', name: 'Assistant', role: 'Helpful' }], id });
+  } else if (method === 'createConversation') {
+    write({ jsonrpc: '2.0', result: { id: 'conv-1', agent_id: params.agent_id ?? 'default' }, id });
+  } else if (method === 'sendMessage') {
+    for (const word of `You said: ${params.content}`.split(' ')) {
+      notify({ type: 'message.delta', data: { delta: word + ' ' } });
+    }
+    notify({ type: 'done', data: {} });
+    write({ jsonrpc: '2.0', result: { status: 'complete' }, id });
+  } else {
+    write({ jsonrpc: '2.0', error: { code: -32601, message: `Unknown: ${method}` }, id });
+  }
+});
+```
+
 ## Package Architecture
 
 ### Module Path
@@ -311,6 +462,10 @@ agent-tui/
       client.go             # HTTPClient implementation of the Client interface
       stub.go               # StubClient for testing/demo
       client_test.go
+    stdioclient/
+      client.go             # StdioClient: JSON-RPC over stdin/stdout
+      jsonrpc.go            # JSON-RPC 2.0 framing (read/write/notifications)
+      client_test.go
 
   # --- Test utilities (exported) ---
   contracttest/
@@ -328,6 +483,12 @@ agent-tui/
       main.go               # Custom theme example
     custom-commands/
       main.go               # Custom slash commands example
+    stdio-python/
+      main.go               # ~20 lines: spawn a Python script via JSON-RPC stdio
+      agent.py              # Minimal Python stdio backend (zero deps)
+    stdio-typescript/
+      main.go               # ~20 lines: spawn a TS script via JSON-RPC stdio
+      agent.ts              # Minimal TypeScript stdio backend (zero deps)
 ```
 
 ### Public API Surface
@@ -351,9 +512,10 @@ type Config struct {
     AssistantLabel string
 
     // Backend specifies how to connect to the backend.
-    // Exactly one of BackendURL or BackendService must be set.
-    BackendURL     string       // Direct URL (e.g., "http://localhost:8000")
-    BackendService ServiceNode  // Auto-managed local service
+    // Exactly one of BackendURL, BackendService, or BackendStdio must be set.
+    BackendURL     string       // HTTP/SSE: Direct URL (e.g., "http://localhost:8000")
+    BackendService ServiceNode  // HTTP/SSE: Auto-managed local service
+    BackendStdio   *StdioConfig // JSON-RPC: Spawn subprocess, communicate via stdin/stdout
 
     // EnvOverride is the environment variable name that overrides BackendURL.
     // When set and the env var is non-empty, its value is used as BackendURL.
@@ -404,8 +566,8 @@ func (a *App) Run() error
 // --- Client Interface ---
 
 // Client defines the interface for communicating with an agent backend.
-// The package provides HTTPClient (for real backends) and StubClient (for testing).
-// Consumers can implement this interface for custom transport (WebSocket, gRPC, etc.).
+// The package provides HTTPClient (HTTP/SSE), StdioClient (JSON-RPC over stdin/stdout),
+// and StubClient (testing). Consumers can implement this for custom transports.
 //
 // The first three methods are required. ListConversations is optional -- if the
 // backend does not support it, return (nil, nil) and the TUI skips the picker.
@@ -553,6 +715,21 @@ type ExecServiceConfig struct {
 // NewExecService creates a ServiceNode that starts a process via exec.
 func NewExecService(cfg ExecServiceConfig) ServiceNode
 
+// --- stdio Transport ---
+
+// StdioConfig configures a JSON-RPC over stdio backend connection.
+// The TUI spawns the command as a subprocess and communicates via stdin/stdout.
+type StdioConfig struct {
+    Command string   // Executable (e.g., "python", "node", "npx")
+    Args    []string // Arguments (e.g., ["agent.py"] or ["tsx", "agent.ts"])
+    Dir     string   // Working directory (optional)
+    Env     []string // Additional environment variables ("KEY=VALUE")
+}
+
+// NewStdioClient creates a Client that communicates via JSON-RPC over stdin/stdout.
+// Used internally when Config.BackendStdio is set. Exported for advanced use.
+func NewStdioClient(cfg StdioConfig) (Client, error)
+
 // --- Theme System ---
 
 // Theme maps design tokens to terminal styles.
@@ -664,6 +841,32 @@ app, err := tui.New(tui.Config{
 })
 ```
 
+#### stdio Backend Example (Python)
+
+```go
+app, err := tui.New(tui.Config{
+    AppName: "My Agent",
+    BackendStdio: &tui.StdioConfig{
+        Command: "python",
+        Args:    []string{"agent.py"},
+        Dir:     "./backend",
+    },
+})
+```
+
+#### stdio Backend Example (TypeScript)
+
+```go
+app, err := tui.New(tui.Config{
+    AppName: "My Agent",
+    BackendStdio: &tui.StdioConfig{
+        Command: "npx",
+        Args:    []string{"tsx", "agent.ts"},
+        Dir:     "./backend",
+    },
+})
+```
+
 ## Extension Points
 
 ### 1. Custom Commands
@@ -705,7 +908,7 @@ func (d *DockerService) BaseURL() string        { return "http://localhost:8000"
 
 ### 4. Custom Client Implementations
 
-The `Client` interface is exported. Consumers can implement it for non-HTTP transports (WebSocket, gRPC, in-process function calls):
+The `Client` interface is exported. The package ships with three implementations: `HTTPClient` (HTTP/SSE), `StdioClient` (JSON-RPC over stdio), and `StubClient` (testing). Consumers can implement the interface for other transports (WebSocket, gRPC, in-process function calls):
 
 ```go
 type InProcessClient struct {
@@ -808,13 +1011,14 @@ func findBackendDir() string {
 
 | Phase | What | Depends On | Estimated Size |
 |-------|------|------------|----------------|
-| 1 | Define public API surface | -- | ~400 lines |
+| 1 | Define public API surface (incl. StdioConfig) | -- | ~450 lines |
 | 2 | Restructure internals | Phase 1 | ~200 lines changed |
-| 3 | Extract to standalone repo | Phase 2 | Repository setup |
-| 4 | Build consumer configuration layer | Phase 3 | ~300 lines |
+| 3 | Extract to agentic-patterns monorepo | Phase 2 | Repository setup |
+| 4 | Build consumer configuration layer | Phase 3 | ~350 lines |
+| 4b | Build JSON-RPC stdio transport | Phase 1 | ~480 lines |
 | 5 | Migrate Stack Bench CLI | Phase 4 | ~100 lines (net reduction) |
-| 6 | Contract test suite + examples | Phase 4 | ~400 lines |
-| 7 | Documentation + release | Phase 6 | Docs only |
+| 6 | Contract test suite + examples (HTTP + stdio) | Phase 4, 4b | ~600 lines |
+| 7 | Backend implementor's guide (Python + TS) + release | Phase 6 | Docs + reference code |
 
 ### Phase 1: Define Public API Surface
 
@@ -828,6 +1032,7 @@ Create the exported types and interfaces in the root package. These are the type
 - `types.go` -- `AgentSummary`, `Conversation`, `StreamChunk`, `ChunkType`
 - `command.go` -- `CommandDef`, `CommandHandler`, `CommandParseResult`
 - `service.go` -- `ServiceNode` interface, `ServiceStatus`, `ExecServiceConfig`, `NewExecService`
+- `stdio.go` -- `StdioConfig`, `NewStdioClient`
 - `theme.go` -- `Theme`, `Style`, token enums, `DarkTheme()`, `LightTheme()`
 
 The public types are thin wrappers or re-exports of internal types. The goal is a clean, minimal API surface that hides implementation details.
@@ -867,24 +1072,61 @@ Move existing code from `app/cli/internal/` into `agent-tui/internal/`, refactor
 8. `ui/markdown.go` lines 52-61: move package-level `var` style definitions (which call `theme.Active()` at init time) into a function that resolves against the configured theme at render time. Currently these are frozen at package init, which breaks per-instance theme configuration.
 9. `ui/autocomplete/autocomplete.go` lines 155-167: remove local `min`/`max` helper functions that shadow Go 1.21+ built-ins (Go 1.25 is used per `go.mod`).
 
-### Phase 3: Extract to Standalone Repository
+### Phase 3: Extract Package (within stack-bench, portable to agentic-patterns later)
 
-1. Create `github.com/dugshub/agent-tui` repository.
-2. Initialize `go.mod` with `module github.com/dugshub/agent-tui`.
+**Development happens in the stack-bench repo** where the CLI source lives. The package is structured to be relocatable — a clean `go.mod` with no stack-bench-specific imports means it can be moved to agentic-patterns (or a standalone repo) later with only a module path change.
+
+1. Create `packages/agent-tui/` directory in the stack-bench repo.
+2. Initialize `go.mod` with `module github.com/dugshub/agent-tui` (the Go module path is independent of the git repo path — changing it later is a one-line edit + find-replace in consumer `go.mod` files).
 3. Copy the restructured code from Phase 2.
 4. Ensure `go build ./...` and `go test ./...` pass.
-5. Tag `v0.1.0`.
+5. **Do not tag a release yet** — tagging happens after relocation to the final home (agentic-patterns or standalone).
+
+**Future relocation:** Move `packages/agent-tui/` to its final home, update the `module` line in `go.mod`, update consumer `require` directives, tag `v0.1.0`.
 
 ### Phase 4: Build Consumer Configuration Layer
 
 Implement the `New(Config) (*App, error)` constructor that wires everything together:
 
-1. **Resolve backend connection:** Check `EnvOverride` env var, then `BackendURL`, then `BackendService`. Create the appropriate `Client`.
+1. **Resolve backend connection:** Check `EnvOverride` env var, then `BackendURL`, then `BackendService`, then `BackendStdio`. Create the appropriate `Client` (`HTTPClient` for URL/service, `StdioClient` for stdio). Exactly one backend option must be set (or resolved via env override).
 2. **Start service if needed:** If `BackendService` is set, create a `ServiceManager` and start it.
 3. **Register commands:** Merge built-in commands with `Config.Commands`. Built-in: `/help`, `/clear`, `/quit`. If the consumer registered a command with the same name, theirs wins.
 4. **Set up theme:** Use `Config.Theme` or default to `DarkTheme()`.
 5. **Create the Bubble Tea program:** Wire the app model with the client, command registry, service manager, and config values (AppName, AssistantLabel).
 6. **Signal handling:** `App.Run()` sets up SIGINT/SIGTERM handlers for clean shutdown.
+
+### Phase 4b: Build JSON-RPC stdio Transport
+
+Implement the `StdioClient` — a `Client` implementation that spawns a subprocess and communicates via JSON-RPC 2.0 over stdin/stdout.
+
+**Files to create (in `agent-tui/internal/stdioclient/`):**
+
+- `jsonrpc.go` (~150 lines) -- JSON-RPC 2.0 wire types and framing:
+  - `Request` struct: `{"jsonrpc": "2.0", "method": "...", "params": {...}, "id": N}`
+  - `Response` struct: `{"jsonrpc": "2.0", "result": {...}, "id": N}` or `{"error": {...}, "id": N}`
+  - `Notification` struct: `{"jsonrpc": "2.0", "method": "stream.event", "params": {...}}`
+  - `Writer`: writes JSON-RPC objects as newline-delimited JSON to an `io.Writer`
+  - `Reader`: reads newline-delimited JSON from a `bufio.Scanner`, dispatches to response or notification handlers
+  - Request ID generation (atomic counter)
+
+- `client.go` (~200 lines) -- `StdioClient` implementing `Client`:
+  - `NewStdioClient(StdioConfig)`: spawns `exec.Command`, pipes stdin/stdout, starts reader goroutine
+  - `ListAgents`: sends `listAgents` request, waits for response
+  - `CreateConversation`: sends `createConversation` request, waits for response
+  - `SendMessage`: sends `sendMessage` request, returns `<-chan StreamChunk` fed by `stream.event` notifications. Channel is closed on `done` notification or final response.
+  - `ListConversations`: sends `listConversations` request. On `-32601` error (Method not found), returns `(nil, nil)`.
+  - `GetConversation`: same optional semantics.
+  - `Close()`: closes stdin, waits 5s, sends SIGTERM
+
+- `client_test.go` (~130 lines) -- Tests using a mock subprocess (in-process pipe):
+  - Happy path: full sendMessage flow with streaming notifications
+  - Error handling: JSON-RPC error responses, malformed JSON, process exit
+  - Optional method handling: `-32601` returns nil
+  - Process lifecycle: graceful shutdown
+
+**Key implementation detail:** The reader goroutine reads stdout line-by-line. For each line, it unmarshals the JSON to determine if it's a response (has `id`) or notification (no `id`). Responses are dispatched to a waiting channel keyed by request ID. Notifications are dispatched to the active stream channel (if any).
+
+This phase can run **in parallel** with Phases 2-4 since it only depends on the Phase 1 types.
 
 ### Phase 5: Migrate Stack Bench CLI
 
@@ -896,17 +1138,26 @@ Implement the `New(Config) (*App, error)` constructor that wires everything toge
 
 ### Phase 6: Contract Test Suite + Examples
 
-1. Build `contracttest/validate.go` with test helpers that any backend can use.
-2. Create `_examples/minimal/` -- remote backend connection (~30 lines).
+1. Build `contracttest/validate.go` with test helpers that any backend can use (both HTTP and stdio transports).
+2. Create `_examples/minimal/` -- remote HTTP/SSE backend connection (~30 lines).
 3. Create `_examples/local-python/` -- auto-start Python backend with a tiny Flask SSE server.
-4. Create `_examples/custom-theme/` -- Nord theme customization.
-5. Create `_examples/custom-commands/` -- custom slash commands.
+4. Create `_examples/stdio-python/` -- spawn a Python script via JSON-RPC stdio (~20 lines Go + the `agent.py` from the spec).
+5. Create `_examples/stdio-typescript/` -- spawn a TS script via JSON-RPC stdio (~20 lines Go + the `agent.ts` from the spec).
+6. Create `_examples/custom-theme/` -- Nord theme customization.
+7. Create `_examples/custom-commands/` -- custom slash commands.
 
-### Phase 7: Documentation + Release
+### Phase 7: Backend Implementor's Guide + Release
 
-1. Write `README.md` with quick-start, configuration reference, backend contract docs.
-2. Write `CONTRIBUTING.md`.
-3. Tag `v0.2.0` (first public release with docs and examples).
+1. Write `README.md` with quick-start, configuration reference.
+2. Write `docs/backend-guide.md` -- **Backend Implementor's Guide** covering:
+   - HTTP/SSE contract reference with curl examples for every endpoint
+   - JSON-RPC stdio contract reference with example stdin/stdout transcripts
+   - Python reference implementation (HTTP/SSE via FastAPI + stdio via raw script)
+   - TypeScript reference implementation (HTTP/SSE via Express + stdio via raw script)
+   - Common patterns: single-agent backends, multi-agent, tool calling, error handling
+   - Troubleshooting: debugging SSE streams with curl, debugging stdio with pipe
+3. Write `CONTRIBUTING.md`.
+4. Tag `agent-tui/v0.1.0` (first public release with both transports, docs, and examples).
 
 ## Key Design Decisions
 
@@ -940,7 +1191,13 @@ The agent picker phase (list agents, select one, create conversation) is part of
 
 **Implementation:** When `ListAgents` returns exactly one agent, the picker phase is skipped and a conversation is created immediately.
 
-### 7. Theme system is exported as-is
+### 7. JSON-RPC over stdio as the second transport (not raw stdio)
+
+The stdio transport uses JSON-RPC 2.0 rather than ad-hoc line-delimited JSON. Raw stdio would require inventing message framing, error formats, and request correlation — effectively a worse JSON-RPC. JSON-RPC is a tiny spec with libraries in every language, aligns with MCP (Model Context Protocol), and gives us structured errors, request IDs, and a clean notification mechanism for streaming.
+
+**Key design:** Streaming uses JSON-RPC **notifications** (`stream.event`) with the same event type names and data schemas as the SSE transport. Backend developers learn one set of events regardless of transport.
+
+### 8. Theme system is exported as-is
 
 The four-dimensional token system (Category, Hierarchy, Emphasis, Status) from the CLI component spec is preserved and exported. It is the right abstraction -- consumers who want to customize colors do so through semantic tokens, not by overriding individual lipgloss styles. The built-in DarkTheme and LightTheme cover 90% of use cases.
 
@@ -950,6 +1207,7 @@ The four-dimensional token system (Category, Hierarchy, Emphasis, Status) from t
 
 Every internal package has `_test.go` files, carried over from the current CLI:
 
+- `internal/stdioclient/client_test.go` -- JSON-RPC framing, stdio streaming, process lifecycle, error handling, optional method fallback
 - `internal/sse/parse_test.go` -- SSE parsing, chunk conversion, legacy event names, malformed data
 - `internal/chat/model_test.go` -- Message accumulation, tool call lifecycle, error handling, stream finalization
 - `internal/command/parse_test.go` -- Command parsing, tokenization, quoted strings
@@ -960,8 +1218,8 @@ Every internal package has `_test.go` files, carried over from the current CLI:
 
 ### Integration Tests (root package)
 
-- `tui_test.go` -- `New()` with various Config combinations: URL-only, service, env override, custom commands, custom theme
-- `config_test.go` -- Validation: missing AppName errors, both BackendURL and BackendService errors, etc.
+- `tui_test.go` -- `New()` with various Config combinations: URL-only, service, stdio, env override, custom commands, custom theme
+- `config_test.go` -- Validation: missing AppName errors, multiple backend options set errors, stdio + BackendURL conflict, etc.
 
 ### Contract Tests (exported)
 

@@ -29,3 +29,8 @@ async def handle_for_broadcast(event: Event) -> None:
     if isinstance(payload, dict) and "stack_id" in payload:
         stack_id = payload["stack_id"]
         await broadcast.broadcast(f"stack:{stack_id}", event.event_type, data)
+
+    # Route to conversation-specific channel when payload contains conversation_id
+    if isinstance(payload, dict) and "conversation_id" in payload:
+        conv_id = payload["conversation_id"]
+        await broadcast.broadcast(f"conversation:{conv_id}", event.event_type, data)

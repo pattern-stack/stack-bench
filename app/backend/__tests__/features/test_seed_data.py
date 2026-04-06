@@ -10,10 +10,10 @@ def test_seed_yaml_loadable() -> None:
     seed_path = Path(__file__).parent.parent.parent / "src" / "seeds" / "agents.yaml"
     with open(seed_path) as f:
         data = yaml.safe_load(f)
-    assert len(data["role_templates"]) == 5
-    assert len(data["agent_definitions"]) == 5
+    assert len(data["role_templates"]) == 6
+    assert len(data["agent_definitions"]) == 6
     names = {rt["name"] for rt in data["role_templates"]}
-    assert names == {"understander", "planner", "specifier", "implementer", "reviewer"}
+    assert names == {"understander", "planner", "specifier", "implementer", "reviewer", "orchestrator"}
 
 
 @pytest.mark.unit

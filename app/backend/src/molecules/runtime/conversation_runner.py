@@ -259,12 +259,19 @@ class ConversationRunner:
                 pass
 
     def _get_default_runner(self) -> RunnerProtocol:
-        """Get the default runner for production use.
+        """Get the default runner based on available configuration.
 
-        Returns:
-            An AgentRunner instance (uses LiteLLM under the hood).
+        Returns StubRunner when ANTHROPIC_API_KEY is not set,
+        AgentRunner otherwise.
         """
-        # TODO: Use RunnerPool for phase-based runner selection
+        from config.settings import get_settings
+
+        settings = get_settings()
+        if not settings.ANTHROPIC_API_KEY:
+            from molecules.runtime.stub_runner import StubRunner
+
+            return StubRunner()
+
         from agentic_patterns.core.systems.runners.agent import AgentRunner
 
         return AgentRunner()

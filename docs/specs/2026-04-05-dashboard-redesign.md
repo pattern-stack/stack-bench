@@ -1,6 +1,6 @@
 ---
 title: Dashboard Redesign — Navigation, Kanban, Agent Workspaces
-status: draft
+status: in-progress
 created: 2026-04-05
 epic: EP-016
 depends_on: []
