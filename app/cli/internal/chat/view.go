@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/alecthomas/chroma/v2/lexers"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/ui"
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
@@ -306,6 +307,7 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 		body := atoms.CodeBlock(ctx, atoms.CodeBlockData{
 			Code:     result,
 			FilePath: path,
+			Language: languageFromPath(path),
 		})
 		return header + "\n" + indentBody(body)
 
@@ -342,4 +344,17 @@ func stripDiffHeaders(diff string) string {
 func indentBody(s string) string {
 	lines := strings.Split(s, "\n")
 	return "    " + strings.Join(lines, "\n    ")
+}
+
+// languageFromPath returns a chroma-compatible language name based on the
+// filename, using chroma's built-in extension matching (covers ~250 languages).
+func languageFromPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	lexer := lexers.Match(path)
+	if lexer == nil {
+		return ""
+	}
+	return lexer.Config().Name
 }
