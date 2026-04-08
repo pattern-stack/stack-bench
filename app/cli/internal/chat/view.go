@@ -292,18 +292,11 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 		return header
 	}
 
-	// Tool bodies are indented 4 spaces under the header via indentBody, so
-	// block renderers must target a narrower width to avoid overflow.
-	innerCtx := ctx
-	if innerCtx.Width > 4 {
-		innerCtx.Width -= 4
-	}
-
 	// Dispatch by display_type for completed successful tool calls
 	switch tc.DisplayType {
 	case "diff":
 		path, _ := tc.Arguments["path"].(string)
-		body := molecules.DiffBlock(innerCtx, molecules.DiffBlockData{
+		body := molecules.DiffBlock(ctx, molecules.DiffBlockData{
 			FilePath: path,
 			Diff:     stripDiffHeaders(result),
 			Language: languageFromPath(path),
@@ -312,7 +305,7 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 
 	case "code":
 		path, _ := tc.Arguments["path"].(string)
-		body := atoms.CodeBlock(innerCtx, atoms.CodeBlockData{
+		body := atoms.CodeBlock(ctx, atoms.CodeBlockData{
 			Code:     result,
 			FilePath: path,
 			Language: languageFromPath(path),
@@ -320,7 +313,7 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 		return header + "\n" + indentBody(body)
 
 	case "bash":
-		body := atoms.CodeBlock(innerCtx, atoms.CodeBlockData{
+		body := atoms.CodeBlock(ctx, atoms.CodeBlockData{
 			Code:     result,
 			Language: "bash",
 		})
