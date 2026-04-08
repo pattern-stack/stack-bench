@@ -12,12 +12,14 @@ type AgentSummary struct {
 
 // Conversation is a summary of a past conversation for the picker.
 type Conversation struct {
-	ID            string    `json:"id"`
-	AgentID       string    `json:"agent_id"`
-	State         string    `json:"state"`
-	ExchangeCount int       `json:"exchange_count"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID                 string    `json:"id"`
+	AgentID            string    `json:"agent_id"`
+	State              string    `json:"state"`
+	ExchangeCount      int       `json:"exchange_count"`
+	BranchedFromID     *string   `json:"branched_from_id,omitempty"`
+	BranchedAtSequence *int      `json:"branched_at_sequence,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // ConversationDetail is the full conversation with message history.
@@ -49,21 +51,29 @@ type MessagePart struct {
 type ChunkType string
 
 const (
-	ChunkText      ChunkType = "text"
-	ChunkThinking  ChunkType = "thinking"
-	ChunkToolStart ChunkType = "tool_start"
-	ChunkToolEnd   ChunkType = "tool_end"
+	ChunkText       ChunkType = "text"
+	ChunkThinking   ChunkType = "thinking"
+	ChunkToolStart  ChunkType = "tool_start"
+	ChunkToolEnd    ChunkType = "tool_end"
+	ChunkToolReject ChunkType = "tool_rejected"
+	ChunkError      ChunkType = "error"
+	ChunkIteration  ChunkType = "iteration"
+	ChunkMsgStart   ChunkType = "msg_start"
 )
 
 // StreamChunk is a piece of a streaming response from the backend.
 type StreamChunk struct {
-	Content     string
-	Type        ChunkType
-	Done        bool
-	Error       error
+	Content string
+	Type    ChunkType
+	Done    bool
+	Error   error
+	// Tool fields (populated for ChunkToolStart / ChunkToolEnd)
 	ToolCallID  string
 	ToolName    string
-	DisplayType string
-	ToolInput   string
+	DisplayType string         // "generic", "diff", "code", "bash"
+	ToolInput   string         // raw input string (legacy)
+	Arguments   map[string]any // structured tool arguments
+	Result      string         // explicit result field
 	ToolError   string
+	DurationMs  int
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/dugshub/agent-tui/internal/service"
 	"github.com/dugshub/agent-tui/internal/sse"
 	"github.com/dugshub/agent-tui/internal/ui/components/atoms"
+	"github.com/dugshub/agent-tui/internal/ui/components/molecules"
 	"github.com/dugshub/agent-tui/internal/ui/theme"
 )
 
@@ -61,6 +62,10 @@ type Model struct {
 
 	// Runtime health
 	healthStatuses map[string]service.ServiceStatus
+
+	// Gallery mode (set by NewGallery)
+	gallery       bool
+	galleryLoaded bool
 }
 
 // New creates the initial app model.
@@ -90,13 +95,31 @@ func (m Model) Init() tea.Cmd {
 	return loadAgents
 }
 
+// chatChromeRows is the number of rows the app reserves around the chat:
+// 2 for the header (title + separator), 2 for the legend (separator + status bar).
+const chatChromeRows = 4
+
 // Update handles all incoming messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.chat.SetSize(m.width, m.height-2)
+		m.chat.SetSize(m.width, m.height-chatChromeRows)
+		if m.gallery {
+			pos := m.chat.SaveScrollPosition()
+			firstLoad := pos == 0 && !m.galleryLoaded
+			m.galleryLoaded = true
+			m.chat.ClearMessages()
+			for _, gm := range buildGalleryMessages(m.width) {
+				m.chat.AppendMessage(gm)
+			}
+			if firstLoad {
+				m.chat.GotoBottom()
+			} else {
+				m.chat.RestoreScrollPosition(pos)
+			}
+		}
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -164,7 +187,7 @@ func (m Model) updateAgentSelect(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.agents) > 0 {
 			agent := m.agents[m.agentCursor]
 			m.chat = chat.New(m.client, agent.Name, m.registry, m.cfg.AssistantLabel)
-			m.chat.SetSize(m.width, m.height-2)
+			m.chat.SetSize(m.width, m.height-chatChromeRows)
 
 			client := m.client
 			agentID := agent.ID
@@ -205,50 +228,70 @@ func (m Model) View() tea.View {
 		case PhaseSelectAgent:
 			body = m.viewAgentSelect()
 		case PhaseChat:
-			body = m.chat.View()
+			body = m.chat.RenderHeader() + "\n" + m.chat.View()
 		}
-		body += "\n" + m.renderStatus()
+		body += "\n" + m.renderLegend()
 	}
 
 	v := tea.NewView(body)
 	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
 	return v
 }
 
 func (m Model) viewAgentSelect() string {
+	ctx := atoms.DefaultContext(m.width)
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+
 	var lines []string
 
 	appName := m.cfg.AppName
 	if appName == "" {
 		appName = "AGENT TUI"
 	}
-	title := theme.Bold().Render(" " + strings.ToUpper(appName))
-	lines = append(lines, title)
-	lines = append(lines, theme.Dim().Render(strings.Repeat("─", m.width)))
+	header := molecules.Header(ctx, molecules.HeaderData{
+		Title: strings.ToUpper(appName),
+	})
+	lines = append(lines, header)
 	lines = append(lines, "")
 
 	if m.loadErr != nil {
-		lines = append(lines, theme.Resolve(theme.Style{Status: theme.Error}).Render(fmt.Sprintf("  Error: %v", m.loadErr)))
-		lines = append(lines, "")
-		lines = append(lines, theme.Dim().Render("  Press q to quit."))
+		errBlock := molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
+			Message:     fmt.Sprintf("%v", m.loadErr),
+			Suggestions: []string{"Press q to quit."},
+		})
+		lines = append(lines, "  "+errBlock)
 	} else if len(m.agents) == 0 {
-		lines = append(lines, theme.Dim().Render("  Loading agents..."))
+		lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text:  "Loading agents...",
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		}))
 	} else {
-		lines = append(lines, theme.Fg().Render("  Select an agent to start a conversation:"))
+		lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text: "Select an agent to start a conversation:",
+		}))
 		lines = append(lines, "")
 
 		for i, agent := range m.agents {
 			cursor := "  "
 			if i == m.agentCursor {
-				cursor = theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("> ")
+				cursor = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent}) + " "
 			}
 
-			name := theme.Fg().Render(agent.Name)
+			name := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text: agent.Name,
+			})
 			if i == m.agentCursor {
-				name = theme.Bold().Render(agent.Name)
+				name = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+					Text:  agent.Name,
+					Style: theme.Style{Category: theme.CatAgent},
+				})
 			}
 
-			role := theme.Dim().Render(agent.Role)
+			role := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  agent.Role,
+				Style: theme.Style{Hierarchy: theme.Tertiary},
+			})
 			lines = append(lines, fmt.Sprintf("  %s%s  %s", cursor, name, role))
 		}
 	}
@@ -263,43 +306,41 @@ func (m Model) viewAgentSelect() string {
 	)
 }
 
-func (m Model) renderStatus() string {
+func (m Model) renderLegend() string {
+	ctx := atoms.DefaultContext(m.width)
+
 	var hint string
 	switch m.phase {
 	case PhaseSelectAgent:
 		hint = "j/k: navigate  enter: select  q: quit"
 	case PhaseChat:
-		hint = "enter: send  esc: back to agents  ctrl+c: quit"
+		hint = "enter: send  pgup/pgdn: scroll  esc: back  ctrl+c: quit"
 	}
 
-	// Health indicator (hidden in compact mode)
-	ctx := atoms.DefaultContext(m.width)
-	var healthIndicator string
-	if !ctx.Compact() && m.manager != nil {
-		for _, node := range m.manager.Nodes() {
-			status, ok := m.healthStatuses[node.Name()]
-			if !ok {
-				status = service.StatusStarting
-			}
-			switch status {
-			case service.StatusHealthy:
-				healthIndicator = theme.Resolve(theme.Style{Status: theme.Success}).Render("●") + theme.Dim().Render(" "+node.Name())
-			case service.StatusUnhealthy:
-				healthIndicator = theme.Resolve(theme.Style{Status: theme.Error}).Render("●") + theme.Dim().Render(" "+node.Name())
-			case service.StatusStarting:
-				healthIndicator = theme.Dim().Render("○ " + node.Name())
-			default:
-				healthIndicator = theme.Dim().Render("○ " + node.Name())
-			}
+	// Map service health to molecule HealthState
+	var health molecules.HealthState
+	var serviceName string
+	if m.manager != nil {
+		serviceName = "backend"
+		status, ok := m.healthStatuses[serviceName]
+		if !ok {
+			status = service.StatusStarting
+		}
+		switch status {
+		case service.StatusHealthy:
+			health = molecules.HealthHealthy
+		case service.StatusUnhealthy:
+			health = molecules.HealthUnhealthy
+		case service.StatusStarting:
+			health = molecules.HealthStarting
+		default:
+			health = molecules.HealthUnknown
 		}
 	}
 
-	sep := theme.Dim().Render(strings.Repeat("─", m.width))
-
-	left := theme.Dim().Render(" " + hint)
-	if healthIndicator != "" {
-		fill := max(0, m.width-lipgloss.Width(left)-lipgloss.Width(healthIndicator)-1)
-		return sep + "\n" + left + strings.Repeat(" ", fill) + healthIndicator
-	}
-	return sep + "\n" + left
+	return molecules.StatusBar(ctx, molecules.StatusBarData{
+		Hints:       " " + hint,
+		ServiceName: serviceName,
+		Health:      health,
+	})
 }

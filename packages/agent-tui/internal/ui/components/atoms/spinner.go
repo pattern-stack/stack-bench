@@ -4,74 +4,60 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+
 	"github.com/dugshub/agent-tui/internal/ui/theme"
 )
 
-// spinnerFrames is the braille dot animation sequence.
-var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+// SpinnerFrames is the braille animation sequence.
+var SpinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
-// spinnerInterval is the time between frame advances.
-const spinnerInterval = 80 * time.Millisecond
+// SpinnerInterval is the default tick duration between frames.
+const SpinnerInterval = 80 * time.Millisecond
 
-// spinnerSeq is a package-level counter for unique Spinner IDs.
-var spinnerSeq int
-
-// TickMsg is sent by the Spinner's tick command.
-// ID scopes ticks to a specific Spinner instance.
-type TickMsg struct {
+// SpinnerTickMsg signals the spinner to advance one frame.
+// ID identifies which spinner instance this tick belongs to so multiple
+// spinners can coexist without cross-talk.
+type SpinnerTickMsg struct {
 	ID int
 }
 
-// Spinner is an animated braille indicator.
-// It follows the Bubble Tea sub-model pattern (like chat.Model):
-// Update returns (Spinner, tea.Cmd) rather than (tea.Model, tea.Cmd).
+// Spinner is a Bubble Tea sub-model that renders an animated braille indicator.
 type Spinner struct {
-	id    int
-	frame int
 	Style theme.Style
+	ID    int
+	frame int
 }
 
-// NewSpinner creates a Spinner with the default Running style.
-func NewSpinner() Spinner {
-	spinnerSeq++
-	return Spinner{
-		id:    spinnerSeq,
-		Style: theme.Style{Status: theme.Running},
-	}
+// NewSpinner creates a Spinner with the given ID and style.
+// IDs let multiple spinner instances coexist; pick any unique int per instance.
+func NewSpinner(id int, style theme.Style) Spinner {
+	return Spinner{ID: id, Style: style}
 }
 
-// Init returns the first tick command.
+// Init starts the tick loop.
 func (s Spinner) Init() tea.Cmd {
 	return s.tick()
 }
 
-// Update advances the frame on a matching TickMsg.
+// Update advances the frame on matching tick messages.
 func (s Spinner) Update(msg tea.Msg) (Spinner, tea.Cmd) {
-	if msg, ok := msg.(TickMsg); ok && msg.ID == s.id {
-		s.frame = (s.frame + 1) % len(spinnerFrames)
+	if tick, ok := msg.(SpinnerTickMsg); ok && tick.ID == s.ID {
+		s.frame = (s.frame + 1) % len(SpinnerFrames)
 		return s, s.tick()
 	}
 	return s, nil
 }
 
-// ViewWith renders the current frame glyph using the given RenderContext.
-// This is the primary render method, used by molecule composition.
-func (s Spinner) ViewWith(ctx RenderContext) string {
-	style := ctx.Theme.Resolve(s.Style)
-	return style.Render(spinnerFrames[s.frame])
+// View renders the current frame with the resolved style.
+func (s Spinner) View(ctx RenderContext) string {
+	resolved := ctx.Theme.Resolve(s.Style)
+	return resolved.Render(SpinnerFrames[s.frame])
 }
 
-// View renders the current frame using the active theme.
-// Convenience for standalone usage outside a molecule.
-func (s Spinner) View() string {
-	style := theme.Resolve(s.Style)
-	return style.Render(spinnerFrames[s.frame])
-}
-
-// tick returns a tea.Cmd that sends a TickMsg after the interval.
+// tick returns a tea.Cmd that sends a SpinnerTickMsg after the interval.
 func (s Spinner) tick() tea.Cmd {
-	id := s.id
-	return tea.Tick(spinnerInterval, func(time.Time) tea.Msg {
-		return TickMsg{ID: id}
+	id := s.ID
+	return tea.Tick(SpinnerInterval, func(time.Time) tea.Msg {
+		return SpinnerTickMsg{ID: id}
 	})
 }

@@ -8,6 +8,8 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/agent-tui/internal/sse"
+	"github.com/dugshub/agent-tui/internal/ui/components/atoms"
+	"github.com/dugshub/agent-tui/internal/ui/components/molecules"
 	"github.com/dugshub/agent-tui/internal/ui/theme"
 )
 
@@ -17,6 +19,7 @@ type PickerAction int
 const (
 	ActionNew      PickerAction = iota // Start a new conversation
 	ActionContinue                     // Continue an existing conversation
+	ActionBranch                       // Branch from an existing conversation
 )
 
 // ConversationSelectedMsg is sent when the user picks a conversation.
@@ -74,7 +77,6 @@ func (m PickerModel) Update(msg tea.Msg) (PickerModel, tea.Cmd) {
 }
 
 func (m PickerModel) handleKey(msg tea.KeyPressMsg) (PickerModel, tea.Cmd) {
-	// Total items: 1 (new) + len(conversations)
 	total := 1 + len(m.conversations)
 
 	switch msg.String() {
@@ -99,6 +101,17 @@ func (m PickerModel) handleKey(msg tea.KeyPressMsg) (PickerModel, tea.Cmd) {
 				ConversationID: conv.ID,
 			}
 		}
+	case "b":
+		// Branch only works on existing conversations
+		if m.cursor > 0 && m.cursor <= len(m.conversations) {
+			conv := m.conversations[m.cursor-1]
+			return m, func() tea.Msg {
+				return ConversationSelectedMsg{
+					Action:         ActionBranch,
+					ConversationID: conv.ID,
+				}
+			}
+		}
 	}
 
 	return m, nil
@@ -110,47 +123,72 @@ func (m PickerModel) View() string {
 		return ""
 	}
 
+	ctx := atoms.DefaultContext(m.width)
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+
 	var lines []string
 
-	header := " " + theme.Bold().Render("CONVERSATIONS") +
-		theme.Dim().Render(" — ") +
-		theme.Resolve(theme.Style{Category: theme.CatAgent}).Render(m.agentName)
+	header := molecules.Header(ctx, molecules.HeaderData{
+		Title: "CONVERSATIONS",
+		Badges: []atoms.BadgeData{
+			{
+				Label:   m.agentName,
+				Style:   theme.Style{Category: theme.CatAgent},
+				Variant: atoms.BadgeOutline,
+			},
+		},
+	})
 	lines = append(lines, header)
-	lines = append(lines, theme.Dim().Render(strings.Repeat("─", m.width)))
 	lines = append(lines, "")
 
 	if m.loadErr != nil {
-		lines = append(lines, theme.Resolve(theme.Style{Status: theme.Error}).Render(fmt.Sprintf("  Error: %v", m.loadErr)))
+		errBlock := molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
+			Message: fmt.Sprintf("%v", m.loadErr),
+		})
+		lines = append(lines, "  "+errBlock)
 	} else if m.loading {
-		lines = append(lines, theme.Dim().Render("  Loading conversations..."))
+		lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text:  "Loading conversations...",
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		}))
 	} else {
 		// "New conversation" option
 		newCursor := "  "
-		newLabel := theme.Fg().Render("+ New conversation")
+		newLabel := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text: "+ New conversation",
+		})
 		if m.cursor == 0 {
-			newCursor = theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("> ")
-			newLabel = theme.Bold().Render("+ New conversation")
+			newCursor = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent}) + " "
+			newLabel = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  "+ New conversation",
+				Style: theme.Style{Category: theme.CatAgent},
+			})
 		}
 		lines = append(lines, fmt.Sprintf("  %s%s", newCursor, newLabel))
 		lines = append(lines, "")
 
 		if len(m.conversations) > 0 {
-			lines = append(lines, theme.Dim().Render("  Past conversations:"))
+			lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  "Past conversations:",
+				Style: theme.Style{Hierarchy: theme.Tertiary},
+			}))
 			lines = append(lines, "")
 
 			for i, conv := range m.conversations {
-				idx := i + 1 // offset by 1 for the "new" option
+				idx := i + 1
 				cursor := "  "
 				if m.cursor == idx {
-					cursor = theme.Resolve(theme.Style{Category: theme.CatAgent}).Render("> ")
+					cursor = atoms.Icon(inlineCtx, atoms.IconCursor, theme.Style{Category: theme.CatAgent}) + " "
 				}
 
-				// Format: state, exchange count, time
-				label := conv.AgentID
+				label := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+					Text: conv.AgentID,
+				})
 				if m.cursor == idx {
-					label = theme.Bold().Render(label)
-				} else {
-					label = theme.Fg().Render(label)
+					label = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+						Text:  conv.AgentID,
+						Style: theme.Style{Category: theme.CatAgent},
+					})
 				}
 
 				meta := fmt.Sprintf("%s  %d exchanges  %s",
@@ -159,16 +197,32 @@ func (m PickerModel) View() string {
 					conv.UpdatedAt.Format("Jan 2 15:04"),
 				)
 
+				metaText := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+					Text:  meta,
+					Style: theme.Style{Hierarchy: theme.Tertiary},
+				})
+
+				branch := ""
+				if conv.BranchedFromID != nil {
+					branch = " " + atoms.Badge(inlineCtx, atoms.BadgeData{
+						Label:   "branch",
+						Style:   theme.Style{Category: theme.CatAgent},
+						Variant: atoms.BadgeOutline,
+					})
+				}
+
 				lines = append(lines,
-					fmt.Sprintf("  %s%s  %s", cursor, label, theme.Dim().Render(meta)),
+					fmt.Sprintf("  %s%s  %s%s", cursor, label, metaText, branch),
 				)
 			}
 		} else {
-			lines = append(lines, theme.Dim().Render("  No past conversations."))
+			lines = append(lines, "  "+atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  "No past conversations.",
+				Style: theme.Style{Hierarchy: theme.Tertiary},
+			}))
 		}
 	}
 
-	// Pad to fill height
 	for len(lines) < m.height {
 		lines = append(lines, "")
 	}

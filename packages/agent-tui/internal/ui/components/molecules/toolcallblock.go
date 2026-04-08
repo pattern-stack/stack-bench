@@ -7,114 +7,75 @@ import (
 	"github.com/dugshub/agent-tui/internal/ui/theme"
 )
 
-// ToolStatus represents the current state of a tool invocation.
-type ToolStatus int
+// ToolCallState represents the execution state of a tool call.
+type ToolCallState int
 
 const (
-	ToolRunning ToolStatus = iota
-	ToolSuccess
-	ToolError
+	ToolCallPending ToolCallState = iota // Not yet started
+	ToolCallRunning                      // Currently executing
+	ToolCallSuccess                      // Completed successfully
+	ToolCallError                        // Failed
 )
 
-// ToolCallData carries configuration for a ToolCallBlock.
-type ToolCallData struct {
-	Name      string     // tool name, e.g. "edit_file"
-	Status    ToolStatus // Running, Success, Error
-	Input     string     // tool input/arguments (shown in collapsed CodeBlock)
-	Output    string     // tool output/result (shown in collapsed CodeBlock)
-	Error     string     // error message (shown when Status == ToolError)
-	Collapsed bool       // if true, hide input/output CodeBlocks
+// ToolCallBlockData holds parameters for rendering a tool call display.
+type ToolCallBlockData struct {
+	ToolName string
+	Args     string        // optional: rendered argument summary
+	State    ToolCallState
+	Spinner  atoms.Spinner // used when State == ToolCallRunning
+	Result   string        // optional: short result summary
 }
 
-// statusIcon returns the icon name for a given tool status.
-func statusIcon(status ToolStatus) atoms.IconName {
-	switch status {
-	case ToolSuccess:
-		return atoms.IconCheck
-	case ToolError:
-		return atoms.IconX
+// ToolCallBlock renders a tool invocation header with a state-appropriate icon,
+// the tool name as a badge, optional arguments inline, and an optional short result.
+// Rich bodies (diff/code/bash) should be rendered separately by the caller and
+// composed below this header — see chat/view.go for the dispatch pattern.
+func ToolCallBlock(ctx atoms.RenderContext, data ToolCallBlockData) string {
+	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+
+	// State icon
+	var icon string
+	switch data.State {
+	case ToolCallRunning:
+		icon = data.Spinner.View(inlineCtx)
+	case ToolCallSuccess:
+		icon = atoms.Icon(inlineCtx, atoms.IconCheck, theme.Style{Status: theme.Success})
+	case ToolCallError:
+		icon = atoms.Icon(inlineCtx, atoms.IconX, theme.Style{Status: theme.Error})
 	default:
-		return atoms.IconDot
+		icon = atoms.Icon(inlineCtx, atoms.IconCircle, theme.Style{Hierarchy: theme.Tertiary})
 	}
-}
 
-// statusTheme returns the theme status for a given tool status.
-func statusTheme(status ToolStatus) theme.Status {
-	switch status {
-	case ToolSuccess:
-		return theme.Success
-	case ToolError:
-		return theme.Error
-	default:
-		return theme.Running
-	}
-}
-
-// statusLabel returns the display label for a given tool status.
-func statusLabel(status ToolStatus) string {
-	switch status {
-	case ToolSuccess:
-		return "done"
-	case ToolError:
-		return "failed"
-	default:
-		return "running"
-	}
-}
-
-// ToolCallBlock renders a tool invocation display.
-// Header: Icon(status) + Badge(tool name, filled, CatTool) + Badge(status label, outline, status color)
-// Body (when not collapsed): CodeBlock(input) + CodeBlock(output) or error text
-func ToolCallBlock(ctx atoms.RenderContext, data ToolCallData) string {
-	var parts []string
-
-	// --- Header line ---
-	var header []string
-
-	// Status icon
-	themeStatus := statusTheme(data.Status)
-	iconStyle := theme.Style{Status: themeStatus}
-	header = append(header, atoms.Icon(ctx, statusIcon(data.Status), iconStyle))
-
-	// Tool name badge (filled, CatTool)
-	header = append(header, atoms.Badge(ctx, atoms.BadgeData{
-		Label:   data.Name,
+	// Tool name badge
+	badge := atoms.Badge(inlineCtx, atoms.BadgeData{
+		Label:   data.ToolName,
 		Style:   theme.Style{Category: theme.CatTool},
-		Variant: atoms.BadgeFilled,
-	}))
-
-	// Status label badge (outline, status color)
-	header = append(header, atoms.Badge(ctx, atoms.BadgeData{
-		Label:   statusLabel(data.Status),
-		Style:   theme.Style{Status: themeStatus},
 		Variant: atoms.BadgeOutline,
-	}))
+	})
 
-	parts = append(parts, strings.Join(header, " "))
+	line := icon + " " + badge
 
-	// --- Body (when not collapsed) ---
-	if !data.Collapsed {
-		// Error text
-		if data.Status == ToolError && data.Error != "" {
-			errStyle := theme.Style{Status: theme.Error}
-			parts = append(parts, atoms.TextBlock(ctx, atoms.TextBlockData{
-				Text:  data.Error,
-				Style: errStyle,
-			}))
-		}
+	// Optional arguments
+	if data.Args != "" {
+		args := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text:  data.Args,
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		})
+		line += "  " + args
+	}
 
-		// Input code block
-		if data.Input != "" {
-			parts = append(parts, atoms.CodeBlock(ctx, atoms.CodeBlockData{
-				Code: data.Input,
-			}))
-		}
+	var parts []string
+	parts = append(parts, line)
 
-		// Output code block
-		if data.Output != "" {
-			parts = append(parts, atoms.CodeBlock(ctx, atoms.CodeBlockData{
-				Code: data.Output,
-			}))
+	// Optional result (indented below)
+	if data.Result != "" {
+		result := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+			Text:  data.Result,
+			Style: theme.Style{Hierarchy: theme.Secondary},
+		})
+		lines := strings.Split(result, "\n")
+		for _, l := range lines {
+			parts = append(parts, "    "+l)
 		}
 	}
 

@@ -1,244 +1,231 @@
 package chat
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/dugshub/agent-tui/internal/sse"
 )
 
-func TestAccumulateText(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkText, Content: "hello "}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkText, Content: "world"}})
+// --- helpers ---
+
+func newTestModel() Model {
+	return New(nil, "test", nil, "ai:")
+}
+
+func resp(chunk sse.StreamChunk) ResponseMsg {
+	return ResponseMsg{Chunk: chunk}
+}
+
+// --- tests ---
+
+func TestPartAccumulation_TextChunks(t *testing.T) {
+	m := newTestModel()
+
+	m.handleResponse(resp(sse.StreamChunk{Content: "Hello ", Type: sse.ChunkText}))
+	m.handleResponse(resp(sse.StreamChunk{Content: "world", Type: sse.ChunkText}))
+	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
 
 	if len(m.messages) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(m.messages))
 	}
 	msg := m.messages[0]
 	if msg.Role != RoleAssistant {
-		t.Fatalf("expected RoleAssistant, got %d", msg.Role)
+		t.Errorf("expected assistant role, got %v", msg.Role)
 	}
 	if len(msg.Parts) != 1 {
 		t.Fatalf("expected 1 part, got %d", len(msg.Parts))
 	}
-	tp, ok := msg.Parts[0].(TextPart)
-	if !ok {
-		t.Fatalf("expected TextPart, got %T", msg.Parts[0])
+	if msg.Parts[0].Type != PartText {
+		t.Errorf("expected text part, got %s", msg.Parts[0].Type)
 	}
-	if tp.Content != "hello world" {
-		t.Errorf("Content = %q, want %q", tp.Content, "hello world")
+	if msg.Parts[0].Content != "Hello world" {
+		t.Errorf("expected 'Hello world', got %q", msg.Parts[0].Content)
+	}
+	if msg.Content() != "Hello world" {
+		t.Errorf("Content() = %q, want 'Hello world'", msg.Content())
 	}
 }
 
-func TestAccumulateTextAfterToolCall(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkText, Content: "before"}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkToolStart, ToolCallID: "tc1", ToolName: "search"}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkText, Content: "after"}})
+func TestPartAccumulation_ThinkingThenText(t *testing.T) {
+	m := newTestModel()
+
+	m.handleResponse(resp(sse.StreamChunk{Content: "Let me think...", Type: sse.ChunkThinking}))
+	m.handleResponse(resp(sse.StreamChunk{Content: "The answer is 42", Type: sse.ChunkText}))
+	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+
+	msg := m.messages[0]
+	if len(msg.Parts) != 2 {
+		t.Fatalf("expected 2 parts, got %d", len(msg.Parts))
+	}
+	if msg.Parts[0].Type != PartThinking {
+		t.Errorf("part 0: expected thinking, got %s", msg.Parts[0].Type)
+	}
+	if msg.Parts[1].Type != PartText {
+		t.Errorf("part 1: expected text, got %s", msg.Parts[1].Type)
+	}
+}
+
+func TestPartAccumulation_ToolCallStartEnd(t *testing.T) {
+	m := newTestModel()
+
+	m.handleResponse(resp(sse.StreamChunk{Content: "Let me read that file.", Type: sse.ChunkText}))
+	m.handleResponse(resp(sse.StreamChunk{
+		Type:        sse.ChunkToolStart,
+		ToolCallID:  "tc-1",
+		ToolName:    "read_file",
+		DisplayType: "code",
+		Arguments:   map[string]any{"path": "/tmp/foo.go"},
+	}))
+	m.handleResponse(resp(sse.StreamChunk{
+		Type:       sse.ChunkToolEnd,
+		ToolCallID: "tc-1",
+		ToolName:   "read_file",
+		Result:     "package main\nfunc main() {}",
+		DurationMs: 42,
+	}))
+	m.handleResponse(resp(sse.StreamChunk{Content: "Here's the file.", Type: sse.ChunkText}))
+	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
 
 	msg := m.messages[0]
 	if len(msg.Parts) != 3 {
-		t.Fatalf("expected 3 parts, got %d", len(msg.Parts))
+		t.Fatalf("expected 3 parts (text, tool_call, text), got %d", len(msg.Parts))
 	}
-	if _, ok := msg.Parts[0].(TextPart); !ok {
-		t.Errorf("part[0] expected TextPart, got %T", msg.Parts[0])
+
+	// Part 0: text
+	if msg.Parts[0].Type != PartText || msg.Parts[0].Content != "Let me read that file." {
+		t.Errorf("part 0: got type=%s content=%q", msg.Parts[0].Type, msg.Parts[0].Content)
 	}
-	if _, ok := msg.Parts[1].(ToolCallPart); !ok {
-		t.Errorf("part[1] expected ToolCallPart, got %T", msg.Parts[1])
+
+	// Part 1: tool call
+	tc := msg.Parts[1]
+	if tc.Type != PartToolCall {
+		t.Fatalf("part 1: expected tool_call, got %s", tc.Type)
 	}
-	if _, ok := msg.Parts[2].(TextPart); !ok {
-		t.Errorf("part[2] expected TextPart, got %T", msg.Parts[2])
+	if tc.ToolCall == nil {
+		t.Fatal("part 1: ToolCall is nil")
+	}
+	if tc.ToolCall.ID != "tc-1" {
+		t.Errorf("ToolCall.ID = %q, want 'tc-1'", tc.ToolCall.ID)
+	}
+	if tc.ToolCall.Name != "read_file" {
+		t.Errorf("ToolCall.Name = %q, want 'read_file'", tc.ToolCall.Name)
+	}
+	if tc.ToolCall.DisplayType != "code" {
+		t.Errorf("ToolCall.DisplayType = %q, want 'code'", tc.ToolCall.DisplayType)
+	}
+	if tc.ToolCall.State != ToolCallStateComplete {
+		t.Errorf("ToolCall.State = %q, want 'complete'", tc.ToolCall.State)
+	}
+	if tc.ToolCall.Result != "package main\nfunc main() {}" {
+		t.Errorf("ToolCall.Result = %q", tc.ToolCall.Result)
+	}
+	if tc.ToolCall.DurationMs != 42 {
+		t.Errorf("ToolCall.DurationMs = %d, want 42", tc.ToolCall.DurationMs)
+	}
+	if !tc.Complete {
+		t.Error("tool call part should be Complete after ChunkToolEnd")
+	}
+
+	// Part 2: text
+	if msg.Parts[2].Type != PartText || msg.Parts[2].Content != "Here's the file." {
+		t.Errorf("part 2: got type=%s content=%q", msg.Parts[2].Type, msg.Parts[2].Content)
 	}
 }
 
-func TestAccumulateThinking(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkThinking, Content: "let me "}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkThinking, Content: "think..."}})
+func TestPartAccumulation_ToolCallError(t *testing.T) {
+	m := newTestModel()
 
-	msg := m.messages[0]
-	if len(msg.Parts) != 1 {
-		t.Fatalf("expected 1 part, got %d", len(msg.Parts))
-	}
-	tp, ok := msg.Parts[0].(ThinkingPart)
-	if !ok {
-		t.Fatalf("expected ThinkingPart, got %T", msg.Parts[0])
-	}
-	if tp.Content != "let me think..." {
-		t.Errorf("Content = %q, want %q", tp.Content, "let me think...")
-	}
-}
-
-func TestToolCallLifecycle(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{
+	m.handleResponse(resp(sse.StreamChunk{
 		Type:        sse.ChunkToolStart,
-		ToolCallID:  "tc1",
-		ToolName:    "search",
-		DisplayType: "generic",
-		ToolInput:   "query=foo",
-	}})
-
-	// Verify running state
-	msg := m.messages[0]
-	tc, ok := msg.Parts[0].(ToolCallPart)
-	if !ok {
-		t.Fatalf("expected ToolCallPart, got %T", msg.Parts[0])
-	}
-	if tc.State != ToolCallRunning {
-		t.Errorf("State = %d, want ToolCallRunning", tc.State)
-	}
-	if tc.Input != "query=foo" {
-		t.Errorf("Input = %q, want %q", tc.Input, "query=foo")
-	}
-
-	// Complete the tool call
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{
+		ToolCallID:  "tc-err",
+		ToolName:    "bash",
+		DisplayType: "bash",
+	}))
+	m.handleResponse(resp(sse.StreamChunk{
 		Type:       sse.ChunkToolEnd,
-		ToolCallID: "tc1",
-		ToolName:   "search",
-		Content:    "found 3 results",
-	}})
+		ToolCallID: "tc-err",
+		ToolName:   "bash",
+		ToolError:  "command not found",
+		Result:     "",
+	}))
+	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
 
-	msg = m.messages[0]
-	tc, ok = msg.Parts[0].(ToolCallPart)
-	if !ok {
-		t.Fatalf("expected ToolCallPart, got %T", msg.Parts[0])
+	tc := m.messages[0].Parts[0].ToolCall
+	if tc.State != ToolCallStateError {
+		t.Errorf("expected error state, got %s", tc.State)
 	}
-	if tc.State != ToolCallComplete {
-		t.Errorf("State = %d, want ToolCallComplete", tc.State)
-	}
-	if tc.Result != "found 3 results" {
-		t.Errorf("Result = %q, want %q", tc.Result, "found 3 results")
+	if tc.Error != "command not found" {
+		t.Errorf("expected error message, got %q", tc.Error)
 	}
 }
 
-func TestToolCallFailed(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{
-		Type:       sse.ChunkToolStart,
-		ToolCallID: "tc1",
-		ToolName:   "search",
-	}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
-		ToolCallID: "tc1",
-		ToolName:   "search",
-		ToolError:  "permission denied",
-	}})
+func TestPartAccumulation_ToolReject(t *testing.T) {
+	m := newTestModel()
 
-	msg := m.messages[0]
-	tc, ok := msg.Parts[0].(ToolCallPart)
-	if !ok {
-		t.Fatalf("expected ToolCallPart, got %T", msg.Parts[0])
-	}
-	if tc.State != ToolCallFailed {
-		t.Errorf("State = %d, want ToolCallFailed", tc.State)
-	}
-	if tc.Error != "permission denied" {
-		t.Errorf("Error = %q, want %q", tc.Error, "permission denied")
-	}
-}
+	m.handleResponse(resp(sse.StreamChunk{
+		Type:     sse.ChunkToolReject,
+		ToolName: "rm_rf",
+		Content:  "tool not allowed",
+	}))
+	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
 
-func TestToolCallUnmatchedEnd(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	// First create an assistant message with a tool call
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{
-		Type:       sse.ChunkToolStart,
-		ToolCallID: "tc1",
-		ToolName:   "search",
-	}})
-	// Send tool end with a non-matching ID -- should not panic, should not modify anything
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
-		ToolCallID: "nonexistent",
-		ToolName:   "search",
-		Content:    "result",
-	}})
-
-	msg := m.messages[0]
-	// The original tool call should still be in Running state
-	tc, ok := msg.Parts[0].(ToolCallPart)
-	if !ok {
-		t.Fatalf("expected ToolCallPart, got %T", msg.Parts[0])
-	}
-	if tc.State != ToolCallRunning {
-		t.Errorf("State = %d, want ToolCallRunning (unmatched end should not modify)", tc.State)
-	}
-}
-
-func TestErrorChunk(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	m.streaming = true
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{
-		Error: errors.New("connection failed"),
-	}})
-
-	if m.streaming {
-		t.Error("expected streaming=false after error")
-	}
-	if len(m.messages) != 1 {
-		t.Fatalf("expected 1 message, got %d", len(m.messages))
-	}
 	msg := m.messages[0]
 	if len(msg.Parts) != 1 {
 		t.Fatalf("expected 1 part, got %d", len(msg.Parts))
 	}
-	ep, ok := msg.Parts[0].(ErrorPart)
-	if !ok {
-		t.Fatalf("expected ErrorPart, got %T", msg.Parts[0])
+	if msg.Parts[0].Type != PartError {
+		t.Errorf("expected error part, got %s", msg.Parts[0].Type)
 	}
-	if ep.Message != "connection failed" {
-		t.Errorf("Message = %q, want %q", ep.Message, "connection failed")
+	if msg.Parts[0].Content != "Tool rejected: rm_rf: tool not allowed" {
+		t.Errorf("content = %q", msg.Parts[0].Content)
 	}
 }
 
-func TestFinalizeRaw(t *testing.T) {
-	m := New(nil, "test", nil, "ai:")
-	m.streaming = true
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkThinking, Content: "hmm"}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkText, Content: "hello "}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkToolStart, ToolCallID: "tc1", ToolName: "x"}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkToolEnd, ToolCallID: "tc1", Content: "result"}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkText, Content: "world"}})
-	m.handleResponse(ResponseMsg{Chunk: sse.StreamChunk{Type: sse.ChunkText, Done: true}})
+func TestPartAccumulation_MultipleToolCalls(t *testing.T) {
+	m := newTestModel()
+
+	m.handleResponse(resp(sse.StreamChunk{
+		Type: sse.ChunkToolStart, ToolCallID: "tc-1", ToolName: "read_file", DisplayType: "code",
+	}))
+	m.handleResponse(resp(sse.StreamChunk{
+		Type: sse.ChunkToolEnd, ToolCallID: "tc-1", Result: "file contents",
+	}))
+	m.handleResponse(resp(sse.StreamChunk{
+		Type: sse.ChunkToolStart, ToolCallID: "tc-2", ToolName: "edit_file", DisplayType: "diff",
+	}))
+	m.handleResponse(resp(sse.StreamChunk{
+		Type: sse.ChunkToolEnd, ToolCallID: "tc-2", Result: "edit applied",
+	}))
+	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
 
 	msg := m.messages[0]
-	// Raw should contain only text parts, not thinking or tool results
-	if msg.Raw != "hello world" {
-		t.Errorf("Raw = %q, want %q", msg.Raw, "hello world")
+	if len(msg.Parts) != 2 {
+		t.Fatalf("expected 2 tool call parts, got %d", len(msg.Parts))
 	}
-	if m.streaming {
-		t.Error("expected streaming=false after Done")
+	if msg.Parts[0].ToolCall.Name != "read_file" {
+		t.Errorf("part 0: name = %q", msg.Parts[0].ToolCall.Name)
 	}
-}
-
-func TestContentMethod(t *testing.T) {
-	// With Raw set
-	msg := Message{Role: RoleAssistant, Raw: "from raw"}
-	if msg.Content() != "from raw" {
-		t.Errorf("Content() = %q, want %q", msg.Content(), "from raw")
-	}
-
-	// Without Raw, falls back to TextParts
-	msg2 := Message{
-		Role: RoleAssistant,
-		Parts: []MessagePart{
-			TextPart{Content: "hello "},
-			ErrorPart{Message: "oops"},
-			TextPart{Content: "world"},
-		},
-	}
-	want := "hello Error: oopsworld"
-	if msg2.Content() != want {
-		t.Errorf("Content() = %q, want %q", msg2.Content(), want)
+	if msg.Parts[1].ToolCall.Name != "edit_file" {
+		t.Errorf("part 1: name = %q", msg.Parts[1].ToolCall.Name)
 	}
 }
 
-func TestBackwardCompatUserMessage(t *testing.T) {
-	msg := Message{Role: RoleUser, Raw: "user input"}
-	if msg.Content() != "user input" {
-		t.Errorf("Content() = %q, want %q", msg.Content(), "user input")
+func TestRawMessage_BackwardCompat(t *testing.T) {
+	msg := Message{Role: RoleAssistant, Raw: true, RawContent: "<pre>rendered</pre>"}
+	if msg.Content() != "<pre>rendered</pre>" {
+		t.Errorf("Content() = %q, want raw content", msg.Content())
+	}
+}
+
+func TestTextMessage_Helper(t *testing.T) {
+	msg := TextMessage(RoleUser, "hello")
+	if msg.Role != RoleUser {
+		t.Errorf("role = %v", msg.Role)
+	}
+	if msg.Content() != "hello" {
+		t.Errorf("Content() = %q", msg.Content())
+	}
+	if len(msg.Parts) != 1 || msg.Parts[0].Type != PartText {
+		t.Error("expected single text part")
 	}
 }

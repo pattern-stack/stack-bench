@@ -18,12 +18,14 @@ type AgentSummary struct {
 
 // Conversation is a summary of a past conversation.
 type Conversation struct {
-	ID            string    `json:"id"`
-	AgentID       string    `json:"agent_id"`
-	State         string    `json:"state"`
-	ExchangeCount int       `json:"exchange_count"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID                 string    `json:"id"`
+	AgentID            string    `json:"agent_id"`
+	State              string    `json:"state"`
+	ExchangeCount      int       `json:"exchange_count"`
+	BranchedFromID     *string   `json:"branched_from_id,omitempty"`
+	BranchedAtSequence *int      `json:"branched_at_sequence,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // ConversationDetail is the full conversation with message history.
@@ -55,23 +57,31 @@ type MessagePart struct {
 type ChunkType string
 
 const (
-	ChunkText      ChunkType = "text"
-	ChunkThinking  ChunkType = "thinking"
-	ChunkToolStart ChunkType = "tool_start"
-	ChunkToolEnd   ChunkType = "tool_end"
+	ChunkText       ChunkType = "text"
+	ChunkThinking   ChunkType = "thinking"
+	ChunkToolStart  ChunkType = "tool_start"
+	ChunkToolEnd    ChunkType = "tool_end"
+	ChunkToolReject ChunkType = "tool_rejected"
+	ChunkError      ChunkType = "error"
+	ChunkIteration  ChunkType = "iteration"
+	ChunkMsgStart   ChunkType = "msg_start"
 )
 
 // StreamChunk is a piece of a streaming response from the backend.
 type StreamChunk struct {
-	Content     string
-	Type        ChunkType
-	Done        bool
-	Error       error
+	Content string
+	Type    ChunkType
+	Done    bool
+	Error   error
+	// Tool fields (populated for ChunkToolStart / ChunkToolEnd)
 	ToolCallID  string
 	ToolName    string
-	DisplayType string
-	ToolInput   string
+	DisplayType string         // "generic", "diff", "code", "bash"
+	ToolInput   string         // raw input string (legacy)
+	Arguments   map[string]any // structured tool arguments
+	Result      string         // explicit result field (separate from Content)
 	ToolError   string
+	DurationMs  int
 }
 
 // APIError represents an error returned by the backend API.
@@ -155,10 +165,11 @@ type SSEReasoningData struct {
 
 // SSEToolStartData is the JSON payload for tool start events.
 type SSEToolStartData struct {
-	ToolCallID  string `json:"tool_call_id"`
-	ToolName    string `json:"tool_name"`
-	Input       string `json:"input"`
-	DisplayType string `json:"display_type"`
+	ToolCallID  string         `json:"tool_call_id"`
+	ToolName    string         `json:"tool_name"`
+	Input       string         `json:"input"`
+	DisplayType string         `json:"display_type"`
+	Arguments   map[string]any `json:"arguments"`
 }
 
 // SSEToolEndData is the JSON payload for tool end events.
@@ -166,6 +177,7 @@ type SSEToolEndData struct {
 	ToolCallID  string `json:"tool_call_id"`
 	ToolName    string `json:"tool_name"`
 	Output      string `json:"output"`
+	Result      any    `json:"result"`
 	Error       string `json:"error"`
 	DisplayType string `json:"display_type"`
 	DurationMs  int    `json:"duration_ms"`
@@ -209,13 +221,18 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
+		name := d.ToolName
+		if name == "" {
+			name = d.Input
+		}
 		return &StreamChunk{
-			Content:     d.ToolName,
+			Content:     name,
 			Type:        ChunkToolStart,
 			ToolCallID:  d.ToolCallID,
 			ToolName:    d.ToolName,
 			DisplayType: d.DisplayType,
 			ToolInput:   d.Input,
+			Arguments:   d.Arguments,
 		}
 
 	// Tool end: legacy "agent.tool.end", alt "tool_end", and canonical "tool.end"
@@ -224,14 +241,40 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
+		// Prefer explicit Output, fall back to Result if Result is a string.
+		result := d.Output
+		if r, ok := d.Result.(string); ok && result == "" {
+			result = r
+		}
 		return &StreamChunk{
-			Content:     d.Output,
+			Content:     result,
 			Type:        ChunkToolEnd,
 			ToolCallID:  d.ToolCallID,
 			ToolName:    d.ToolName,
 			DisplayType: d.DisplayType,
+			Result:      result,
 			ToolError:   d.Error,
+			DurationMs:  d.DurationMs,
 		}
+
+	// Tool rejected: backend refused to run a tool
+	case "agent.tool.rejected", "tool.rejected":
+		var d struct {
+			ToolName string `json:"tool_name"`
+			Reason   string `json:"reason"`
+		}
+		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
+			return nil
+		}
+		return &StreamChunk{
+			Content:  d.Reason,
+			Type:     ChunkToolReject,
+			ToolName: d.ToolName,
+		}
+
+	// Iteration boundaries — surface as a marker, no content
+	case "agent.iteration.start", "agent.iteration.end":
+		return &StreamChunk{Type: ChunkIteration}
 
 	case "done":
 		return &StreamChunk{Done: true, Type: ChunkText}

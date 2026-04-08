@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -9,8 +10,9 @@ import (
 	"github.com/dugshub/agent-tui/internal/sse"
 )
 
-// DemoStep is a single step in a demo script. Each step can be a user message
-// (Role="user", Content set) or an assistant response with rich streaming parts.
+// DemoStep is a single step in a demo script. Each step is either a user
+// message (Role="user", Content set) or an assistant response (Role="assistant",
+// Parts set with structured content blocks).
 type DemoStep struct {
 	Role    string     `json:"role"`
 	Content string     `json:"content,omitempty"`
@@ -18,22 +20,30 @@ type DemoStep struct {
 }
 
 // DemoPart is a typed content block within an assistant response.
+//
+// For tool_call parts, Arguments and Result mirror the SSE wire format —
+// the demo client emits ChunkToolStart with the structured Arguments map and
+// ChunkToolEnd with Result, so the chat model's display-type dispatch sees
+// the same data shape it would from a real backend.
 type DemoPart struct {
-	Type        string `json:"type"`                   // "text", "thinking", "tool_start", "tool_end"
-	Content     string `json:"content,omitempty"`       // text/thinking content, or tool result
-	ToolCallID  string `json:"tool_call_id,omitempty"`
-	ToolName    string `json:"tool_name,omitempty"`
-	DisplayType string `json:"display_type,omitempty"`  // "diff", "code", "bash", "generic"
-	Input       string `json:"input,omitempty"`         // tool input
-	Error       string `json:"error,omitempty"`         // tool error
+	Type        string         `json:"type"`                   // "text" | "thinking" | "tool_call" | "error"
+	Content     string         `json:"content,omitempty"`      // text/thinking/error content
+	ToolName    string         `json:"tool_name,omitempty"`    // for tool_call
+	DisplayType string         `json:"display_type,omitempty"` // "generic", "diff", "code", "bash"
+	Arguments   map[string]any `json:"arguments,omitempty"`    // structured tool arguments
+	Result      string         `json:"result,omitempty"`       // tool result
+	Error       string         `json:"error,omitempty"`        // tool error
+	DurationMs  int            `json:"duration_ms,omitempty"`  // tool execution time
 }
 
 // demoClient replays a scripted conversation for demo/testing purposes.
-// It implements the internal sse.Client interface.
+// Implements the internal sse.Client interface so it slots into the same
+// TUI plumbing as the real HTTP backend.
 type demoClient struct {
-	script []DemoStep
-	cursor int
-	mu     sync.Mutex
+	script    []DemoStep
+	cursor    int
+	toolCount int
+	mu        sync.Mutex
 }
 
 var _ sse.Client = (*demoClient)(nil)
@@ -74,39 +84,10 @@ func (d *demoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan 
 			return
 		}
 
-		// If step has parts, stream them with types
 		if len(step.Parts) > 0 {
-			for _, p := range step.Parts {
-				switch p.Type {
-				case "thinking":
-					streamWords(ch, p.Content, sse.ChunkThinking, 20*time.Millisecond)
-				case "tool_start":
-					ch <- sse.StreamChunk{
-						Content:     p.ToolName,
-						Type:        sse.ChunkToolStart,
-						ToolCallID:  p.ToolCallID,
-						ToolName:    p.ToolName,
-						DisplayType: p.DisplayType,
-						ToolInput:   p.Input,
-					}
-					time.Sleep(300 * time.Millisecond)
-				case "tool_end":
-					ch <- sse.StreamChunk{
-						Content:     p.Content,
-						Type:        sse.ChunkToolEnd,
-						ToolCallID:  p.ToolCallID,
-						ToolName:    p.ToolName,
-						DisplayType: p.DisplayType,
-						ToolError:   p.Error,
-					}
-					time.Sleep(100 * time.Millisecond)
-				default: // "text"
-					streamWords(ch, p.Content, sse.ChunkText, 25*time.Millisecond)
-				}
-			}
+			d.streamParts(ch, step.Parts)
 		} else {
-			// Simple text-only step
-			streamWords(ch, step.Content, sse.ChunkText, 25*time.Millisecond)
+			d.streamText(ch, step.Content)
 		}
 
 		ch <- sse.StreamChunk{Done: true}
@@ -123,16 +104,78 @@ func (d *demoClient) GetConversation(_ context.Context, _ string) (*sse.Conversa
 	return nil, nil
 }
 
-// streamWords sends content word-by-word with a delay between each.
-func streamWords(ch chan<- sse.StreamChunk, content string, chunkType sse.ChunkType, delay time.Duration) {
-	words := strings.Fields(content)
-	for i, word := range words {
-		token := word
-		if i < len(words)-1 {
-			token += " "
+// streamText streams plain text word-by-word, preserving leading indent per line.
+func (d *demoClient) streamText(ch chan<- sse.StreamChunk, content string) {
+	lines := strings.Split(content, "\n")
+	for li, line := range lines {
+		if li > 0 {
+			ch <- sse.StreamChunk{Content: "\n", Type: sse.ChunkText}
+			time.Sleep(15 * time.Millisecond)
 		}
-		ch <- sse.StreamChunk{Content: token, Type: chunkType}
-		time.Sleep(delay)
+		trimmed := strings.TrimLeft(line, " \t")
+		indent := line[:len(line)-len(trimmed)]
+		if indent != "" {
+			ch <- sse.StreamChunk{Content: indent, Type: sse.ChunkText}
+		}
+		words := strings.Fields(trimmed)
+		for wi, word := range words {
+			token := word
+			if wi < len(words)-1 {
+				token += " "
+			}
+			ch <- sse.StreamChunk{Content: token, Type: sse.ChunkText}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+
+// streamParts streams structured parts with realistic timing and tool call IDs.
+func (d *demoClient) streamParts(ch chan<- sse.StreamChunk, parts []DemoPart) {
+	for _, part := range parts {
+		switch part.Type {
+		case "text":
+			d.streamText(ch, part.Content)
+
+		case "thinking":
+			ch <- sse.StreamChunk{Content: part.Content, Type: sse.ChunkThinking}
+			time.Sleep(3 * time.Second)
+
+		case "tool_call":
+			d.toolCount++
+			tcID := fmt.Sprintf("demo-tc-%d", d.toolCount)
+			ch <- sse.StreamChunk{
+				Type:        sse.ChunkToolStart,
+				ToolCallID:  tcID,
+				ToolName:    part.ToolName,
+				DisplayType: part.DisplayType,
+				Arguments:   part.Arguments,
+			}
+			// Simulate tool execution time, scaled up for visual effect.
+			dur := part.DurationMs * 3
+			if dur < 2000 {
+				dur = 2000
+			}
+			if dur > 5000 {
+				dur = 5000
+			}
+			time.Sleep(time.Duration(dur) * time.Millisecond)
+			chunk := sse.StreamChunk{
+				Type:       sse.ChunkToolEnd,
+				ToolCallID: tcID,
+				ToolName:   part.ToolName,
+				Result:     part.Result,
+				DurationMs: part.DurationMs,
+			}
+			if part.Error != "" {
+				chunk.ToolError = part.Error
+			}
+			ch <- chunk
+			time.Sleep(100 * time.Millisecond)
+
+		case "error":
+			ch <- sse.StreamChunk{Content: part.Content, Type: sse.ChunkError}
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
 

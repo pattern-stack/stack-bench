@@ -97,7 +97,10 @@ func (a *publicClientAdapter) SendMessage(ctx context.Context, conversationID st
 				ToolName:    sc.ToolName,
 				DisplayType: sc.DisplayType,
 				ToolInput:   sc.ToolInput,
+				Arguments:   sc.Arguments,
+				Result:      sc.Result,
 				ToolError:   sc.ToolError,
+				DurationMs:  sc.DurationMs,
 			}
 		}
 	}()
@@ -116,8 +119,10 @@ func (a *publicClientAdapter) ListConversations(ctx context.Context, agentName s
 	for i, c := range convs {
 		result[i] = Conversation{
 			ID: c.ID, AgentID: c.AgentID, State: c.State,
-			ExchangeCount: c.ExchangeCount,
-			CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
+			ExchangeCount:      c.ExchangeCount,
+			BranchedFromID:     c.BranchedFromID,
+			BranchedAtSequence: c.BranchedAtSequence,
+			CreatedAt:          c.CreatedAt, UpdatedAt: c.UpdatedAt,
 		}
 	}
 	return result, nil

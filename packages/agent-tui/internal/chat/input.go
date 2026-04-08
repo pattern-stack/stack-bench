@@ -1,6 +1,13 @@
 package chat
 
-import "strings"
+import (
+	"strings"
+
+	"charm.land/lipgloss/v2"
+)
+
+// Input editing and layout helpers. Extracted so they can be reused
+// when we swap the hand-rolled input for a bubbles/textinput.
 
 // deleteChar removes the last character from s.
 func deleteChar(s string) string {
@@ -30,4 +37,43 @@ func deleteWord(s string) string {
 // deleteLine clears the entire input.
 func deleteLine(_ string) string {
 	return ""
+}
+
+// wrapLine breaks a single line into chunks that fit within maxWidth,
+// preferring word boundaries over hard character breaks.
+func wrapLine(line string, maxWidth int) []string {
+	if maxWidth <= 0 || lipgloss.Width(line) <= maxWidth {
+		return []string{line}
+	}
+	runes := []rune(line)
+	var result []string
+	for len(runes) > 0 {
+		if lipgloss.Width(string(runes)) <= maxWidth {
+			result = append(result, string(runes))
+			break
+		}
+		breakAt := maxWidth
+		if breakAt > len(runes) {
+			breakAt = len(runes)
+		}
+		// Try to break at a space
+		best := -1
+		for i := breakAt; i > 0; i-- {
+			if runes[i-1] == ' ' {
+				best = i
+				break
+			}
+		}
+		if best > 0 {
+			result = append(result, string(runes[:best]))
+			runes = runes[best:]
+		} else {
+			result = append(result, string(runes[:breakAt]))
+			runes = runes[breakAt:]
+		}
+	}
+	if len(result) == 0 {
+		return []string{""}
+	}
+	return result
 }

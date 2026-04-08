@@ -4,98 +4,91 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dugshub/agent-tui/internal/ui/components/atoms"
 	"github.com/dugshub/agent-tui/internal/ui/theme"
 )
 
-func TestToolCallBlockRunning(t *testing.T) {
-	ctx := testContext(theme.DarkTheme(), 80)
-	result := ToolCallBlock(ctx, ToolCallData{
-		Name:   "edit_file",
-		Status: ToolRunning,
+func TestToolCallBlock_ContainsToolName(t *testing.T) {
+	out := ToolCallBlock(darkCtx(), ToolCallBlockData{
+		ToolName: "read_file",
+		State:    ToolCallPending,
 	})
-	if !strings.Contains(result, "edit_file") {
-		t.Error("should contain tool name")
-	}
-	if !strings.Contains(result, "running") {
-		t.Error("should contain 'running' status label")
+	if !strings.Contains(out, "read_file") {
+		t.Error("expected tool call block to contain tool name")
 	}
 }
 
-func TestToolCallBlockSuccess(t *testing.T) {
-	ctx := testContext(theme.DarkTheme(), 80)
-	result := ToolCallBlock(ctx, ToolCallData{
-		Name:   "read_file",
-		Status: ToolSuccess,
+func TestToolCallBlock_PendingShowsCircle(t *testing.T) {
+	out := ToolCallBlock(darkCtx(), ToolCallBlockData{
+		ToolName: "write_file",
+		State:    ToolCallPending,
 	})
-	if !strings.Contains(result, "read_file") {
-		t.Error("should contain tool name")
-	}
-	if !strings.Contains(result, "done") {
-		t.Error("should contain 'done' status label")
+	if !strings.Contains(out, "○") {
+		t.Error("expected pending state to show circle icon")
 	}
 }
 
-func TestToolCallBlockError(t *testing.T) {
-	ctx := testContext(theme.DarkTheme(), 80)
-	result := ToolCallBlock(ctx, ToolCallData{
-		Name:      "write_file",
-		Status:    ToolError,
-		Error:     "permission denied",
-		Collapsed: false,
+func TestToolCallBlock_SuccessShowsCheck(t *testing.T) {
+	out := ToolCallBlock(darkCtx(), ToolCallBlockData{
+		ToolName: "read_file",
+		State:    ToolCallSuccess,
 	})
-	if !strings.Contains(result, "write_file") {
-		t.Error("should contain tool name")
-	}
-	if !strings.Contains(result, "failed") {
-		t.Error("should contain 'failed' status label")
-	}
-	if !strings.Contains(result, "permission denied") {
-		t.Error("should contain error text")
+	if !strings.Contains(out, "✓") {
+		t.Error("expected success state to show check icon")
 	}
 }
 
-func TestToolCallBlockCollapsed(t *testing.T) {
-	ctx := testContext(theme.DarkTheme(), 80)
-	result := ToolCallBlock(ctx, ToolCallData{
-		Name:      "edit_file",
-		Status:    ToolSuccess,
-		Input:     "some input data",
-		Output:    "some output data",
-		Collapsed: true,
+func TestToolCallBlock_ErrorShowsX(t *testing.T) {
+	out := ToolCallBlock(darkCtx(), ToolCallBlockData{
+		ToolName: "exec",
+		State:    ToolCallError,
 	})
-	if strings.Contains(result, "some input data") {
-		t.Error("collapsed block should hide input")
-	}
-	if strings.Contains(result, "some output data") {
-		t.Error("collapsed block should hide output")
+	if !strings.Contains(out, "✗") {
+		t.Error("expected error state to show X icon")
 	}
 }
 
-func TestToolCallBlockExpanded(t *testing.T) {
-	ctx := testContext(theme.DarkTheme(), 80)
-	result := ToolCallBlock(ctx, ToolCallData{
-		Name:      "edit_file",
-		Status:    ToolSuccess,
-		Input:     "file: main.go",
-		Output:    "ok",
-		Collapsed: false,
+func TestToolCallBlock_RunningShowsSpinner(t *testing.T) {
+	s := atoms.NewSpinner(1, theme.Style{Status: theme.Running})
+	out := ToolCallBlock(darkCtx(), ToolCallBlockData{
+		ToolName: "search",
+		State:    ToolCallRunning,
+		Spinner:  s,
 	})
-	if !strings.Contains(result, "file: main.go") {
-		t.Error("expanded block should show input")
-	}
-	if !strings.Contains(result, "ok") {
-		t.Error("expanded block should show output")
+	if !strings.Contains(out, atoms.SpinnerFrames[0]) {
+		t.Error("expected running state to show spinner frame")
 	}
 }
 
-func TestToolCallBlockDifferentThemes(t *testing.T) {
-	data := ToolCallData{
-		Name:   "bash",
-		Status: ToolRunning,
+func TestToolCallBlock_WithArgs(t *testing.T) {
+	out := ToolCallBlock(darkCtx(), ToolCallBlockData{
+		ToolName: "read_file",
+		State:    ToolCallSuccess,
+		Args:     "path=main.go",
+	})
+	if !strings.Contains(out, "path=main.go") {
+		t.Error("expected tool call block to contain args")
 	}
-	dark := ToolCallBlock(testContext(theme.DarkTheme(), 80), data)
-	light := ToolCallBlock(testContext(theme.LightTheme(), 80), data)
-	if dark == light {
-		t.Error("dark and light themes should produce different output")
+}
+
+func TestToolCallBlock_WithResult(t *testing.T) {
+	out := ToolCallBlock(darkCtx(), ToolCallBlockData{
+		ToolName: "exec",
+		State:    ToolCallSuccess,
+		Result:   "exit code 0",
+	})
+	if !strings.Contains(out, "exit code 0") {
+		t.Error("expected tool call block to contain result")
+	}
+}
+
+func TestToolCallBlock_LightTheme(t *testing.T) {
+	out := ToolCallBlock(lightCtx(), ToolCallBlockData{
+		ToolName: "grep",
+		State:    ToolCallSuccess,
+		Args:     "pattern=TODO",
+	})
+	if !strings.Contains(out, "grep") {
+		t.Error("expected light theme tool call block to contain tool name")
 	}
 }

@@ -24,9 +24,10 @@ func NewGallery() Model {
 		client:   client,
 		registry: reg,
 		cfg:      cfg,
+		gallery:  true,
 	}
 	m.chat = chat.New(client, "Component Gallery", reg, cfg.AssistantLabel)
-	m.chat.SetSize(m.width, m.height-5)
+	m.chat.SetSize(m.width, m.height-chatChromeRows)
 	m.chat.SetConversationID("gallery")
 
 	for _, msg := range buildGalleryMessages(m.width) {
@@ -43,7 +44,7 @@ func buildGalleryMessages(width int) []chat.Message {
 	var msgs []chat.Message
 
 	raw := func(content string) {
-		msgs = append(msgs, chat.Message{Role: chat.RoleSystem, Raw: content + "\n"})
+		msgs = append(msgs, chat.Message{Role: chat.RoleSystem, Raw: true, RawContent: content + "\n"})
 	}
 
 	section := func(title, description string) string {
@@ -336,22 +337,36 @@ func buildGalleryMessages(width int) []chat.Message {
 		raw(strings.Join(parts, "\n"))
 	}
 
-	// StatusBlock (static render — uses View with a fresh context)
+	// StatusBlock
 	{
 		var parts []string
 		parts = append(parts, section("StatusBlock", "Spinner with verb label and optional elapsed/count badges."))
 		parts = append(parts, "")
 
-		blocks := []molecules.StatusBlockData{
-			{Verb: "Reading files", Elapsed: "3.2s", Count: "12 files"},
-			{Verb: "Analyzing dependencies", Elapsed: "1.7s"},
-			{Verb: "Running tests", Count: "47 passed"},
-			{Verb: "Thinking"},
-		}
-		for _, data := range blocks {
-			sb := molecules.NewStatusBlock(data)
-			parts = append(parts, "  "+sb.View(ctx))
-		}
+		spinner := atoms.NewSpinner(99, theme.Style{Status: theme.Running})
+
+		parts = append(parts, "  "+molecules.StatusBlock(ctx, molecules.StatusBlockData{
+			Spinner: spinner,
+			Verb:    "Reading files",
+			Elapsed: 3.2,
+			Count:   12,
+			Unit:    "files",
+		}))
+		parts = append(parts, "  "+molecules.StatusBlock(ctx, molecules.StatusBlockData{
+			Spinner: spinner,
+			Verb:    "Analyzing dependencies",
+			Elapsed: 1.7,
+		}))
+		parts = append(parts, "  "+molecules.StatusBlock(ctx, molecules.StatusBlockData{
+			Spinner: spinner,
+			Verb:    "Running tests",
+			Count:   47,
+			Unit:    "passed",
+		}))
+		parts = append(parts, "  "+molecules.StatusBlock(ctx, molecules.StatusBlockData{
+			Spinner: spinner,
+			Verb:    "Thinking",
+		}))
 
 		raw(strings.Join(parts, "\n"))
 	}
@@ -359,27 +374,36 @@ func buildGalleryMessages(width int) []chat.Message {
 	// ToolCallBlock
 	{
 		var parts []string
-		parts = append(parts, section("ToolCallBlock", "Tool invocation display with state icon, name badge, and result."))
+		parts = append(parts, section("ToolCallBlock", "Tool invocation header with state icon, name badge, args, and optional result."))
 		parts = append(parts, "")
 
-		parts = append(parts, "  "+molecules.ToolCallBlock(ctx, molecules.ToolCallData{
-			Name:   "Read",
-			Input:  "app/cli/internal/ui/theme/tokens.go",
-			Status: molecules.ToolSuccess,
-			Output: "52 lines",
+		spinner := atoms.NewSpinner(100, theme.Style{Status: theme.Running})
+
+		parts = append(parts, "  "+molecules.ToolCallBlock(ctx, molecules.ToolCallBlockData{
+			ToolName: "Read",
+			Args:     "app/cli/internal/ui/theme/tokens.go",
+			State:    molecules.ToolCallSuccess,
+			Result:   "52 lines",
 		}))
 		parts = append(parts, "")
-		parts = append(parts, "  "+molecules.ToolCallBlock(ctx, molecules.ToolCallData{
-			Name:   "Edit",
-			Input:  "app/cli/internal/chat/view.go",
-			Status: molecules.ToolRunning,
+		parts = append(parts, "  "+molecules.ToolCallBlock(ctx, molecules.ToolCallBlockData{
+			ToolName: "Edit",
+			Args:     "app/cli/internal/chat/view.go",
+			State:    molecules.ToolCallRunning,
+			Spinner:  spinner,
 		}))
 		parts = append(parts, "")
-		parts = append(parts, "  "+molecules.ToolCallBlock(ctx, molecules.ToolCallData{
-			Name:   "Bash",
-			Input:  "go test ./...",
-			Status: molecules.ToolError,
-			Error:  "FAIL: TestBadge_Truncation (badge_test.go:42)",
+		parts = append(parts, "  "+molecules.ToolCallBlock(ctx, molecules.ToolCallBlockData{
+			ToolName: "Bash",
+			Args:     "go test ./...",
+			State:    molecules.ToolCallError,
+			Result:   "FAIL: TestBadge_Truncation (badge_test.go:42)",
+		}))
+		parts = append(parts, "")
+		parts = append(parts, "  "+molecules.ToolCallBlock(ctx, molecules.ToolCallBlockData{
+			ToolName: "Grep",
+			Args:     "pattern: theme.Resolve",
+			State:    molecules.ToolCallPending,
 		}))
 
 		raw(strings.Join(parts, "\n"))
