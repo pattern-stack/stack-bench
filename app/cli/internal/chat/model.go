@@ -114,6 +114,8 @@ type Model struct {
 	registry       *command.Registry
 	autocomplete   autocomplete.Model
 	viewport       viewport.Model
+	spinner        atoms.Spinner
+	spinnerActive  bool
 	ExchangeCount  int
 	IsBranch       bool
 }
@@ -264,7 +266,7 @@ func (m *Model) rebuildViewportContent() {
 
 	var rendered []string
 	for _, msg := range m.messages {
-		rendered = append(rendered, renderMessage(msg, m.width))
+		rendered = append(rendered, renderMessage(msg, m.width, m.spinner))
 	}
 
 	m.viewport.SetContent(strings.Join(rendered, "\n"))
@@ -289,6 +291,14 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
 		return *m, cmd
+	case atoms.SpinnerTickMsg:
+		if m.spinnerActive {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			m.rebuildViewportContent()
+			return *m, cmd
+		}
+		return *m, nil
 	case ResponseMsg:
 		return m.handleResponse(msg)
 	case command.ClearMsg:
@@ -482,9 +492,16 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 				State:       ToolCallStateRunning,
 			},
 		})
+		if !m.spinnerActive {
+			m.spinner = atoms.NewSpinner(1, theme.Style{Status: theme.Running})
+			m.spinnerActive = true
+			m.rebuildViewportContent()
+			return *m, tea.Batch(readStream(m.streamCh), m.spinner.Init())
+		}
 
 	case api.ChunkToolEnd:
 		m.completeToolCall(chunk)
+		m.spinnerActive = false
 
 	case api.ChunkToolReject:
 		m.ensureAssistantMessage()
@@ -508,6 +525,7 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	if chunk.Done {
 		m.streaming = false
 		m.streamCh = nil
+		m.spinnerActive = false
 		// Mark all parts complete
 		if len(m.messages) > 0 {
 			last := &m.messages[len(m.messages)-1]

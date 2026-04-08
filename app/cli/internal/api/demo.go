@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -9,8 +10,21 @@ import (
 
 // DemoMessage is a single message in a demo script.
 type DemoMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string     `json:"role"`
+	Content string     `json:"content"`
+	Parts   []DemoPart `json:"parts,omitempty"` // structured parts (optional, overrides Content)
+}
+
+// DemoPart is a structured part within a demo message.
+type DemoPart struct {
+	Type        string         `json:"type"`                   // "text", "thinking", "tool_call", "error"
+	Content     string         `json:"content,omitempty"`      // text/thinking/error content
+	ToolName    string         `json:"tool_name,omitempty"`    // for tool_call
+	DisplayType string         `json:"display_type,omitempty"` // "generic", "diff", "code", "bash"
+	Arguments   map[string]any `json:"arguments,omitempty"`    // tool arguments
+	Result      string         `json:"result,omitempty"`       // tool result
+	Error       string         `json:"error,omitempty"`        // tool error
+	DurationMs  int            `json:"duration_ms,omitempty"`  // tool duration
 }
 
 // DemoClient replays a scripted conversation for demo/testing purposes.
@@ -40,54 +54,110 @@ func (d *DemoClient) CreateConversation(_ context.Context, _ string) (string, er
 
 func (d *DemoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan StreamChunk, error) {
 	d.mu.Lock()
-	var content string
-	found := false
+	var msg *DemoMessage
 	for d.cursor < len(d.script) {
 		if d.script[d.cursor].Role == "assistant" {
-			content = d.script[d.cursor].Content
+			msg = &d.script[d.cursor]
 			d.cursor++
-			found = true
 			break
 		}
 		d.cursor++
 	}
 	d.mu.Unlock()
 
-	if !found {
-		content = "(end of demo script)"
+	if msg == nil {
+		msg = &DemoMessage{Role: "assistant", Content: "(end of demo script)"}
 	}
 
 	ch := make(chan StreamChunk, 64)
 	go func() {
 		defer close(ch)
-		// Stream line-by-line, then word-by-word within each line,
-		// preserving newlines so markdown structure survives.
-		lines := strings.Split(content, "\n")
-		for li, line := range lines {
-			if li > 0 {
-				ch <- StreamChunk{Content: "\n", Type: ChunkText}
-				time.Sleep(15 * time.Millisecond)
-			}
-			// Preserve leading whitespace (indentation), then stream words
-			trimmed := strings.TrimLeft(line, " \t")
-			indent := line[:len(line)-len(trimmed)]
-			if indent != "" {
-				ch <- StreamChunk{Content: indent, Type: ChunkText}
-			}
-			words := strings.Fields(trimmed)
-			for wi, word := range words {
-				token := word
-				if wi < len(words)-1 {
-					token += " "
-				}
-				ch <- StreamChunk{Content: token, Type: ChunkText}
-				time.Sleep(50 * time.Millisecond)
-			}
+		if len(msg.Parts) > 0 {
+			d.streamParts(ch, msg.Parts)
+		} else {
+			d.streamText(ch, msg.Content)
 		}
 		ch <- StreamChunk{Done: true}
 	}()
 
 	return ch, nil
+}
+
+// streamText streams plain text word-by-word (original behavior).
+func (d *DemoClient) streamText(ch chan<- StreamChunk, content string) {
+	lines := strings.Split(content, "\n")
+	for li, line := range lines {
+		if li > 0 {
+			ch <- StreamChunk{Content: "\n", Type: ChunkText}
+			time.Sleep(15 * time.Millisecond)
+		}
+		trimmed := strings.TrimLeft(line, " \t")
+		indent := line[:len(line)-len(trimmed)]
+		if indent != "" {
+			ch <- StreamChunk{Content: indent, Type: ChunkText}
+		}
+		words := strings.Fields(trimmed)
+		for wi, word := range words {
+			token := word
+			if wi < len(words)-1 {
+				token += " "
+			}
+			ch <- StreamChunk{Content: token, Type: ChunkText}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+
+var demoToolCallCounter int
+
+// streamParts streams structured parts with realistic timing.
+func (d *DemoClient) streamParts(ch chan<- StreamChunk, parts []DemoPart) {
+	for _, part := range parts {
+		switch part.Type {
+		case "text":
+			d.streamText(ch, part.Content)
+
+		case "thinking":
+			ch <- StreamChunk{Content: part.Content, Type: ChunkThinking}
+			time.Sleep(3 * time.Second)
+
+		case "tool_call":
+			demoToolCallCounter++
+			tcID := fmt.Sprintf("demo-tc-%d", demoToolCallCounter)
+			ch <- StreamChunk{
+				Type:        ChunkToolStart,
+				ToolCallID:  tcID,
+				ToolName:    part.ToolName,
+				DisplayType: part.DisplayType,
+				Arguments:   part.Arguments,
+			}
+			// Simulate tool execution time — scale up for visual effect
+			dur := part.DurationMs * 3
+			if dur < 2000 {
+				dur = 2000
+			}
+			if dur > 5000 {
+				dur = 5000
+			}
+			time.Sleep(time.Duration(dur) * time.Millisecond)
+			chunk := StreamChunk{
+				Type:       ChunkToolEnd,
+				ToolCallID: tcID,
+				ToolName:   part.ToolName,
+				Result:     part.Result,
+				DurationMs: part.DurationMs,
+			}
+			if part.Error != "" {
+				chunk.ToolError = part.Error
+			}
+			ch <- chunk
+			time.Sleep(100 * time.Millisecond)
+
+		case "error":
+			ch <- StreamChunk{Content: part.Content, Type: ChunkError}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 }
 
 func (d *DemoClient) ListConversations(_ context.Context, _ string) ([]Conversation, error) {
