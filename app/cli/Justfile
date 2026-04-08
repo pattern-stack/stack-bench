@@ -24,6 +24,10 @@ demo *args:
 gallery:
     go run . --demo-gallery
 
+# Show every spinner preset animated side-by-side
+spinners:
+    go run . --demo-spinners
+
 # Run CLI in a tmux session for AI-driven testing
 # Usage: just demo-tmux
 #   Then from another terminal:

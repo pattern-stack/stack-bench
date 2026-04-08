@@ -12,10 +12,12 @@ import (
 	"syscall"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/api"
 	"github.com/dugshub/stack-bench/app/cli/internal/app"
 	"github.com/dugshub/stack-bench/app/cli/internal/service"
+	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
 //go:embed fixtures/demo.json
@@ -26,10 +28,31 @@ func main() {
 	demoMode := flag.Bool("demo", false, "run in demo mode with scripted conversation replay")
 	demoScript := flag.String("demo-script", "", "path to demo script JSON (default: built-in fixture)")
 	galleryMode := flag.Bool("demo-gallery", false, "show component gallery with all atoms and molecules")
+	spinnersMode := flag.Bool("demo-spinners", false, "show every spinner preset animated side-by-side")
+	themeName := flag.String("theme", "", "color theme: 'dark' or 'light' (default: dark, or $SB_THEME)")
 	flag.Parse()
+
+	// Theme selection: CLI flag > env var > terminal background detection.
+	switch {
+	case *themeName != "":
+		theme.SetActive(*themeName)
+	case os.Getenv("SB_THEME") != "":
+		theme.SetActive(os.Getenv("SB_THEME"))
+	default:
+		// Query the terminal for its background color and pick a theme that
+		// contrasts well. Falls back to dark if the query fails.
+		if !lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
+			theme.SetActive("light")
+		}
+	}
 
 	if *galleryMode {
 		runGallery()
+		return
+	}
+
+	if *spinnersMode {
+		runSpinnerGallery()
 		return
 	}
 
@@ -118,6 +141,15 @@ func runDemo(scriptPath string) {
 
 func runGallery() {
 	model := app.NewGallery()
+	p := tea.NewProgram(model)
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runSpinnerGallery() {
+	model := app.NewSpinnerGallery()
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
