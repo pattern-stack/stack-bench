@@ -53,11 +53,11 @@ func DiffBlock(ctx atoms.RenderContext, data DiffBlockData) string {
 }
 
 // renderDiffLine renders a single parsed diff line as "  NUM MARKER CONTENT".
-// The marker and content colors follow the line kind; syntax highlighting is
-// applied to added lines when a language is set.
+// The line number shares the marker's color so add/remove regions stand out
+// in the gutter at a glance; context line numbers stay dim.
 func renderDiffLine(ctx atoms.RenderContext, line DiffLine, language string, numStyle theme.Style) string {
 	var num, marker string
-	var markerStyle, contentStyle theme.Style
+	var markerStyle, contentStyle, lineNumStyle theme.Style
 
 	switch line.Kind {
 	case DiffLineAdded:
@@ -65,20 +65,23 @@ func renderDiffLine(ctx atoms.RenderContext, line DiffLine, language string, num
 		marker = "+"
 		markerStyle = theme.Style{Status: theme.Success}
 		contentStyle = theme.Style{Status: theme.Success}
+		lineNumStyle = theme.Style{Status: theme.Success}
 	case DiffLineRemoved:
 		num = fmt.Sprintf("%4d", line.OldNum)
 		marker = "-"
 		markerStyle = theme.Style{Status: theme.Error}
 		contentStyle = theme.Style{Status: theme.Error}
+		lineNumStyle = theme.Style{Status: theme.Error}
 	default: // DiffLineContext
 		num = fmt.Sprintf("%4d", line.NewNum)
 		marker = " "
 		markerStyle = theme.Style{Hierarchy: theme.Tertiary}
 		contentStyle = theme.Style{Hierarchy: theme.Tertiary}
+		lineNumStyle = numStyle
 	}
 
 	numRendered := atoms.TextBlock(ctx, atoms.TextBlockData{
-		Text: num, Style: numStyle,
+		Text: num, Style: lineNumStyle,
 	})
 	markerRendered := atoms.TextBlock(ctx, atoms.TextBlockData{
 		Text: marker, Style: markerStyle,

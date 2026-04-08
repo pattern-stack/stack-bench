@@ -41,11 +41,14 @@ func CodeBlock(ctx RenderContext, data CodeBlockData) string {
 			pathStyle := ctx.Theme.Resolve(theme.Style{Category: theme.CatTool, Hierarchy: theme.Tertiary})
 			headerParts = append(headerParts, pathStyle.Render(data.FilePath))
 		}
-		parts = append(parts, "  "+strings.Join(headerParts, "  "))
+		parts = append(parts, "       "+strings.Join(headerParts, "  "))
 	}
 
 	lines := strings.Split(data.Code, "\n")
-	gutterChar := gutterStyle.Render("  │ ")
+	// Gutter is padded so the │ aligns with the marker column of DiffBlock
+	// (which uses "  " + 4-char number + " " before its marker = column 7).
+	// This makes adjacent code/diff blocks read as part of the same gutter.
+	gutterChar := gutterStyle.Render("       │ ")
 
 	// Calculate line number width for padding
 	lineNumWidth := 0
@@ -54,7 +57,7 @@ func CodeBlock(ctx RenderContext, data CodeBlockData) string {
 	}
 
 	// Max content width (account for gutter + padding)
-	gutterWidth := 4 // "  │ "
+	gutterWidth := 9 // "       │ "
 	if data.LineNumbers {
 		gutterWidth += lineNumWidth + 1
 	}

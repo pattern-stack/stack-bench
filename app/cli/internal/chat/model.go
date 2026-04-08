@@ -269,7 +269,7 @@ func (m *Model) rebuildViewportContent() {
 		rendered = append(rendered, renderMessage(msg, m.width, m.spinner))
 	}
 
-	m.viewport.SetContent(strings.Join(rendered, "\n"))
+	m.viewport.SetContent(strings.Join(rendered, "\n\n"))
 
 	if wasAtBottom {
 		m.viewport.GotoBottom()

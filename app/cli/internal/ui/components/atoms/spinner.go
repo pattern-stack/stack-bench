@@ -8,8 +8,12 @@ import (
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/theme"
 )
 
-// SpinnerFrames contains the braille animation sequence.
-var SpinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+// SpinnerFrames contains the braille animation sequence. Uses the dense
+// 6-dot variant so every frame fills the full cell — keeps the spinner
+// vertically aligned with adjacent glyphs like ✓ and ✗ that sit on the
+// baseline. The sparser top-dot frames (⠋⠙⠹) appear to float above the
+// text baseline, which looks misaligned next to other status icons.
+var SpinnerFrames = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
 
 // SpinnerInterval is the default tick duration between frames.
 const SpinnerInterval = 80 * time.Millisecond
