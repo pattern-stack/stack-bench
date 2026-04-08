@@ -165,6 +165,18 @@ func (a *App) Run() error {
 	return nil
 }
 
+// RunGallery launches the component gallery — a scrollable showcase of all
+// atoms and molecules pre-rendered. No backend required.
+func RunGallery() error {
+	model := app.NewGallery()
+
+	p := tea.NewProgram(model)
+	if _, err := p.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (a *App) buildRegistry() *command.Registry {
 	reg := command.DefaultRegistry()
 

@@ -1,0 +1,17 @@
+# agent-tui
+
+# Run tests
+test:
+    go test ./...
+
+# Quality gates
+quality:
+    go vet ./... && go test ./...
+
+# Run the demo TUI
+demo *args:
+    cd _examples/demo && go run . {{args}}
+
+# Run the component gallery
+gallery:
+    cd _examples/gallery && go run .

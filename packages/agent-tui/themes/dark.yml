@@ -1,0 +1,21 @@
+name: dark
+foreground: "#F8F8F2"
+background: "#282A36"
+dim: "#6272A4"
+categories:
+  agent: "#BD93F9"
+  system: "#8BE9FD"
+  tool: "#FFB86C"
+  user: "#F8F8F2"
+  cat5: "#FF79C6"
+  cat6: "#F1FA8C"
+  cat7: "#50FA7B"
+  cat8: "#6272A4"
+statuses:
+  none: "#F8F8F2"
+  success: "#50FA7B"
+  error: "#FF5555"
+  warning: "#F1FA8C"
+  info: "#8BE9FD"
+  muted: "#6272A4"
+  running: "#BD93F9"

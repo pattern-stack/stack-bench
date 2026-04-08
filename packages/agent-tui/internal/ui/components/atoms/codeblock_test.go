@@ -33,9 +33,10 @@ func TestCodeBlockWithLineNumbers(t *testing.T) {
 	}
 
 	result := CodeBlock(ctx, data)
+	// 3 code lines + blank before + blank after = 5 total
 	lines := strings.Split(result, "\n")
-	if len(lines) != 3 {
-		t.Errorf("expected 3 lines, got %d", len(lines))
+	if len(lines) != 5 {
+		t.Errorf("expected 5 lines (blank + 3 code + blank), got %d", len(lines))
 	}
 	// Line numbers should appear in the output
 	if !strings.Contains(result, "1") || !strings.Contains(result, "3") {
@@ -52,9 +53,10 @@ func TestCodeBlockWithoutLineNumbers(t *testing.T) {
 	}
 
 	result := CodeBlock(ctx, data)
+	// 2 code lines + blank before + blank after = 4 total
 	lines := strings.Split(result, "\n")
-	if len(lines) != 2 {
-		t.Errorf("expected 2 lines, got %d", len(lines))
+	if len(lines) != 4 {
+		t.Errorf("expected 4 lines (blank + 2 code + blank), got %d", len(lines))
 	}
 }
 

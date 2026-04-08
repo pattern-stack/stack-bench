@@ -37,6 +37,14 @@ quality-cli:
 build-cli:
     cd app/cli && just build
 
+# Run the agent-tui demo
+demo *args='':
+    cd packages/agent-tui/_examples/demo && go run . {{args}}
+
+# Run the agent-tui component gallery
+gallery:
+    cd packages/agent-tui/_examples/gallery && go run .
+
 # Deploy
 deploy-build *args='':
     #!/usr/bin/env bash
