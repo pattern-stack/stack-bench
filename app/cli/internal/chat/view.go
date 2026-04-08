@@ -143,10 +143,10 @@ func (m *Model) RenderHeader() string {
 	})
 }
 
-func renderMessage(msg Message, width int) string {
+func renderMessage(msg Message, width int, spinner atoms.Spinner) string {
 	// Raw messages are pre-rendered — display as-is.
 	if msg.Raw {
-		return msg.Content
+		return msg.RawContent
 	}
 
 	ctx := atoms.DefaultContext(width)
@@ -155,29 +155,191 @@ func renderMessage(msg Message, width int) string {
 	case RoleUser:
 		return molecules.MessageBlock(ctx, molecules.MessageBlockData{
 			Role:    atoms.RoleUser,
-			Content: msg.Content,
+			Content: msg.Content(),
 		})
 
 	case RoleAssistant:
-		badge := atoms.Badge(ctx, atoms.BadgeData{
-			Label:   "assistant",
-			Style:   theme.Style{Category: theme.CatAgent},
-			Variant: atoms.BadgeFilled,
-		})
-		contentWidth := width - 4
-		if contentWidth < 20 {
-			contentWidth = 20
-		}
-		rendered := ui.RenderMarkdown(msg.Content, contentWidth)
-		lines := strings.Split(rendered, "\n")
-		indented := "  " + strings.Join(lines, "\n  ")
-		return badge + "\n" + indented
+		return renderAssistantMessage(ctx, msg, width, spinner)
 
 	case RoleSystem:
 		return molecules.MessageBlock(ctx, molecules.MessageBlockData{
 			Role:    atoms.RoleSystem,
-			Content: msg.Content,
+			Content: msg.Content(),
 		})
 	}
 	return ""
+}
+
+func renderAssistantMessage(ctx atoms.RenderContext, msg Message, width int, spinner atoms.Spinner) string {
+	badge := atoms.Badge(ctx, atoms.BadgeData{
+		Label:   "assistant",
+		Style:   theme.Style{Category: theme.CatAgent},
+		Variant: atoms.BadgeFilled,
+	})
+
+	contentWidth := width - 4
+	if contentWidth < 20 {
+		contentWidth = 20
+	}
+
+	var sections []string
+	sections = append(sections, badge)
+
+	var prevType PartType
+	for _, part := range msg.Parts {
+		rendered := renderPart(ctx, part, contentWidth, spinner)
+		if rendered != "" {
+			lines := strings.Split(rendered, "\n")
+			indented := "  " + strings.Join(lines, "\n  ")
+			// Add blank line between parts of different types
+			if prevType != "" && prevType != part.Type {
+				sections = append(sections, "")
+			}
+			sections = append(sections, indented)
+			prevType = part.Type
+		}
+	}
+
+	if len(sections) == 1 {
+		return badge
+	}
+
+	return strings.Join(sections, "\n")
+}
+
+func renderPart(ctx atoms.RenderContext, part MessagePart, contentWidth int, spinner atoms.Spinner) string {
+	switch part.Type {
+	case PartText:
+		if part.Content == "" {
+			return ""
+		}
+		return ui.RenderMarkdown(part.Content, contentWidth)
+
+	case PartThinking:
+		if part.Content == "" {
+			return ""
+		}
+		summary := part.Content
+		if idx := strings.IndexByte(summary, '\n'); idx > 0 {
+			summary = summary[:idx]
+		}
+		if len(summary) > 60 {
+			summary = summary[:57] + "..."
+		}
+		return atoms.TextBlock(ctx, atoms.TextBlockData{
+			Text:  "thinking: " + summary,
+			Style: theme.Style{Hierarchy: theme.Tertiary},
+		})
+
+	case PartToolCall:
+		return renderToolCallPart(ctx, part, spinner)
+
+	case PartError:
+		return molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
+			Message: part.Content,
+		})
+	}
+	return ""
+}
+
+func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms.Spinner) string {
+	tc := part.ToolCall
+	if tc == nil {
+		return ""
+	}
+
+	// Map chat ToolCallState to molecules ToolCallState
+	var state molecules.ToolCallState
+	switch tc.State {
+	case ToolCallStatePending:
+		state = molecules.ToolCallPending
+	case ToolCallStateRunning:
+		state = molecules.ToolCallRunning
+	case ToolCallStateComplete:
+		state = molecules.ToolCallSuccess
+	case ToolCallStateError:
+		state = molecules.ToolCallError
+	}
+
+	result := tc.Result
+	if tc.Error != "" {
+		result = tc.Error
+	}
+
+	// For rich display types, hide args (they're noisy and the body shows context).
+	// For generic, show args inline.
+	hideArgs := tc.State == ToolCallStateComplete && result != "" &&
+		(tc.DisplayType == "diff" || tc.DisplayType == "code" || tc.DisplayType == "bash")
+	args := ""
+	if !hideArgs {
+		args = formatArgs(tc.Arguments)
+	}
+
+	// Render the tool call header (icon + name badge + args)
+	header := molecules.ToolCallBlock(ctx, molecules.ToolCallBlockData{
+		ToolName: tc.Name,
+		State:    state,
+		Spinner:  spinner,
+		Args:     args,
+	})
+
+	// While running or no result, just show the header (and error text if any)
+	if tc.State != ToolCallStateComplete || result == "" {
+		if result != "" {
+			return header + "\n" + indentBody(result)
+		}
+		return header
+	}
+
+	// Dispatch by display_type for completed successful tool calls
+	switch tc.DisplayType {
+	case "diff":
+		path, _ := tc.Arguments["path"].(string)
+		body := molecules.DiffBlock(ctx, molecules.DiffBlockData{
+			FilePath: path,
+			Diff:     stripDiffHeaders(result),
+		})
+		return header + "\n" + indentBody(body)
+
+	case "code":
+		path, _ := tc.Arguments["path"].(string)
+		body := atoms.CodeBlock(ctx, atoms.CodeBlockData{
+			Code:     result,
+			FilePath: path,
+		})
+		return header + "\n" + indentBody(body)
+
+	case "bash":
+		body := atoms.CodeBlock(ctx, atoms.CodeBlockData{
+			Code:     result,
+			Language: "bash",
+		})
+		return header + "\n" + indentBody(body)
+
+	default:
+		return header + "\n" + indentBody(result)
+	}
+}
+
+// stripDiffHeaders removes the --- a/file, +++ b/file, and @@ hunk header lines
+// from a unified diff, leaving only the +/- content lines.
+func stripDiffHeaders(diff string) string {
+	lines := strings.Split(diff, "\n")
+	out := lines[:0]
+	for _, line := range lines {
+		if strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ ") {
+			continue
+		}
+		if strings.HasPrefix(line, "@@") {
+			continue
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "\n")
+}
+
+// indentBody indents each line by 4 spaces for nesting under a tool call header.
+func indentBody(s string) string {
+	lines := strings.Split(s, "\n")
+	return "    " + strings.Join(lines, "\n    ")
 }

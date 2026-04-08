@@ -26,18 +26,30 @@ type Message struct {
 type ChunkType string
 
 const (
-	ChunkText      ChunkType = "text"
-	ChunkThinking  ChunkType = "thinking"
-	ChunkToolStart ChunkType = "tool_start"
-	ChunkToolEnd   ChunkType = "tool_end"
+	ChunkText       ChunkType = "text"
+	ChunkThinking   ChunkType = "thinking"
+	ChunkToolStart  ChunkType = "tool_start"
+	ChunkToolEnd    ChunkType = "tool_end"
+	ChunkToolReject ChunkType = "tool_rejected"
+	ChunkError      ChunkType = "error"
+	ChunkIteration  ChunkType = "iteration"
+	ChunkMsgStart   ChunkType = "msg_start"
 )
 
 // StreamChunk is a piece of a streaming response from the backend.
 type StreamChunk struct {
 	Content string
-	Type    ChunkType // "text", "thinking", "tool_start", "tool_end"
+	Type    ChunkType
 	Done    bool
 	Error   error
+	// Tool fields (populated for ChunkToolStart / ChunkToolEnd)
+	ToolCallID  string
+	ToolName    string
+	DisplayType string            // "generic", "diff", "code", "bash"
+	Arguments   map[string]any
+	Result      string
+	ToolError   string
+	DurationMs  int
 }
 
 // Client defines the interface for communicating with the stack-bench backend.

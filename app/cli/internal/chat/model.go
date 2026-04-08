@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -25,11 +26,74 @@ const (
 	RoleSystem    = atoms.RoleSystem
 )
 
-// Message is a single chat message.
+// PartType identifies the kind of message part.
+type PartType string
+
+const (
+	PartText     PartType = "text"
+	PartThinking PartType = "thinking"
+	PartToolCall PartType = "tool_call"
+	PartError    PartType = "error"
+)
+
+// ToolCallState tracks the lifecycle of a tool call.
+type ToolCallState string
+
+const (
+	ToolCallStatePending  ToolCallState = "pending"
+	ToolCallStateRunning  ToolCallState = "running"
+	ToolCallStateComplete ToolCallState = "complete"
+	ToolCallStateError    ToolCallState = "error"
+)
+
+// ToolCallPart holds structured data for a tool call part.
+type ToolCallPart struct {
+	ID          string
+	Name        string
+	DisplayType string
+	Arguments   map[string]any
+	State       ToolCallState
+	Result      string
+	Error       string
+	DurationMs  int
+}
+
+// MessagePart is one segment of a message (text, thinking, tool call, or error).
+type MessagePart struct {
+	Type     PartType
+	Content  string
+	ToolCall *ToolCallPart
+	Complete bool
+}
+
+// Message is a single chat message with structured parts.
 type Message struct {
-	Role    Role
-	Content string
-	Raw     bool // when true, Content is pre-rendered — bypass markdown
+	Role       Role
+	Parts      []MessagePart
+	Raw        bool   // when true, RawContent is pre-rendered — bypass parts
+	RawContent string // only used when Raw is true
+}
+
+// Content returns the text content of the message.
+// For raw messages, returns RawContent. For part-based messages,
+// concatenates all part content.
+func (m Message) Content() string {
+	if m.Raw {
+		return m.RawContent
+	}
+	var buf strings.Builder
+	for _, p := range m.Parts {
+		buf.WriteString(p.Content)
+	}
+	return buf.String()
+}
+
+// TextMessage creates a simple single-text-part message.
+func TextMessage(role Role, content string) Message {
+	return Message{
+		Role:  role,
+		Parts: []MessagePart{{Type: PartText, Content: content, Complete: true}},
+	}
 }
 
 // ResponseMsg is sent by the backend streaming response tea.Cmd.
@@ -50,6 +114,8 @@ type Model struct {
 	registry       *command.Registry
 	autocomplete   autocomplete.Model
 	viewport       viewport.Model
+	spinner        atoms.Spinner
+	spinnerActive  bool
 	ExchangeCount  int
 	IsBranch       bool
 }
@@ -200,7 +266,7 @@ func (m *Model) rebuildViewportContent() {
 
 	var rendered []string
 	for _, msg := range m.messages {
-		rendered = append(rendered, renderMessage(msg, m.width))
+		rendered = append(rendered, renderMessage(msg, m.width, m.spinner))
 	}
 
 	m.viewport.SetContent(strings.Join(rendered, "\n"))
@@ -225,6 +291,14 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
 		return *m, cmd
+	case atoms.SpinnerTickMsg:
+		if m.spinnerActive {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			m.rebuildViewportContent()
+			return *m, cmd
+		}
+		return *m, nil
 	case ResponseMsg:
 		return m.handleResponse(msg)
 	case command.ClearMsg:
@@ -354,10 +428,8 @@ func (m *Model) submit() (Model, tea.Cmd) {
 		result := command.Parse(text)
 		def := m.registry.Lookup(result.Command)
 		if def == nil {
-			m.messages = append(m.messages, Message{
-				Role:    RoleSystem,
-				Content: "Unknown command: " + text + ". Type /help for available commands.",
-			})
+			m.messages = append(m.messages, TextMessage(RoleSystem,
+				"Unknown command: "+text+". Type /help for available commands."))
 			m.rebuildViewportContent()
 			return *m, nil
 		}
@@ -368,7 +440,7 @@ func (m *Model) submit() (Model, tea.Cmd) {
 	}
 
 	// Regular message
-	m.messages = append(m.messages, Message{Role: RoleUser, Content: text})
+	m.messages = append(m.messages, TextMessage(RoleUser, text))
 	m.streaming = true
 	m.rebuildViewportContent()
 
@@ -377,10 +449,7 @@ func (m *Model) submit() (Model, tea.Cmd) {
 	ch, err := client.SendMessage(context.Background(), convID, text)
 	if err != nil {
 		m.streaming = false
-		m.messages = append(m.messages, Message{
-			Role:    RoleAssistant,
-			Content: "Error: " + err.Error(),
-		})
+		m.messages = append(m.messages, TextMessage(RoleAssistant, "Error: "+err.Error()))
 		m.rebuildViewportContent()
 		return *m, nil
 	}
@@ -394,31 +463,140 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	if chunk.Error != nil {
 		m.streaming = false
 		m.streamCh = nil
-		m.messages = append(m.messages, Message{
-			Role:    RoleAssistant,
-			Content: "Error: " + chunk.Error.Error(),
-		})
+		m.messages = append(m.messages, TextMessage(RoleAssistant, "Error: "+chunk.Error.Error()))
 		m.rebuildViewportContent()
 		return *m, nil
 	}
 
-	if chunk.Content != "" {
-		if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == RoleAssistant {
-			m.messages[len(m.messages)-1].Content += chunk.Content
-		} else {
-			m.messages = append(m.messages, Message{Role: RoleAssistant, Content: chunk.Content})
+	switch chunk.Type {
+	case api.ChunkText:
+		if chunk.Content != "" {
+			m.appendToLastPart(PartText, chunk.Content)
 		}
-		m.rebuildViewportContent()
+
+	case api.ChunkThinking:
+		if chunk.Content != "" {
+			m.appendToLastPart(PartThinking, chunk.Content)
+		}
+
+	case api.ChunkToolStart:
+		m.ensureAssistantMessage()
+		last := &m.messages[len(m.messages)-1]
+		last.Parts = append(last.Parts, MessagePart{
+			Type: PartToolCall,
+			ToolCall: &ToolCallPart{
+				ID:          chunk.ToolCallID,
+				Name:        chunk.ToolName,
+				DisplayType: chunk.DisplayType,
+				Arguments:   chunk.Arguments,
+				State:       ToolCallStateRunning,
+			},
+		})
+		if !m.spinnerActive {
+			m.spinner = atoms.NewSpinner(1, theme.Style{Status: theme.Running})
+			m.spinnerActive = true
+			m.rebuildViewportContent()
+			return *m, tea.Batch(readStream(m.streamCh), m.spinner.Init())
+		}
+
+	case api.ChunkToolEnd:
+		m.completeToolCall(chunk)
+		m.spinnerActive = false
+
+	case api.ChunkToolReject:
+		m.ensureAssistantMessage()
+		last := &m.messages[len(m.messages)-1]
+		last.Parts = append(last.Parts, MessagePart{
+			Type:     PartError,
+			Content:  "Tool rejected: " + chunk.ToolName + ": " + chunk.Content,
+			Complete: true,
+		})
+
+	case api.ChunkError:
+		m.ensureAssistantMessage()
+		last := &m.messages[len(m.messages)-1]
+		last.Parts = append(last.Parts, MessagePart{
+			Type:     PartError,
+			Content:  chunk.Content,
+			Complete: true,
+		})
 	}
 
 	if chunk.Done {
 		m.streaming = false
 		m.streamCh = nil
+		m.spinnerActive = false
+		// Mark all parts complete
+		if len(m.messages) > 0 {
+			last := &m.messages[len(m.messages)-1]
+			for i := range last.Parts {
+				last.Parts[i].Complete = true
+			}
+		}
 		m.rebuildViewportContent()
 		return *m, nil
 	}
 
+	m.rebuildViewportContent()
 	return *m, readStream(m.streamCh)
+}
+
+// ensureAssistantMessage makes sure the last message is an assistant message.
+func (m *Model) ensureAssistantMessage() {
+	if len(m.messages) == 0 || m.messages[len(m.messages)-1].Role != RoleAssistant {
+		m.messages = append(m.messages, Message{Role: RoleAssistant})
+	}
+}
+
+// appendToLastPart appends content to the last part of the given type,
+// or creates a new part if the last part is a different type.
+func (m *Model) appendToLastPart(partType PartType, content string) {
+	m.ensureAssistantMessage()
+	last := &m.messages[len(m.messages)-1]
+	if len(last.Parts) > 0 {
+		p := &last.Parts[len(last.Parts)-1]
+		if p.Type == partType && !p.Complete {
+			p.Content += content
+			return
+		}
+	}
+	last.Parts = append(last.Parts, MessagePart{Type: partType, Content: content})
+}
+
+// completeToolCall finds the matching tool call part and fills in the result.
+func (m *Model) completeToolCall(chunk api.StreamChunk) {
+	if len(m.messages) == 0 {
+		return
+	}
+	last := &m.messages[len(m.messages)-1]
+	// Match by tool call ID
+	for i := len(last.Parts) - 1; i >= 0; i-- {
+		p := &last.Parts[i]
+		if p.Type == PartToolCall && p.ToolCall != nil && p.ToolCall.ID == chunk.ToolCallID {
+			m.fillToolCallResult(p, chunk)
+			return
+		}
+	}
+	// Fallback: match most recent running tool call
+	for i := len(last.Parts) - 1; i >= 0; i-- {
+		p := &last.Parts[i]
+		if p.Type == PartToolCall && p.ToolCall != nil && p.ToolCall.State == ToolCallStateRunning {
+			m.fillToolCallResult(p, chunk)
+			return
+		}
+	}
+}
+
+func (m *Model) fillToolCallResult(p *MessagePart, chunk api.StreamChunk) {
+	if chunk.ToolError != "" {
+		p.ToolCall.State = ToolCallStateError
+		p.ToolCall.Error = chunk.ToolError
+	} else {
+		p.ToolCall.State = ToolCallStateComplete
+	}
+	p.ToolCall.Result = chunk.Result
+	p.ToolCall.DurationMs = chunk.DurationMs
+	p.Complete = true
 }
 
 // skipStreaming drains the stream channel and completes the response immediately.
@@ -427,11 +605,31 @@ func (m *Model) skipStreaming() {
 		return
 	}
 	for chunk := range m.streamCh {
-		if chunk.Content != "" {
-			if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == RoleAssistant {
-				m.messages[len(m.messages)-1].Content += chunk.Content
-			} else {
-				m.messages = append(m.messages, Message{Role: RoleAssistant, Content: chunk.Content})
+		switch chunk.Type {
+		case api.ChunkText:
+			if chunk.Content != "" {
+				m.appendToLastPart(PartText, chunk.Content)
+			}
+		case api.ChunkThinking:
+			if chunk.Content != "" {
+				m.appendToLastPart(PartThinking, chunk.Content)
+			}
+		case api.ChunkToolStart:
+			m.ensureAssistantMessage()
+			last := &m.messages[len(m.messages)-1]
+			last.Parts = append(last.Parts, MessagePart{
+				Type: PartToolCall,
+				ToolCall: &ToolCallPart{
+					ID: chunk.ToolCallID, Name: chunk.ToolName,
+					DisplayType: chunk.DisplayType, Arguments: chunk.Arguments,
+					State: ToolCallStateRunning,
+				},
+			})
+		case api.ChunkToolEnd:
+			m.completeToolCall(chunk)
+		default:
+			if chunk.Content != "" {
+				m.appendToLastPart(PartText, chunk.Content)
 			}
 		}
 		if chunk.Done {
@@ -453,10 +651,7 @@ func (m *Model) showHelp(commands []command.Def) {
 		}
 		lines = append(lines, "  /"+cmd.Name+aliases+" — "+cmd.Description)
 	}
-	m.messages = append(m.messages, Message{
-		Role:    RoleSystem,
-		Content: strings.Join(lines, "\n"),
-	})
+	m.messages = append(m.messages, TextMessage(RoleSystem, strings.Join(lines, "\n")))
 	m.rebuildViewportContent()
 }
 
@@ -476,4 +671,20 @@ func readStream(ch <-chan api.StreamChunk) tea.Cmd {
 		}
 		return ResponseMsg{Chunk: chunk}
 	}
+}
+
+// formatArgs converts a map of arguments to a compact display string.
+func formatArgs(args map[string]any) string {
+	if len(args) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(args)
+	if err != nil {
+		return ""
+	}
+	s := string(b)
+	if len(s) > 80 {
+		s = s[:77] + "..."
+	}
+	return s
 }

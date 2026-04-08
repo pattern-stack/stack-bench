@@ -7,6 +7,8 @@ tool calls, and token counts back to DB after the stream completes.
 
 from __future__ import annotations
 
+import json
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 from agentic_patterns.core.systems.core.events import (
@@ -18,6 +20,20 @@ from agentic_patterns.core.systems.streaming import SSEFormatter
 
 from features.tool_calls.schemas.input import ToolCallCreate, ToolCallUpdate
 from molecules.entities.conversation_entity import ConversationEntity
+
+TOOL_DISPLAY_TYPES: dict[str, str] = {
+    # File operations → diff view
+    "edit_file": "diff",
+    "write_file": "diff",
+    "apply_patch": "diff",
+    # Read/code operations → code view
+    "read_file": "code",
+    "grep": "code",
+    "glob": "code",
+    # Shell operations → bash view
+    "bash": "bash",
+    "execute_command": "bash",
+}
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -111,8 +127,14 @@ class ConversationRunner:
                 message,
                 message_history=message_history,
             ):
-                # Yield SSE-formatted event
-                yield formatter.format_stream_event(event)
+                # Yield SSE-formatted event, enriching tool events with display_type
+                if isinstance(event, (ToolCallStartEvent, ToolCallEndEvent)):
+                    data = asdict(event)
+                    data = json.loads(json.dumps(data, default=SSEFormatter._serialize))
+                    data["display_type"] = TOOL_DISPLAY_TYPES.get(event.tool_name, "generic")
+                    yield formatter.format(event.event_type, data)
+                else:
+                    yield formatter.format_stream_event(event)
 
                 # Collect response data from MessageCompleteEvent
                 if isinstance(event, MessageCompleteEvent):
