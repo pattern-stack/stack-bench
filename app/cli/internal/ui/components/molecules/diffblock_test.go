@@ -16,7 +16,7 @@ const testDiff = `@@ -1,3 +1,4 @@
 func TestDiffBlock_ContainsFilePath(t *testing.T) {
 	out := DiffBlock(darkCtx(), DiffBlockData{
 		FilePath: "main.go",
-		Diff:     testDiff,
+		Hunks:    ParseUnifiedDiff(testDiff),
 	})
 	if !strings.Contains(out, "main.go") {
 		t.Error("expected diff block to contain file path")
@@ -26,7 +26,7 @@ func TestDiffBlock_ContainsFilePath(t *testing.T) {
 func TestDiffBlock_ContainsAddedLine(t *testing.T) {
 	out := DiffBlock(darkCtx(), DiffBlockData{
 		FilePath: "main.go",
-		Diff:     testDiff,
+		Hunks:    ParseUnifiedDiff(testDiff),
 	})
 	if !strings.Contains(out, `import "fmt"`) {
 		t.Error("expected diff block to contain added line content")
@@ -36,7 +36,7 @@ func TestDiffBlock_ContainsAddedLine(t *testing.T) {
 func TestDiffBlock_ContainsRemovedLine(t *testing.T) {
 	out := DiffBlock(darkCtx(), DiffBlockData{
 		FilePath: "main.go",
-		Diff:     testDiff,
+		Hunks:    ParseUnifiedDiff(testDiff),
 	})
 	if !strings.Contains(out, `println("hello")`) {
 		t.Error("expected diff block to contain removed line content")
@@ -46,7 +46,7 @@ func TestDiffBlock_ContainsRemovedLine(t *testing.T) {
 func TestDiffBlock_ContainsContextLine(t *testing.T) {
 	out := DiffBlock(darkCtx(), DiffBlockData{
 		FilePath: "main.go",
-		Diff:     testDiff,
+		Hunks:    ParseUnifiedDiff(testDiff),
 	})
 	if !strings.Contains(out, "package main") {
 		t.Error("expected diff block to contain context line")
@@ -56,7 +56,7 @@ func TestDiffBlock_ContainsContextLine(t *testing.T) {
 func TestDiffBlock_ContainsHunkHeader(t *testing.T) {
 	out := DiffBlock(darkCtx(), DiffBlockData{
 		FilePath: "main.go",
-		Diff:     testDiff,
+		Hunks:    ParseUnifiedDiff(testDiff),
 	})
 	if !strings.Contains(out, "@@") {
 		t.Error("expected diff block to contain hunk header")
@@ -65,7 +65,7 @@ func TestDiffBlock_ContainsHunkHeader(t *testing.T) {
 
 func TestDiffBlock_NoFilePath(t *testing.T) {
 	out := DiffBlock(darkCtx(), DiffBlockData{
-		Diff: "+added line",
+		Hunks: ParseUnifiedDiff("+added line"),
 	})
 	if !strings.Contains(out, "added line") {
 		t.Error("expected diff block without file path to still render diff")
@@ -73,8 +73,8 @@ func TestDiffBlock_NoFilePath(t *testing.T) {
 }
 
 func TestDiffBlock_AddedAndRemovedDiffer(t *testing.T) {
-	added := DiffBlock(darkCtx(), DiffBlockData{Diff: "+new"})
-	removed := DiffBlock(darkCtx(), DiffBlockData{Diff: "-old"})
+	added := DiffBlock(darkCtx(), DiffBlockData{Hunks: ParseUnifiedDiff("+new")})
+	removed := DiffBlock(darkCtx(), DiffBlockData{Hunks: ParseUnifiedDiff("-old")})
 	// They should render with different styling (colors)
 	if added == removed {
 		t.Error("expected added and removed lines to render differently")
@@ -84,7 +84,7 @@ func TestDiffBlock_AddedAndRemovedDiffer(t *testing.T) {
 func TestDiffBlock_LightTheme(t *testing.T) {
 	out := DiffBlock(lightCtx(), DiffBlockData{
 		FilePath: "lib.go",
-		Diff:     testDiff,
+		Hunks:    ParseUnifiedDiff(testDiff),
 	})
 	if !strings.Contains(out, "lib.go") {
 		t.Error("expected light theme diff block to contain file path")

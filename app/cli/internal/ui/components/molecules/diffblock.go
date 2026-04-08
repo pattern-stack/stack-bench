@@ -2,7 +2,6 @@ package molecules
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
@@ -10,20 +9,23 @@ import (
 )
 
 // DiffBlockData holds parameters for rendering a unified diff display.
+// Callers with a raw unified diff string should use ParseUnifiedDiff to
+// construct the Hunks slice.
 type DiffBlockData struct {
 	FilePath string
-	Diff     string // unified diff content (lines starting with +, -, or space)
-	Language string // optional chroma language for syntax-highlighting line content
+	Hunks    []DiffHunk
+	Language string // optional chroma language for syntax-highlighting content
 }
 
-// DiffBlock renders a file path header and color-coded diff lines.
-// Added lines are green, removed lines are red, context lines are dim.
+// DiffBlock renders a file path header followed by one or more hunks of
+// color-coded diff lines. Added lines are green, removed lines are red,
+// context lines are dim. When Language is set, added lines are syntax-
+// highlighted; removed lines stay in a solid red so the eye can find changes
+// at a glance.
 func DiffBlock(ctx atoms.RenderContext, data DiffBlockData) string {
 	inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
-
 	var parts []string
 
-	// File path header
 	if data.FilePath != "" {
 		path := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
 			Text:  data.FilePath,
@@ -32,94 +34,67 @@ func DiffBlock(ctx atoms.RenderContext, data DiffBlockData) string {
 		parts = append(parts, path)
 	}
 
-	// Parse diff lines with line number tracking
-	// Format: "  NUM MARKER CONTENT" where MARKER is +/- or space
-	lines := strings.Split(data.Diff, "\n")
 	numStyle := theme.Style{Hierarchy: theme.Quaternary}
 
-	var oldLine, newLine int
-	for _, line := range lines {
-		var contentStyle theme.Style
-		var markerStyle theme.Style
-		var num, marker, content string
-
-		switch {
-		case strings.HasPrefix(line, "@@"):
-			// Hunk header — render as-is, no line number
-			oldLine, newLine = parseHunkHeader(line)
+	for _, hunk := range data.Hunks {
+		if hunk.RawHeader != "" {
 			rendered := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
-				Text:  line,
+				Text:  hunk.RawHeader,
 				Style: theme.Style{Category: theme.CatSystem, Hierarchy: theme.Tertiary},
 			})
 			parts = append(parts, "  "+rendered)
-			continue
-		case strings.HasPrefix(line, "+"):
-			num = fmt.Sprintf("%4d", newLine)
-			marker = "+"
-			content = strings.TrimPrefix(line, "+")
-			markerStyle = theme.Style{Status: theme.Success}
-			contentStyle = theme.Style{Status: theme.Success}
-			newLine++
-		case strings.HasPrefix(line, "-"):
-			num = fmt.Sprintf("%4d", oldLine)
-			marker = "-"
-			content = strings.TrimPrefix(line, "-")
-			markerStyle = theme.Style{Status: theme.Error}
-			contentStyle = theme.Style{Status: theme.Error}
-			oldLine++
-		default:
-			num = fmt.Sprintf("%4d", newLine)
-			marker = " "
-			content = line
-			markerStyle = theme.Style{Hierarchy: theme.Tertiary}
-			contentStyle = theme.Style{Hierarchy: theme.Tertiary}
-			oldLine++
-			newLine++
 		}
-
-		numRendered := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
-			Text: num, Style: numStyle,
-		})
-		markerRendered := atoms.TextBlock(inlineCtx, atoms.TextBlockData{
-			Text: marker, Style: markerStyle,
-		})
-
-		// Syntax-highlight ONLY added lines when language is set.
-		// Removed lines stay solid red, context lines stay dim — they're not
-		// the focus of the diff and the flat color helps the eye find adds.
-		var contentRendered string
-		if data.Language != "" && marker == "+" {
-			contentRendered = atoms.HighlightCode(inlineCtx, content, data.Language)
-		} else {
-			contentRendered = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
-				Text: content, Style: contentStyle,
-			})
+		for _, line := range hunk.Lines {
+			parts = append(parts, renderDiffLine(inlineCtx, line, data.Language, numStyle))
 		}
-		parts = append(parts, "  "+numRendered+" "+markerRendered+" "+contentRendered)
 	}
 
 	return strings.Join(parts, "\n")
 }
 
-// parseHunkHeader extracts old and new start line numbers from a @@ header.
-func parseHunkHeader(line string) (oldStart, newStart int) {
-	// Format: @@ -old,count +new,count @@
-	parts := strings.SplitN(line, " ", 4)
-	if len(parts) >= 3 {
-		if old := strings.TrimPrefix(parts[1], "-"); old != "" {
-			if n, _, ok := strings.Cut(old, ","); ok {
-				oldStart, _ = strconv.Atoi(n)
-			} else {
-				oldStart, _ = strconv.Atoi(old)
-			}
-		}
-		if nw := strings.TrimPrefix(parts[2], "+"); nw != "" {
-			if n, _, ok := strings.Cut(nw, ","); ok {
-				newStart, _ = strconv.Atoi(n)
-			} else {
-				newStart, _ = strconv.Atoi(nw)
-			}
-		}
+// renderDiffLine renders a single parsed diff line as "  NUM MARKER CONTENT".
+// The marker and content colors follow the line kind; syntax highlighting is
+// applied to added lines when a language is set.
+func renderDiffLine(ctx atoms.RenderContext, line DiffLine, language string, numStyle theme.Style) string {
+	var num, marker string
+	var markerStyle, contentStyle theme.Style
+
+	switch line.Kind {
+	case DiffLineAdded:
+		num = fmt.Sprintf("%4d", line.NewNum)
+		marker = "+"
+		markerStyle = theme.Style{Status: theme.Success}
+		contentStyle = theme.Style{Status: theme.Success}
+	case DiffLineRemoved:
+		num = fmt.Sprintf("%4d", line.OldNum)
+		marker = "-"
+		markerStyle = theme.Style{Status: theme.Error}
+		contentStyle = theme.Style{Status: theme.Error}
+	default: // DiffLineContext
+		num = fmt.Sprintf("%4d", line.NewNum)
+		marker = " "
+		markerStyle = theme.Style{Hierarchy: theme.Tertiary}
+		contentStyle = theme.Style{Hierarchy: theme.Tertiary}
 	}
-	return
+
+	numRendered := atoms.TextBlock(ctx, atoms.TextBlockData{
+		Text: num, Style: numStyle,
+	})
+	markerRendered := atoms.TextBlock(ctx, atoms.TextBlockData{
+		Text: marker, Style: markerStyle,
+	})
+
+	// Syntax-highlight only added lines when a language is set. Removed lines
+	// stay solid red and context lines stay dim — the flat color helps the eye
+	// find adds in a busy diff.
+	var contentRendered string
+	if language != "" && line.Kind == DiffLineAdded {
+		contentRendered = atoms.HighlightCode(ctx, line.Content, language)
+	} else {
+		contentRendered = atoms.TextBlock(ctx, atoms.TextBlockData{
+			Text: line.Content, Style: contentStyle,
+		})
+	}
+
+	return "  " + numRendered + " " + markerRendered + " " + contentRendered
 }

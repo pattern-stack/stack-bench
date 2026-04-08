@@ -411,7 +411,7 @@ func buildGalleryMessages(width int) []chat.Message {
 
 		parts = append(parts, molecules.DiffBlock(ctx, molecules.DiffBlockData{
 			FilePath: "app/cli/internal/chat/view.go",
-			Diff: `@@ -146,8 +146,13 @@ func renderMessage(msg Message, width int) string {
+			Hunks: molecules.ParseUnifiedDiff(`@@ -146,8 +146,13 @@ func renderMessage(msg Message, width int) string {
  func renderMessage(msg Message, width int) string {
 +	// Raw messages are pre-rendered — display as-is.
 +	if msg.Raw {
@@ -426,7 +426,7 @@ func buildGalleryMessages(width int) []chat.Message {
 +	case RoleUser:
 +		return molecules.MessageBlock(ctx, molecules.MessageBlockData{
 +			Role: atoms.RoleUser, Content: msg.Content,
-+		})`,
++		})`),
 		}))
 
 		raw(strings.Join(parts, "\n"))

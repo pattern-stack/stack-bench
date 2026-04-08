@@ -298,7 +298,7 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 		path, _ := tc.Arguments["path"].(string)
 		body := molecules.DiffBlock(ctx, molecules.DiffBlockData{
 			FilePath: path,
-			Diff:     stripDiffHeaders(result),
+			Hunks:    molecules.ParseUnifiedDiff(result),
 			Language: languageFromPath(path),
 		})
 		return header + "\n" + indentBody(body)
@@ -322,23 +322,6 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 	default:
 		return header + "\n" + indentBody(result)
 	}
-}
-
-// stripDiffHeaders removes the --- a/file, +++ b/file, and @@ hunk header lines
-// from a unified diff, leaving only the +/- content lines.
-func stripDiffHeaders(diff string) string {
-	lines := strings.Split(diff, "\n")
-	out := lines[:0]
-	for _, line := range lines {
-		if strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ ") {
-			continue
-		}
-		if strings.HasPrefix(line, "@@") {
-			continue
-		}
-		out = append(out, line)
-	}
-	return strings.Join(out, "\n")
 }
 
 // indentBody indents each line by 4 spaces for nesting under a tool call header.
