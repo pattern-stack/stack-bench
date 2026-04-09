@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/api"
-	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
 )
 
 func TestPartAccumulation_TextChunks(t *testing.T) {
@@ -236,7 +235,7 @@ func TestRenderMessage_AllPartTypes(t *testing.T) {
 		},
 	}
 
-	rendered := renderMessage(msg, 80, atoms.Spinner{})
+	rendered := renderMessage(msg, 80, spinnerSet{}, true)
 	if rendered == "" {
 		t.Fatal("renderMessage returned empty string")
 	}

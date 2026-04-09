@@ -3,6 +3,7 @@ package chat
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
@@ -144,7 +145,14 @@ func (m *Model) RenderHeader() string {
 	})
 }
 
-func renderMessage(msg Message, width int, spinner atoms.Spinner) string {
+// spinnerSet bundles the chat model's two active spinners so we can pass
+// them through the render pipeline as a single unit.
+type spinnerSet struct {
+	tool     atoms.Spinner
+	thinking atoms.Spinner
+}
+
+func renderMessage(msg Message, width int, spinners spinnerSet, isLastMessage bool) string {
 	// Raw messages are pre-rendered — display as-is.
 	if msg.Raw {
 		return msg.RawContent
@@ -160,7 +168,7 @@ func renderMessage(msg Message, width int, spinner atoms.Spinner) string {
 		})
 
 	case RoleAssistant:
-		return renderAssistantMessage(ctx, msg, width, spinner)
+		return renderAssistantMessage(ctx, msg, width, spinners, isLastMessage)
 
 	case RoleSystem:
 		return molecules.MessageBlock(ctx, molecules.MessageBlockData{
@@ -171,7 +179,7 @@ func renderMessage(msg Message, width int, spinner atoms.Spinner) string {
 	return ""
 }
 
-func renderAssistantMessage(ctx atoms.RenderContext, msg Message, width int, spinner atoms.Spinner) string {
+func renderAssistantMessage(ctx atoms.RenderContext, msg Message, width int, spinners spinnerSet, isLastMessage bool) string {
 	badge := atoms.Badge(ctx, atoms.BadgeData{
 		Label:   "assistant",
 		Style:   theme.Style{Category: theme.CatAgent},
@@ -187,8 +195,13 @@ func renderAssistantMessage(ctx atoms.RenderContext, msg Message, width int, spi
 	sections = append(sections, badge)
 
 	var prevType PartType
-	for _, part := range msg.Parts {
-		rendered := renderPart(ctx, part, contentWidth, spinner)
+	for i, part := range msg.Parts {
+		// A thinking part is "actively streaming" if this is the last part
+		// of the last (assistant) message and it hasn't been marked Complete.
+		// That's the only part that should show the live thinking spinner.
+		isLastPart := isLastMessage && i == len(msg.Parts)-1
+		active := isLastPart && !part.Complete
+		rendered := renderPart(ctx, part, contentWidth, spinners, active)
 		if rendered != "" {
 			lines := strings.Split(rendered, "\n")
 			indented := "  " + strings.Join(lines, "\n  ")
@@ -208,7 +221,7 @@ func renderAssistantMessage(ctx atoms.RenderContext, msg Message, width int, spi
 	return strings.Join(sections, "\n")
 }
 
-func renderPart(ctx atoms.RenderContext, part MessagePart, contentWidth int, spinner atoms.Spinner) string {
+func renderPart(ctx atoms.RenderContext, part MessagePart, contentWidth int, spinners spinnerSet, active bool) string {
 	switch part.Type {
 	case PartText:
 		if part.Content == "" {
@@ -227,13 +240,26 @@ func renderPart(ctx atoms.RenderContext, part MessagePart, contentWidth int, spi
 		if len(summary) > 60 {
 			summary = summary[:57] + "..."
 		}
-		return atoms.TextBlock(ctx, atoms.TextBlockData{
+		// Prefix with the Star spinner when actively streaming, otherwise
+		// a static dim glyph so completed thinking still reads as a block.
+		inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+		var prefix string
+		if active {
+			prefix = spinners.thinking.View(inlineCtx) + " "
+		} else {
+			prefix = atoms.TextBlock(inlineCtx, atoms.TextBlockData{
+				Text:  "·",
+				Style: theme.Style{Hierarchy: theme.Tertiary},
+			}) + " "
+		}
+		body := atoms.TextBlock(ctx, atoms.TextBlockData{
 			Text:  "thinking: " + summary,
 			Style: theme.Style{Hierarchy: theme.Tertiary},
 		})
+		return prefix + body
 
 	case PartToolCall:
-		return renderToolCallPart(ctx, part, spinner)
+		return renderToolCallPart(ctx, part, spinners.tool)
 
 	case PartError:
 		return molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
@@ -241,6 +267,22 @@ func renderPart(ctx atoms.RenderContext, part MessagePart, contentWidth int, spi
 		})
 	}
 	return ""
+}
+
+// graduateSpinner picks a spinner frame set based on how long a tool call
+// has been running. Short runs use the subtle default; longer runs escalate
+// to progressively more attention-grabbing animations so a stuck or slow
+// tool becomes visually obvious without having to surface a timer.
+func graduateSpinner(base atoms.Spinner, elapsed time.Duration) atoms.Spinner {
+	switch {
+	case elapsed < 5*time.Second:
+		// keep the default (SparseCenter — subtle)
+	case elapsed < 15*time.Second:
+		base.Frames = atoms.SpinnerPulse
+	default:
+		base.Frames = atoms.SpinnerHeartbeat
+	}
+	return base
 }
 
 func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms.Spinner) string {
@@ -256,6 +298,9 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 		state = molecules.ToolCallPending
 	case ToolCallStateRunning:
 		state = molecules.ToolCallRunning
+		if !tc.StartedAt.IsZero() {
+			spinner = graduateSpinner(spinner, time.Since(tc.StartedAt))
+		}
 	case ToolCallStateComplete:
 		state = molecules.ToolCallSuccess
 	case ToolCallStateError:
@@ -324,10 +369,12 @@ func renderToolCallPart(ctx atoms.RenderContext, part MessagePart, spinner atoms
 	}
 }
 
-// indentBody indents each line by 4 spaces for nesting under a tool call header.
+// indentBody nests a tool body under its header. Returns the body unchanged
+// so code/diff blocks can use the full available width rather than losing
+// columns to decorative indentation — the tool header on its own line above
+// already provides sufficient visual association.
 func indentBody(s string) string {
-	lines := strings.Split(s, "\n")
-	return "    " + strings.Join(lines, "\n    ")
+	return s
 }
 
 // languageFromPath returns a chroma-compatible language name based on the

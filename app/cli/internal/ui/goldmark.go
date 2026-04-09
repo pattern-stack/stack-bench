@@ -472,29 +472,15 @@ func (r *terminalRenderer) renderList(w util.BufWriter, source []byte, node ast.
 }
 
 func (r *terminalRenderer) renderListItem(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	if entering {
-		n := node.(*ast.ListItem)
-		list := n.Parent().(*ast.List)
+	item := node.(*ast.ListItem)
+	prefix, prefixWidth := r.listItemPrefix(item)
 
-		if list.IsOrdered() {
-			num := list.Start
-			for child := list.FirstChild(); child != nil; child = child.NextSibling() {
-				if child == node {
-					break
-				}
-				num++
-			}
-			numStyle := r.ctx.Theme.Resolve(theme.Style{Category: theme.CatAgent})
-			_, _ = w.WriteString("  " + numStyle.Render(fmt.Sprintf("%d.", num)) + " ")
-		} else {
-			bullet := atoms.Icon(r.ctx, atoms.IconBullet, theme.Style{Category: theme.CatAgent})
-			_, _ = w.WriteString("  " + bullet + " ")
-		}
+	if entering {
+		_, _ = w.WriteString(prefix)
 
 		s := theme.Style{Hierarchy: theme.Secondary}
 		resolved := r.ctx.Theme.Resolve(s)
-		itemWidth := r.width - 4
-		if itemWidth > 0 {
+		if itemWidth := r.width - prefixWidth; itemWidth > 0 {
 			resolved = resolved.Width(itemWidth)
 		}
 		r.pushStyle(resolved)
@@ -503,10 +489,42 @@ func (r *terminalRenderer) renderListItem(w util.BufWriter, source []byte, node 
 		style := r.currentStyle()
 		r.popStyle()
 		styled := r.flushInlineRaw(style)
-		_, _ = w.WriteString(styled)
+		// Hanging indent: wrapped continuation lines align past the bullet
+		// prefix so the list item text stays visually aligned instead of
+		// snapping back to column 0. Width comes from the actual rendered
+		// prefix so ordered lists (variable-width numbers) work too.
+		hang := strings.Repeat(" ", prefixWidth)
+		lines := strings.Split(styled, "\n")
+		for i := 1; i < len(lines); i++ {
+			lines[i] = hang + lines[i]
+		}
+		_, _ = w.WriteString(strings.Join(lines, "\n"))
 		_, _ = w.WriteString("\n")
 	}
 	return ast.WalkContinue, nil
+}
+
+// listItemPrefix returns the rendered gutter prefix for a list item and its
+// visible cell width. Called from both branches of renderListItem so the
+// prefix width used for item wrap and hanging indent always matches the
+// exact string written to output, even for variable-width ordered lists.
+func (r *terminalRenderer) listItemPrefix(item *ast.ListItem) (string, int) {
+	list := item.Parent().(*ast.List)
+	if list.IsOrdered() {
+		num := list.Start
+		for child := list.FirstChild(); child != nil; child = child.NextSibling() {
+			if child == item {
+				break
+			}
+			num++
+		}
+		numStyle := r.ctx.Theme.Resolve(theme.Style{Category: theme.CatAgent})
+		p := "  " + numStyle.Render(fmt.Sprintf("%d.", num)) + " "
+		return p, lipgloss.Width(p)
+	}
+	bullet := atoms.Icon(r.ctx, atoms.IconBullet, theme.Style{Category: theme.CatAgent})
+	p := "  " + bullet + " "
+	return p, lipgloss.Width(p)
 }
 
 func (r *terminalRenderer) renderThematicBreak(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {

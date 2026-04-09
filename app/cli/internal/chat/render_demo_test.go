@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/dugshub/stack-bench/app/cli/internal/api"
-	"github.com/dugshub/stack-bench/app/cli/internal/ui/components/atoms"
 )
 
 // TestRenderDemo_PartAwareConversation renders a realistic agentic conversation
@@ -104,16 +103,16 @@ func TestRenderDemo_PartAwareConversation(t *testing.T) {
 	fmt.Println("  EP-008 DEMO: Part-Aware Message Rendering")
 	fmt.Println(repeat("═", width) + "\n")
 
-	fmt.Println(renderMessage(userMsg, width, atoms.Spinner{}))
+	fmt.Println(renderMessage(userMsg, width, spinnerSet{}, true))
 	fmt.Println()
 	if len(m.messages) > 0 {
-		fmt.Println(renderMessage(m.messages[0], width, atoms.Spinner{}))
+		fmt.Println(renderMessage(m.messages[0], width, spinnerSet{}, true))
 	}
 	fmt.Println()
-	fmt.Println(renderMessage(userMsg2, width, atoms.Spinner{}))
+	fmt.Println(renderMessage(userMsg2, width, spinnerSet{}, true))
 	fmt.Println()
 	if len(m2.messages) > 0 {
-		fmt.Println(renderMessage(m2.messages[0], width, atoms.Spinner{}))
+		fmt.Println(renderMessage(m2.messages[0], width, spinnerSet{}, true))
 	}
 	fmt.Println()
 	fmt.Println("═" + repeat("═", width))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -55,6 +56,7 @@ type Model struct {
 
 	// Runtime health
 	healthStatuses map[string]service.ServiceStatus
+	statusSpinner  atoms.Spinner // Heartbeat animation in the status bar
 
 	// Demo mode
 	demo       bool
@@ -86,10 +88,21 @@ func (m Model) Init() tea.Cmd {
 		return AgentsLoadedMsg{Agents: agents, Err: err}
 	}
 
-	if m.manager != nil {
-		return tea.Batch(loadAgents, service.ServiceHealthTick(m.manager))
+	// Status bar heartbeat runs for the life of the app regardless of
+	// whether a service manager is wired up. Using a slower interval so
+	// the beat reads as a pulse rather than a spin.
+	m.statusSpinner = atoms.Spinner{
+		ID:       100,
+		Style:    theme.Style{Status: theme.Success},
+		Frames:   atoms.SpinnerHeartbeat,
+		Interval: 120 * time.Millisecond,
 	}
-	return loadAgents
+
+	cmds := []tea.Cmd{loadAgents, m.statusSpinner.Init()}
+	if m.manager != nil {
+		cmds = append(cmds, service.ServiceHealthTick(m.manager))
+	}
+	return tea.Batch(cmds...)
 }
 
 // Update handles all incoming messages.
@@ -114,6 +127,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+
+	case atoms.SpinnerTickMsg:
+		// Route status-bar heartbeat ticks to our spinner. The chat model
+		// handles its own spinner ticks separately.
+		if msg.ID == m.statusSpinner.ID {
+			var cmd tea.Cmd
+			m.statusSpinner, cmd = m.statusSpinner.Update(msg)
+			return m, cmd
+		}
+		// Forward other spinner ticks to the chat model.
+		newChat, cmd := m.chat.Update(msg)
+		m.chat = newChat
+		return m, cmd
 
 	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" {
@@ -347,5 +373,6 @@ func (m Model) renderLegend() string {
 		Hints:       " " + hint,
 		ServiceName: serviceName,
 		Health:      health,
+		Spinner:     &m.statusSpinner,
 	})
 }

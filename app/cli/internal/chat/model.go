@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/viewport"
@@ -56,6 +57,7 @@ type ToolCallPart struct {
 	Result      string
 	Error       string
 	DurationMs  int
+	StartedAt   time.Time // set when the tool call starts; drives spinner graduation
 }
 
 // MessagePart is one segment of a message (text, thinking, tool call, or error).
@@ -112,12 +114,13 @@ type Model struct {
 	streaming      bool
 	streamCh       <-chan api.StreamChunk
 	registry       *command.Registry
-	autocomplete   autocomplete.Model
-	viewport       viewport.Model
-	spinner        atoms.Spinner
-	spinnerActive  bool
-	ExchangeCount  int
-	IsBranch       bool
+	autocomplete    autocomplete.Model
+	viewport        viewport.Model
+	toolSpinner     atoms.Spinner // SparseCenter for running tool calls
+	thinkingSpinner atoms.Spinner // Star for active thinking
+	spinnerActive   bool
+	ExchangeCount   int
+	IsBranch        bool
 }
 
 // chatScrollKeyMap returns a KeyMap that avoids conflicts with text input.
@@ -264,9 +267,11 @@ func (m *Model) rebuildViewportContent() {
 		return
 	}
 
+	spinners := spinnerSet{tool: m.toolSpinner, thinking: m.thinkingSpinner}
 	var rendered []string
-	for _, msg := range m.messages {
-		rendered = append(rendered, renderMessage(msg, m.width, m.spinner))
+	for i, msg := range m.messages {
+		isLast := i == len(m.messages)-1
+		rendered = append(rendered, renderMessage(msg, m.width, spinners, isLast))
 	}
 
 	m.viewport.SetContent(strings.Join(rendered, "\n\n"))
@@ -292,13 +297,18 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.viewport, cmd = m.viewport.Update(msg)
 		return *m, cmd
 	case atoms.SpinnerTickMsg:
-		if m.spinnerActive {
-			var cmd tea.Cmd
-			m.spinner, cmd = m.spinner.Update(msg)
-			m.rebuildViewportContent()
-			return *m, cmd
+		if !m.spinnerActive {
+			return *m, nil
 		}
-		return *m, nil
+		var cmd tea.Cmd
+		switch msg.ID {
+		case m.toolSpinner.ID:
+			m.toolSpinner, cmd = m.toolSpinner.Update(msg)
+		case m.thinkingSpinner.ID:
+			m.thinkingSpinner, cmd = m.thinkingSpinner.Update(msg)
+		}
+		m.rebuildViewportContent()
+		return *m, cmd
 	case ResponseMsg:
 		return m.handleResponse(msg)
 	case command.ClearMsg:
@@ -454,7 +464,21 @@ func (m *Model) submit() (Model, tea.Cmd) {
 		return *m, nil
 	}
 	m.streamCh = ch
-	return *m, readStream(ch)
+	// Spin up both spinners — tool spinner (SparseCenter) for tool calls
+	// and thinking spinner (Star) for active thinking. Both tick for the
+	// duration of streaming; the view decides which one to show per part.
+	m.toolSpinner = atoms.Spinner{
+		ID:     1,
+		Style:  theme.Style{Status: theme.Running},
+		Frames: atoms.SpinnerSparseCenter,
+	}
+	m.thinkingSpinner = atoms.Spinner{
+		ID:     2,
+		Style:  theme.Style{Status: theme.Running},
+		Frames: atoms.SpinnerStar,
+	}
+	m.spinnerActive = true
+	return *m, tea.Batch(readStream(ch), m.toolSpinner.Init(), m.thinkingSpinner.Init())
 }
 
 func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
@@ -490,18 +514,12 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 				DisplayType: chunk.DisplayType,
 				Arguments:   chunk.Arguments,
 				State:       ToolCallStateRunning,
+				StartedAt:   time.Now(),
 			},
 		})
-		if !m.spinnerActive {
-			m.spinner = atoms.NewSpinner(1, theme.Style{Status: theme.Running})
-			m.spinnerActive = true
-			m.rebuildViewportContent()
-			return *m, tea.Batch(readStream(m.streamCh), m.spinner.Init())
-		}
 
 	case api.ChunkToolEnd:
 		m.completeToolCall(chunk)
-		m.spinnerActive = false
 
 	case api.ChunkToolReject:
 		m.ensureAssistantMessage()
@@ -622,7 +640,8 @@ func (m *Model) skipStreaming() {
 				ToolCall: &ToolCallPart{
 					ID: chunk.ToolCallID, Name: chunk.ToolName,
 					DisplayType: chunk.DisplayType, Arguments: chunk.Arguments,
-					State: ToolCallStateRunning,
+					State:     ToolCallStateRunning,
+					StartedAt: time.Now(),
 				},
 			})
 		case api.ChunkToolEnd:

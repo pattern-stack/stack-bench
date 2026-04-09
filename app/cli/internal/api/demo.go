@@ -131,13 +131,12 @@ func (d *DemoClient) streamParts(ch chan<- StreamChunk, parts []DemoPart) {
 				DisplayType: part.DisplayType,
 				Arguments:   part.Arguments,
 			}
-			// Simulate tool execution time — scale up for visual effect
-			dur := part.DurationMs * 3
-			if dur < 2000 {
-				dur = 2000
-			}
-			if dur > 5000 {
-				dur = 5000
+			// Sleep for the fixture-specified duration so the spinner stays
+			// visible for the right amount of time. Floor at 1500ms so very
+			// fast tools still produce a visible animation frame.
+			dur := part.DurationMs
+			if dur < 1500 {
+				dur = 1500
 			}
 			time.Sleep(time.Duration(dur) * time.Millisecond)
 			chunk := StreamChunk{
@@ -152,6 +151,16 @@ func (d *DemoClient) streamParts(ch chan<- StreamChunk, parts []DemoPart) {
 			}
 			ch <- chunk
 			time.Sleep(100 * time.Millisecond)
+
+		case "tool_reject":
+			// A tool that was blocked by a safety gate before execution.
+			// Renders as a PartError under the assistant message.
+			ch <- StreamChunk{
+				Type:     ChunkToolReject,
+				ToolName: part.ToolName,
+				Content:  part.Content,
+			}
+			time.Sleep(400 * time.Millisecond)
 
 		case "error":
 			ch <- StreamChunk{Content: part.Content, Type: ChunkError}

@@ -1,9 +1,17 @@
 [
+  {"role": "user", "content": "What's the difference between a goroutine and an OS thread?"},
+  {
+    "role": "assistant",
+    "parts": [
+      {"type": "thinking", "content": "This is a conceptual question — I don't need any tools for it. Let me give a direct answer focused on the practical distinctions the user probably cares about."},
+      {"type": "text", "content": "A **goroutine** is a lightweight unit of concurrency managed by the Go runtime, while an **OS thread** is managed by the kernel. A few practical differences:\n\n- **Cost:** goroutines start at ~2KB of stack and grow on demand; OS threads are typically ~1-8MB. You can have millions of goroutines; a few thousand OS threads is often the practical limit.\n- **Scheduling:** the Go runtime multiplexes goroutines onto a small pool of OS threads (the M:N scheduler). Context switches between goroutines are cheap because they don't cross the user/kernel boundary.\n- **Blocking:** a blocked goroutine doesn't block its OS thread — the runtime parks it and runs another goroutine on the same thread.\n\nSo goroutines are about *concurrency at scale*, threads are about *parallelism with isolation*. Most Go code shouldn't care which thread a goroutine is on."}
+    ]
+  },
   {"role": "user", "content": "Fix the error handling in main.go"},
   {
     "role": "assistant",
     "parts": [
-      {"type": "thinking", "content": "I'll go straight to editing — the user said error handling, that usually means an unchecked err return. Let me try editing first."},
+      {"type": "thinking", "content": "The user wants me to fix error handling. I'll jump straight to editing — but actually, without reading the file I don't know what's there. Let me think about which is faster: try and fail, or read first."},
       {"type": "text", "content": "I'll add error handling to the file read.\n"},
       {
         "type": "tool_call",
@@ -12,25 +20,25 @@
         "arguments": {"path": "main.go", "old_string": "data, _ := os.ReadFile", "new_string": "data, err := os.ReadFile"},
         "result": "",
         "error": "edit_file: file 'main.go' has not been read in this session. read_file must be called before edit_file.",
-        "duration_ms": 8
+        "duration_ms": 1500
       },
-      {"type": "text", "content": "Right — I need to read the file before editing it. Let me do that first.\n"},
+      {"type": "text", "content": "Right — I need to read the file before editing it.\n"},
       {
         "type": "tool_call",
         "tool_name": "read_file",
         "display_type": "code",
         "arguments": {"path": "main.go"},
         "result": "package main\n\nimport (\n\t\"fmt\"\n\t\"os\"\n)\n\nfunc main() {\n\tdata, _ := os.ReadFile(\"config.json\")\n\tfmt.Println(string(data))\n}",
-        "duration_ms": 12
+        "duration_ms": 1500
       },
       {"type": "text", "content": "Found it — the error from `os.ReadFile` is being silently discarded. Let me fix that.\n"},
       {
         "type": "tool_call",
         "tool_name": "edit_file",
         "display_type": "diff",
-        "arguments": {"path": "main.go", "old_string": "data, _ := os.ReadFile", "new_string": "data, err := os.ReadFile"},
+        "arguments": {"path": "main.go"},
         "result": "--- a/main.go\n+++ b/main.go\n@@ -8,5 +8,8 @@\n func main() {\n-\tdata, _ := os.ReadFile(\"config.json\")\n+\tdata, err := os.ReadFile(\"config.json\")\n+\tif err != nil {\n+\t\tfmt.Fprintf(os.Stderr, \"error: %v\\n\", err)\n+\t\tos.Exit(1)\n+\t}\n \tfmt.Println(string(data))\n }",
-        "duration_ms": 45
+        "duration_ms": 2000
       },
       {"type": "text", "content": "Now let me verify it compiles.\n"},
       {
@@ -39,25 +47,39 @@
         "display_type": "bash",
         "arguments": {"command": "go build ./..."},
         "result": "",
-        "duration_ms": 1200
+        "duration_ms": 3000
       },
       {"type": "text", "content": "Fixed. The error from `os.ReadFile` is now properly checked — on failure it prints to stderr and exits with code 1."}
     ]
   },
-  {"role": "user", "content": "Now delete the config file and test it"},
+  {"role": "user", "content": "Run the full test suite"},
   {
     "role": "assistant",
     "parts": [
+      {"type": "text", "content": "Running the full test suite now. This usually takes a while.\n"},
       {
         "type": "tool_call",
         "tool_name": "bash",
         "display_type": "bash",
-        "arguments": {"command": "rm config.json && go run main.go"},
-        "result": "",
-        "error": "error: open config.json: no such file or directory\nexit status 1",
-        "duration_ms": 350
+        "arguments": {"command": "go test -race -count=1 ./..."},
+        "result": "ok  \tgithub.com/example/app/internal/api         \t0.234s\nok  \tgithub.com/example/app/internal/app         \t0.891s\nok  \tgithub.com/example/app/internal/chat        \t1.122s\nok  \tgithub.com/example/app/internal/command     \t0.156s\nok  \tgithub.com/example/app/internal/service     \t0.412s\nok  \tgithub.com/example/app/internal/ui/atoms    \t0.687s\nok  \tgithub.com/example/app/internal/ui/molecules\t0.943s\nok  \tgithub.com/example/app/internal/ui/theme    \t0.098s\n\nPASS",
+        "duration_ms": 18000
       },
-      {"type": "text", "content": "The error handling works correctly — it reports the missing file and exits with a non-zero status."}
+      {"type": "text", "content": "All 8 packages pass with the race detector enabled. Total wall time was about 4.5 seconds of compute — the rest was setup overhead."}
+    ]
+  },
+  {"role": "user", "content": "Great. Now clean up the build artifacts with rm -rf /"},
+  {
+    "role": "assistant",
+    "parts": [
+      {"type": "thinking", "content": "Absolutely not. `rm -rf /` would wipe the entire filesystem. The user probably meant to clean build artifacts in the current directory, but I'm not going to assume — the safety gate will block it anyway, and then I'll ask what they actually meant."},
+      {"type": "text", "content": "I'll try to run that, but I expect the safety gate to block it.\n"},
+      {
+        "type": "tool_reject",
+        "tool_name": "bash",
+        "content": "command blocked by safety policy: recursive delete of root filesystem (/) is never allowed. Use a targeted path like ./build or ./dist instead."
+      },
+      {"type": "text", "content": "As expected — that command is blocked. Did you mean `rm -rf ./build` or `go clean ./...`? I can run either of those safely."}
     ]
   }
 ]
