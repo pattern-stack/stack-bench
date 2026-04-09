@@ -9,10 +9,25 @@ adrs: []
 
 # agentic-tui — Standalone Package from PR #198
 
+## CRITICAL CONSTRAINT: PR #198 IS THE VISUAL TRUTH
+
+**DO NOT simplify, rewrite, or "improve" any rendering code from PR #198.**
+The files under `app/cli/internal/chat/`, `app/cli/internal/ui/`, and
+`app/cli/internal/app/` on the PR #198 branch are the canonical visual
+implementation. Copy them. Restructure import paths. Do not change rendering
+logic, component output, spacing, colors, spinner behavior, diff formatting,
+or markdown rendering. If the output of the standalone package differs
+visually from PR #198's demo mode, that is a bug.
+
+A prior attempt (PR #196) tried to extract the TUI and lost visual fidelity
+— spinner presets gone, diff rendering simplified, theme auto-detect dropped,
+dual spinners reduced to single. That regression is why this constraint
+exists. The rendering code is proven and polished. Treat it as frozen.
+
 ## Goal
 
 Build a production-ready, language-agnostic terminal chat UI for any AI agent
-backend. Start from PR #198's code (the visual source of truth) and add
+backend. Start from PR #198's code (the frozen visual implementation) and add
 main's infrastructure (public API, JSON-RPC stdio, contract tests, examples)
 around it — never touching the rendering pipeline.
 
@@ -22,8 +37,8 @@ PR #196's extraction onto main simplified the rendering to get it working.
 Main is missing spinner presets, dual spinners, graduated escalation,
 structured diff parsing, syntax-highlighted diffs, theme auto-detect, and
 demo infrastructure. Porting those visual details forward proved lossy last
-time. PR #198 has the exact UX we want — starting from it means fidelity by
-definition.
+time — **this already failed once and we are not repeating it**. PR #198 has
+the exact UX we want — starting from it means fidelity by definition.
 
 Main's additions over PR #198 are **structural, not visual**:
 - Public API wrapper (~200 lines, zero rendering interaction)
@@ -343,7 +358,11 @@ Keep PR #198's height calculation (it accounts for the richer chrome).
 ### Phase 1: Restructure PR #198 into standalone package layout
 
 Take PR #198's `app/cli/` code and reorganize into the target layout. This
-is a **pure file-move + import-path rewrite** — no logic changes.
+is a **pure file-move + import-path rewrite** — no logic changes, no
+"improvements", no simplifications. Every .go file from the PR #198 branch
+that contains rendering, components, theme, chat model, or markdown code
+must be copied verbatim (modulo import paths). If `go build` fails after
+the restructure, fix imports — do not change the code itself.
 
 **Source → Target mapping**:
 ```
@@ -553,10 +572,13 @@ Contents:
   PR #198's parser. Same event types, different code. Mitigation: diff the
   two parsers, take the superset.
 
-**Zero risk to visual fidelity**: Phases 1-7 never modify files in
+**Zero risk to visual fidelity**: Phases 1-7 never modify rendering logic in
 `internal/chat/view.go`, `internal/ui/components/`, `internal/ui/theme/`,
 or `internal/ui/markdown.go`. These are the rendering pipeline and they
-stay frozen.
+stay frozen. The ONLY acceptable changes to these files are import path
+rewrites (e.g., `github.com/dugshub/stack-bench/app/cli/internal/ui` →
+`github.com/ORG/agentic-tui/internal/ui`). Any other change to rendering
+files is a bug in the plan execution, not an improvement.
 
 ## Open Questions
 
