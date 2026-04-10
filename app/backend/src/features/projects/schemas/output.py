@@ -10,7 +10,7 @@ class ProjectResponse(BaseModel):
     reference_number: str | None = None
     name: str
     description: str | None = None
-    metadata_: dict[str, Any]
+    metadata_: dict[str, Any] | None = None
     state: str
     created_at: datetime
     updated_at: datetime

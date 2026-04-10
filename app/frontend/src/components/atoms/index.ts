@@ -89,3 +89,6 @@ export type { ChatNoticeProps } from "./ChatNotice";
 
 export { UrlInput } from "./UrlInput";
 export type { UrlInputProps } from "./UrlInput";
+
+export { Dialog } from "./Dialog";
+export type { DialogProps } from "./Dialog";

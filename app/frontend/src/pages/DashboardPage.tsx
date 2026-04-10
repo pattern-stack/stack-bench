@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Icon } from "@/components/atoms";
-import { useProjectList } from "@/hooks/useProjectList";
+import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTaskList } from "@/hooks/useTaskList";
 import type { Task } from "@/types/task";
 
@@ -59,8 +59,8 @@ function demoPipeline(task: Task): PipelineStep[] {
 }
 
 function DashboardPage() {
-  const { data: projects } = useProjectList();
-  const projectId = projects[0]?.id;
+  const { activeProject } = useActiveProject();
+  const projectId = activeProject?.id;
   const { data: tasks, loading } = useTaskList(projectId);
 
   if (loading) {

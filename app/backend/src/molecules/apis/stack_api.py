@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from features.branches.schemas.output import BranchResponse
@@ -19,6 +20,7 @@ from molecules.events import (
     DomainEvent,
     publish,
 )
+from molecules.exceptions import BranchNotFoundError
 from molecules.providers.github_adapter import parse_owner_repo
 
 if TYPE_CHECKING:
@@ -27,6 +29,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from features.review_comments.schemas.input import ReviewCommentCreate, ReviewCommentUpdate
+    from molecules.providers.git_types import GitRepoProtocol
     from molecules.providers.github_adapter import DiffData, FileContent, FileTreeNode, GitHubAdapter
 
 
@@ -303,31 +306,53 @@ class StackAPI:
 
         return result
 
-    # --- Git data (read-through via GitHubAdapter) ---
+    # --- Git reader resolution ---
+
+    async def _get_reader_for_branch(self, branch_id: UUID) -> GitRepoProtocol:
+        """Return the best available git reader for a branch.
+
+        Prefers LocalGitAdapter when the workspace has a valid local_path
+        with a .git directory. Falls back to the GitHubAdapter otherwise.
+        Raises RuntimeError if neither is available.
+        """
+        from molecules.providers.local_git_adapter import LocalGitAdapter
+
+        branch = await self.entity.get_branch(branch_id)
+        workspace = await self.entity.workspace_service.get(self.db, branch.workspace_id)
+        if workspace is None:
+            raise BranchNotFoundError(branch_id)
+
+        # Prefer local clone when available
+        local_path = getattr(workspace, "local_path", None)
+        if local_path and Path(local_path).is_dir() and (Path(local_path) / ".git").exists():
+            return LocalGitAdapter(local_path)
+
+        # Fall back to GitHub adapter
+        if self.github is not None:
+            return self.github
+
+        msg = "No git reader available for branch (no local clone and no GitHub adapter)"
+        raise RuntimeError(msg)
+
+    # --- Git data (read-through via git adapter) ---
 
     async def get_branch_diff(self, stack_id: UUID, branch_id: UUID) -> DiffData:
         """Get diff for a branch relative to its base."""
-        if self.github is None:
-            msg = "GitHubAdapter not configured"
-            raise RuntimeError(msg)
+        reader = await self._get_reader_for_branch(branch_id)
         owner, repo, base_ref, head_ref = await self.entity.get_branch_repo_context(branch_id)
-        return await self.github.get_diff(owner, repo, base_ref, head_ref)
+        return await reader.get_diff(owner, repo, base_ref, head_ref)
 
     async def get_branch_tree(self, stack_id: UUID, branch_id: UUID) -> FileTreeNode:
         """Get file tree at branch head."""
-        if self.github is None:
-            msg = "GitHubAdapter not configured"
-            raise RuntimeError(msg)
+        reader = await self._get_reader_for_branch(branch_id)
         owner, repo, _, head_ref = await self.entity.get_branch_repo_context(branch_id)
-        return await self.github.get_file_tree(owner, repo, head_ref)
+        return await reader.get_file_tree(owner, repo, head_ref)
 
     async def get_branch_file(self, stack_id: UUID, branch_id: UUID, path: str) -> FileContent:
         """Get file content at branch head."""
-        if self.github is None:
-            msg = "GitHubAdapter not configured"
-            raise RuntimeError(msg)
+        reader = await self._get_reader_for_branch(branch_id)
         owner, repo, _, head_ref = await self.entity.get_branch_repo_context(branch_id)
-        return await self.github.get_file_content(owner, repo, head_ref, path)
+        return await reader.get_file_content(owner, repo, head_ref, path)
 
     async def merge_stack(self, stack_id: UUID) -> dict[str, object]:
         """Merge all PRs in the stack, bottom-up."""

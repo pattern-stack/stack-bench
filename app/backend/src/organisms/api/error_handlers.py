@@ -17,6 +17,10 @@ from molecules.providers.github_adapter import (
     GitHubNotFoundError,
     GitHubRateLimitError,
 )
+from molecules.providers.local_git_adapter import (
+    LocalGitError,
+    LocalGitRefNotFoundError,
+)
 
 EXCEPTION_MAP: dict[type[MoleculeError], tuple[int, str]] = {
     ConversationNotFoundError: (404, "Conversation not found"),
@@ -43,6 +47,12 @@ async def auth_exception_handler(request: Request, exc: AuthError) -> JSONRespon
 async def state_transition_handler(request: Request, exc: InvalidStateTransitionError) -> JSONResponse:
     """Handle invalid state transitions as 409 Conflict."""
     return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+async def local_git_exception_handler(request: Request, exc: LocalGitError) -> JSONResponse:
+    if isinstance(exc, LocalGitRefNotFoundError):
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
+    return JSONResponse(status_code=500, content={"detail": f"Local git error: {exc}"})
 
 
 async def github_exception_handler(request: Request, exc: GitHubAPIError) -> JSONResponse:

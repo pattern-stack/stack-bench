@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@/components/atoms";
-import { useProjectList } from "@/hooks/useProjectList";
+import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTaskList } from "@/hooks/useTaskList";
 import { useStackList } from "@/hooks/useStackList";
+import { ProjectSwitcher } from "./ProjectSwitcher";
+import { AddProjectDialog } from "@/components/organisms/AddProjectDialog";
 import type { Task } from "@/types/task";
 import type { Stack } from "@/types/stack";
 
@@ -82,14 +85,20 @@ function StackRow({
   );
 }
 
-function GlobalSidebar() {
+interface GlobalSidebarProps {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+function GlobalSidebar({ collapsed = false, onToggleCollapse }: GlobalSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const activeNav = navFromPath(location.pathname);
+  const [showAddProject, setShowAddProject] = useState(false);
 
   // Load project context
-  const { data: projects } = useProjectList();
-  const projectId = projects[0]?.id;
+  const { activeProject } = useActiveProject();
+  const projectId = activeProject?.id;
 
   // Load tasks & stacks for sidebar
   const { data: tasks } = useTaskList(projectId);
@@ -104,17 +113,51 @@ function GlobalSidebar() {
   const workspaceMatch = location.pathname.match(/^\/workspaces\/(.+)/);
   const activeTaskId = workspaceMatch?.[1] ?? null;
 
+  // --- Collapsed view: icon-only rail ---
+  if (collapsed) {
+    return (
+      <aside className="flex flex-col h-full w-12 border-r border-[var(--border)] bg-[var(--bg-surface)] shrink-0">
+        {/* Expand button */}
+        <button
+          onClick={onToggleCollapse}
+          className="px-3 py-3 hover:bg-[var(--bg-canvas-inset)] transition-colors border-b border-[var(--border-muted)]"
+          title="Expand sidebar"
+        >
+          <Icon name="chevron-right" size="sm" className="text-[var(--fg-subtle)]" />
+        </button>
+
+        {/* Nav icons */}
+        <nav className="py-2 space-y-1 flex flex-col items-center">
+          <NavIconButton
+            icon="grid"
+            active={activeNav === "dashboard"}
+            onClick={() => navigate("/")}
+            title="Dashboard"
+          />
+          <NavIconButton
+            icon="layout"
+            active={activeNav === "workspaces"}
+            onClick={() => navigate("/workspaces")}
+            title="Workspaces"
+          />
+          <NavIconButton
+            icon="git-branch"
+            active={activeNav === "stacks"}
+            onClick={() => navigate("/stacks")}
+            title="Stacks"
+          />
+        </nav>
+
+        <AddProjectDialog isOpen={showAddProject} onClose={() => setShowAddProject(false)} />
+      </aside>
+    );
+  }
+
+  // --- Expanded view ---
   return (
-    <aside className="flex flex-col h-full w-[260px] border-r border-[var(--border)] bg-[var(--bg-surface)]">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-[var(--border-muted)]">
-        <div className="flex items-center gap-2">
-          <Icon name="git-branch" size="sm" className="text-[var(--accent)]" />
-          <span className="text-sm font-semibold text-[var(--fg-default)] tracking-tight">
-            Stack Bench
-          </span>
-        </div>
-      </div>
+    <aside className="flex flex-col h-full w-[260px] border-r border-[var(--border)] bg-[var(--bg-surface)] shrink-0">
+      {/* Project Switcher */}
+      <ProjectSwitcher onAddProject={() => setShowAddProject(true)} />
 
       {/* Navigation */}
       <nav className="px-2 py-2 space-y-0.5">
@@ -178,20 +221,29 @@ function GlobalSidebar() {
       </div>
 
       {/* Bottom actions */}
-      <div className="px-3 py-3 border-t border-[var(--border-muted)] space-y-2">
+      <div className="px-3 py-2 border-t border-[var(--border-muted)] flex items-center justify-between">
         <button
           onClick={() => navigate("/?new=1")}
-          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-[var(--accent)] hover:bg-[var(--bg-canvas-inset)] transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-[var(--accent)] hover:bg-[var(--bg-canvas-inset)] transition-colors"
         >
           <Icon name="plus" size="xs" />
           New Task
         </button>
+        <button
+          onClick={onToggleCollapse}
+          className="p-1.5 rounded-md text-[var(--fg-subtle)] hover:text-[var(--fg-default)] hover:bg-[var(--bg-canvas-inset)] transition-colors"
+          title="Collapse sidebar"
+        >
+          <Icon name="chevron-left" size="xs" />
+        </button>
       </div>
+
+      <AddProjectDialog isOpen={showAddProject} onClose={() => setShowAddProject(false)} />
     </aside>
   );
 }
 
-/** Sidebar nav button */
+/** Sidebar nav button (expanded) */
 function NavButton({
   label,
   icon,
@@ -214,6 +266,33 @@ function NavButton({
     >
       <Icon name={icon as any} size="sm" className={active ? "text-[var(--accent)]" : ""} />
       {label}
+    </button>
+  );
+}
+
+/** Sidebar nav button (collapsed — icon only) */
+function NavIconButton({
+  icon,
+  active,
+  onClick,
+  title,
+}: {
+  icon: string;
+  active: boolean;
+  onClick: () => void;
+  title: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`p-2 rounded-md transition-colors ${
+        active
+          ? "bg-[var(--bg-canvas)] text-[var(--accent)]"
+          : "text-[var(--fg-muted)] hover:text-[var(--fg-default)] hover:bg-[var(--bg-canvas-inset)]"
+      }`}
+    >
+      <Icon name={icon as any} size="sm" />
     </button>
   );
 }

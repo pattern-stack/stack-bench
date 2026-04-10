@@ -20,10 +20,12 @@ from molecules.events.setup import (
 )
 from molecules.exceptions import MoleculeError
 from molecules.providers.github_adapter import GitHubAPIError
+from molecules.providers.local_git_adapter import LocalGitError
 from organisms.api.dependencies import get_db
 from organisms.api.error_handlers import (
     auth_exception_handler,
     github_exception_handler,
+    local_git_exception_handler,
     molecule_exception_handler,
     state_transition_handler,
 )
@@ -33,6 +35,7 @@ from organisms.api.routers.conversations import router as conversations_router
 from organisms.api.routers.events import router as events_router
 from organisms.api.routers.jobs import router as jobs_router
 from organisms.api.routers.onboarding import router as onboarding_router
+from organisms.api.routers.project_setup import router as project_setup_router
 from organisms.api.routers.projects import router as projects_router
 from organisms.api.routers.stacks import router as stacks_router
 from organisms.api.routers.tasks import router as tasks_router
@@ -128,11 +131,13 @@ def create_app() -> FastAPI:
     app.include_router(events_router, prefix="/api/v1")
     app.include_router(onboarding_router, prefix="/api/v1")
     app.include_router(workspaces_router, prefix="/api/v1")
+    app.include_router(project_setup_router, prefix="/api/v1")
 
     # Error handlers
     app.add_exception_handler(AuthError, auth_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(MoleculeError, molecule_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(GitHubAPIError, github_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(LocalGitError, local_git_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(InvalidStateTransitionError, state_transition_handler)  # type: ignore[arg-type]
 
     return app
