@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Icon } from "@/components/atoms";
-import { useProjectList } from "@/hooks/useProjectList";
+import { useActiveProject } from "@/contexts/ProjectContext";
 import { useStackList } from "@/hooks/useStackList";
 import { useStackDetail } from "@/hooks/useStackDetail";
 import type { Stack, BranchWithPR } from "@/types/stack";
@@ -37,8 +37,8 @@ const STATE_CONFIG: Record<string, { color: string; label: string }> = {
 };
 
 function StacksListPage() {
-  const { data: projects } = useProjectList();
-  const projectId = projects[0]?.id;
+  const { activeProject } = useActiveProject();
+  const projectId = activeProject?.id;
   const { data: stacks, loading } = useStackList(projectId);
 
   if (loading) {

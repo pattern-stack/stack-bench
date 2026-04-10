@@ -4,6 +4,7 @@ import { RegisterPage } from "@/pages/RegisterPage";
 import { GitHubCallbackPage } from "@/pages/GitHubCallbackPage";
 import { OnboardingPage } from "@/pages/OnboardingPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProjectProvider } from "@/contexts/ProjectContext";
 import { AppLayout } from "@/components/templates/AppLayout";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { WorkspaceDetailPage } from "@/pages/WorkspaceDetailPage";
@@ -30,7 +31,9 @@ export function AppRouter() {
         element={
           <ProtectedRoute>
             <AuthGate>
-              <AppLayout />
+              <ProjectProvider>
+                <AppLayout />
+              </ProjectProvider>
             </AuthGate>
           </ProtectedRoute>
         }
