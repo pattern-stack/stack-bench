@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/dugshub/agentic-tui/internal/httpclient"
+	"github.com/dugshub/agentic-tui/internal/stdioclient"
 	"github.com/dugshub/agentic-tui/internal/types"
 )
 
@@ -16,8 +17,13 @@ func NewStubClient() types.Client {
 }
 
 // NewStdioClient creates a Client that communicates via JSON-RPC over stdin/stdout.
-// This is a placeholder — the actual stdio transport is implemented in SB-061.
-func NewStdioClient(_ StdioConfig) (types.Client, error) {
-	// TODO(SB-061): implement actual stdio client
-	return &httpclient.StubClient{}, nil
+// It spawns the configured command as a subprocess and exchanges JSON-RPC 2.0
+// messages over its stdin/stdout pipes.
+func NewStdioClient(cfg StdioConfig) (types.Client, error) {
+	return stdioclient.New(stdioclient.Config{
+		Command: cfg.Command,
+		Args:    cfg.Args,
+		Dir:     cfg.Dir,
+		Env:     cfg.Env,
+	})
 }

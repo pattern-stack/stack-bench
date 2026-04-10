@@ -86,7 +86,6 @@ func (a *App) resolveBackend() error {
 		a.mgr = service.NewServiceManager(cfg.BackendService)
 		a.client = httpclient.NewHTTPClient(cfg.BackendService.BaseURL())
 	case cfg.BackendStdio != nil:
-		// Placeholder — actual stdio client comes in SB-061
 		c, err := NewStdioClient(*cfg.BackendStdio)
 		if err != nil {
 			return fmt.Errorf("agentic-tui: stdio client: %w", err)
