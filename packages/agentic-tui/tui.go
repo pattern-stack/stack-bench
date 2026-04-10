@@ -56,7 +56,7 @@ func (a *App) resolveBackend() error {
 	// Check env override first
 	if cfg.EnvOverride != "" {
 		if url := os.Getenv(cfg.EnvOverride); url != "" {
-			a.client = httpclient.NewHTTPClient(url)
+			a.client = httpclient.NewHTTPClient(url, cfg.Endpoints)
 			return nil
 		}
 	}
@@ -81,10 +81,10 @@ func (a *App) resolveBackend() error {
 
 	switch {
 	case cfg.BackendURL != "":
-		a.client = httpclient.NewHTTPClient(cfg.BackendURL)
+		a.client = httpclient.NewHTTPClient(cfg.BackendURL, cfg.Endpoints)
 	case cfg.BackendService != nil:
 		a.mgr = service.NewServiceManager(cfg.BackendService)
-		a.client = httpclient.NewHTTPClient(cfg.BackendService.BaseURL())
+		a.client = httpclient.NewHTTPClient(cfg.BackendService.BaseURL(), cfg.Endpoints)
 	case cfg.BackendStdio != nil:
 		c, err := NewStdioClient(*cfg.BackendStdio)
 		if err != nil {

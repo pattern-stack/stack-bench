@@ -7,8 +7,9 @@ import (
 )
 
 // NewHTTPClient creates a Client that communicates over HTTP/SSE.
-func NewHTTPClient(baseURL string) types.Client {
-	return httpclient.NewHTTPClient(baseURL)
+// If endpoints is nil, default paths are used.
+func NewHTTPClient(baseURL string, endpoints *EndpointConfig) types.Client {
+	return httpclient.NewHTTPClient(baseURL, endpoints)
 }
 
 // NewStubClient creates a Client that returns canned responses for testing.

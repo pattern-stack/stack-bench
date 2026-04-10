@@ -59,14 +59,14 @@ func ParseSSE(body io.ReadCloser) <-chan types.SSEEvent {
 // Returns nil for events we don't need to surface to the chat UI.
 func ChunkFromSSE(evt types.SSEEvent) *types.StreamChunk {
 	switch evt.Event {
-	case "agent.message.chunk":
+	case "agent.message.chunk", "message.delta":
 		var d SSEChunkData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
 		return &types.StreamChunk{Content: d.Delta, Type: types.ChunkText}
 
-	case "agent.message.complete":
+	case "agent.message.complete", "message.complete":
 		// Content was already streamed incrementally via chunks.
 		// Only signal completion — do not repeat the full content.
 		return &types.StreamChunk{Done: true, Type: types.ChunkText}
@@ -78,7 +78,7 @@ func ChunkFromSSE(evt types.SSEEvent) *types.StreamChunk {
 		}
 		return &types.StreamChunk{Content: d.Content, Type: types.ChunkThinking}
 
-	case "agent.tool.start", "tool_start":
+	case "agent.tool.start", "tool_start", "tool.start":
 		var d SSEToolStartData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
@@ -96,7 +96,7 @@ func ChunkFromSSE(evt types.SSEEvent) *types.StreamChunk {
 			Arguments:   d.Arguments,
 		}
 
-	case "agent.tool.end", "tool_end":
+	case "agent.tool.end", "tool_end", "tool.end":
 		var d SSEToolEndData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil

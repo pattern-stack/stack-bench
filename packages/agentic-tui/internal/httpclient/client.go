@@ -5,16 +5,71 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dugshub/agentic-tui/internal/sse"
 	"github.com/dugshub/agentic-tui/internal/types"
 )
 
+// endpointConfig mirrors the public EndpointConfig from config.go
+// with accessor methods that supply defaults.
+type endpointConfig struct {
+	listAgents         string
+	createConversation string
+	sendMessage        string
+	listConversations  string
+	getConversation    string
+	health             string
+}
+
+func newEndpointConfig(pub *types.EndpointConfig) *endpointConfig {
+	ec := &endpointConfig{
+		listAgents:         "/agents",
+		createConversation: "/conversations",
+		sendMessage:        "/conversations/{id}/send",
+		listConversations:  "/conversations",
+		getConversation:    "/conversations/{id}",
+		health:             "/health",
+	}
+	if pub == nil {
+		return ec
+	}
+	if pub.ListAgents != "" {
+		ec.listAgents = pub.ListAgents
+	}
+	if pub.CreateConversation != "" {
+		ec.createConversation = pub.CreateConversation
+	}
+	if pub.SendMessage != "" {
+		ec.sendMessage = pub.SendMessage
+	}
+	if pub.ListConversations != "" {
+		ec.listConversations = pub.ListConversations
+	}
+	if pub.GetConversation != "" {
+		ec.getConversation = pub.GetConversation
+	}
+	if pub.Health != "" {
+		ec.health = pub.Health
+	}
+	return ec
+}
+
+func (e *endpointConfig) sendMessagePath(id string) string {
+	return strings.Replace(e.sendMessage, "{id}", id, 1)
+}
+
+func (e *endpointConfig) getConversationPath(id string) string {
+	return strings.Replace(e.getConversation, "{id}", id, 1)
+}
+
 // HTTPClient communicates with the backend over HTTP.
 type HTTPClient struct {
 	BaseURL    string
+	endpoints  *endpointConfig
 	HTTPClient *http.Client
 }
 
@@ -23,9 +78,11 @@ var _ types.Client = (*HTTPClient)(nil)
 // NewHTTPClient creates a client pointing at the given backend base URL.
 // The default timeout of 30s applies to non-streaming requests.
 // For SSE streaming, context cancellation is used instead.
-func NewHTTPClient(baseURL string) *HTTPClient {
+// If endpoints is nil, default paths are used.
+func NewHTTPClient(baseURL string, endpoints *types.EndpointConfig) *HTTPClient {
 	return &HTTPClient{
-		BaseURL: baseURL,
+		BaseURL:   baseURL,
+		endpoints: newEndpointConfig(endpoints),
 		HTTPClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -33,8 +90,9 @@ func NewHTTPClient(baseURL string) *HTTPClient {
 }
 
 func (c *HTTPClient) ListAgents(ctx context.Context) ([]types.AgentSummary, error) {
-	// GET /agents/ returns list[str] (agent names)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agents/", nil)
+	url := c.BaseURL + c.endpoints.listAgents
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -49,32 +107,45 @@ func (c *HTTPClient) ListAgents(ctx context.Context) ([]types.AgentSummary, erro
 		return nil, fmt.Errorf("list agents: HTTP %d", resp.StatusCode)
 	}
 
+	// Read body once, try both formats
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read agents response: %w", err)
+	}
+
+	// Try decoding as []AgentSummary first (canonical format)
+	var agents []types.AgentSummary
+	if err := json.Unmarshal(body, &agents); err == nil && len(agents) > 0 && agents[0].ID != "" {
+		return agents, nil
+	}
+
+	// Fallback: try as []string (legacy format)
 	var names []string
-	if err := json.NewDecoder(resp.Body).Decode(&names); err != nil {
-		return nil, err
+	if err := json.Unmarshal(body, &names); err != nil {
+		return nil, fmt.Errorf("list agents: unexpected response format")
 	}
 
 	// Fetch details for each agent to get role info
-	agents := make([]types.AgentSummary, 0, len(names))
+	result := make([]types.AgentSummary, 0, len(names))
 	for _, name := range names {
 		detail, err := c.getAgentDetail(ctx, name)
 		if err != nil {
 			// Fall back to name-only if detail fetch fails
-			agents = append(agents, types.AgentSummary{ID: name, Name: name, Role: ""})
+			result = append(result, types.AgentSummary{ID: name, Name: name})
 			continue
 		}
-		agents = append(agents, types.AgentSummary{
+		result = append(result, types.AgentSummary{
 			ID:   detail.Name,
 			Name: detail.RoleName,
 			Role: detail.Mission,
 		})
 	}
 
-	return agents, nil
+	return result, nil
 }
 
 func (c *HTTPClient) getAgentDetail(ctx context.Context, name string) (*types.AgentResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agents/"+name, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+c.endpoints.listAgents+"/"+name, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +173,7 @@ func (c *HTTPClient) CreateConversation(ctx context.Context, agentID string) (st
 		return "", err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/conversations/", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+c.endpoints.createConversation, bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
@@ -131,7 +202,7 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/conversations/%s/send", c.BaseURL, conversationID)
+	url := c.BaseURL + c.endpoints.sendMessagePath(conversationID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -174,7 +245,7 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 }
 
 func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([]types.Conversation, error) {
-	url := c.BaseURL + "/conversations/"
+	url := c.BaseURL + c.endpoints.listConversations
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -206,7 +277,7 @@ func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([
 }
 
 func (c *HTTPClient) GetConversation(ctx context.Context, id string) (*types.ConversationDetailResponse, error) {
-	url := fmt.Sprintf("%s/conversations/%s", c.BaseURL, id)
+	url := c.BaseURL + c.endpoints.getConversationPath(id)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err

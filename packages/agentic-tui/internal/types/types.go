@@ -137,3 +137,13 @@ type SSEEvent struct {
 	Event string
 	Data  string
 }
+
+// EndpointConfig allows customizing the API path structure.
+type EndpointConfig struct {
+	ListAgents         string // default: "/agents"
+	CreateConversation string // default: "/conversations"
+	SendMessage        string // default: "/conversations/{id}/messages"
+	ListConversations  string // default: "/conversations"
+	GetConversation    string // default: "/conversations/{id}"
+	Health             string // default: "/health"
+}

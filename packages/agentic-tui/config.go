@@ -1,6 +1,14 @@
 package tui
 
-import tea "charm.land/bubbletea/v2"
+import (
+	tea "charm.land/bubbletea/v2"
+
+	"github.com/dugshub/agentic-tui/internal/types"
+)
+
+// EndpointConfig allows customizing the API path structure.
+// Re-exported from internal/types for use by consumers.
+type EndpointConfig = types.EndpointConfig
 
 // Config configures an agentic-tui instance.
 type Config struct {
@@ -31,16 +39,6 @@ type Config struct {
 
 	// OnReady is called after the backend is connected and agents are loaded.
 	OnReady func(agents []AgentSummary)
-}
-
-// EndpointConfig allows customizing the API path structure.
-type EndpointConfig struct {
-	ListAgents         string // default: "/agents"
-	CreateConversation string // default: "/conversations"
-	SendMessage        string // default: "/conversations/{id}/messages"
-	ListConversations  string // default: "/conversations"
-	GetConversation    string // default: "/conversations/{id}"
-	Health             string // default: "/health"
 }
 
 // CommandDef defines a slash command.
