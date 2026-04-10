@@ -135,7 +135,7 @@ The visual truth. 14 commits of polished TUI at `app/cli/internal/*`:
 ## Architecture (Target)
 
 ```
-github.com/ORG/agentic-tui/
+github.com/dugshub/agentic-tui/
 ├── go.mod                        # standalone module
 ├── tui.go                        # App, New(), Run() — public entry point
 ├── client.go                     # Client interface + factories
@@ -339,19 +339,22 @@ Keep PR #198's height calculation (it accounts for the richer chrome).
 
 ## Implementation Phases
 
-| Phase | What | Depends On |
-|-------|------|------------|
-| 1 | Restructure PR #198 code into standalone package layout | -- |
-| 2 | Unify types into single `internal/types` package | 1 |
-| 3 | Port public API layer from main (Client, Config, App) | 2 |
-| 4 | Port JSON-RPC stdio client from main | 2 |
-| 5 | Port HTTP client enhancements from main (EndpointConfig, aliases) | 2 |
-| 6 | Port service lifecycle from main (ExecService, ServiceManager) | 2 |
-| 7 | Port contract tests and examples from main | 4, 5 |
-| 8 | Write PROTOCOL.md | -- |
-| 9 | CI, release workflow, README | 8 |
-| 10 | Integration test: wire Stack Bench against new package | 9 |
-| 11 | Tag v0.1.0, close PR #198, move #199/#200 | 10 |
+| Issue | What | Depends On | Parallel? |
+|-------|------|------------|-----------|
+| SB-058 | Scaffold standalone package from PR #198 | -- | No (foundation) |
+| SB-059 | Unify types into single `internal/types` package | SB-058 | No (enables rest) |
+| SB-060 | Port public API layer from main | SB-059 | Yes (with 061-063) |
+| SB-061 | Port JSON-RPC stdio client from main | SB-059 | Yes (with 060,062,063) |
+| SB-062 | Port HTTP client enhancements from main | SB-059 | Yes (with 060,061,063) |
+| SB-063 | Port service lifecycle from main | SB-059 | Yes (with 060-062) |
+| SB-064 | Contract tests, examples, PROTOCOL.md | SB-061, SB-062 | No (capstone) |
+
+```
+SB-058 (scaffold) → SB-059 (unify types) → ┬─ SB-060 (public API)      ─┐
+                                             ├─ SB-061 (stdio client)     ├─ SB-064 (tests+examples+protocol)
+                                             ├─ SB-062 (HTTP enhancements)┘
+                                             └─ SB-063 (service lifecycle)
+```
 
 ## Phase Details
 
@@ -385,16 +388,16 @@ app/cli/main.go                   → (becomes example, not part of library)
 **Import path rewrite**:
 ```
 github.com/dugshub/stack-bench/app/cli/internal/api
-  → github.com/ORG/agentic-tui/internal/httpclient  (client parts)
-  → github.com/ORG/agentic-tui/internal/sse         (SSE parts)
+  → github.com/dugshub/agentic-tui/internal/httpclient  (client parts)
+  → github.com/dugshub/agentic-tui/internal/sse         (SSE parts)
 
 github.com/dugshub/stack-bench/app/cli/internal/*
-  → github.com/ORG/agentic-tui/internal/*
+  → github.com/dugshub/agentic-tui/internal/*
 ```
 
 **New go.mod**:
 ```
-module github.com/ORG/agentic-tui
+module github.com/dugshub/agentic-tui
 
 go 1.23
 
@@ -433,7 +436,7 @@ type StreamChunk struct { ... }
 ```go
 // types.go (root)
 package tui
-import "github.com/ORG/agentic-tui/internal/types"
+import "github.com/dugshub/agentic-tui/internal/types"
 type StreamChunk = types.StreamChunk
 type AgentSummary = types.AgentSummary
 // etc.
@@ -505,7 +508,7 @@ and a few polish fixes.
 - `local.go` — `ExecService` (renamed, same logic)
 - `manager.go` — `ServiceManager` (same)
 
-### Phase 7: Port contract tests and examples from main
+### Phase 7 (SB-064): Contract tests, examples, PROTOCOL.md
 
 **Contract tests** — copy `packages/agent-tui/contracttest/`:
 - `validate.go` — HTTP backend contract validation
@@ -520,11 +523,7 @@ and a few polish fixes.
 - `custom-theme/main.go` — custom theme
 - Update imports to new module path
 
-### Phase 8: Write PROTOCOL.md
-
-Stable reference for backend implementors in any language.
-
-Contents:
+**PROTOCOL.md** — stable reference for backend implementors:
 1. SSE event vocabulary with full JSON schemas
 2. JSON-RPC method definitions (params, results, error codes)
 3. HTTP endpoint conventions (paths, headers, SSE wire format)
@@ -533,62 +532,44 @@ Contents:
 6. Backward compatibility guarantees
 7. "Implementing a backend in 30 minutes" quick-start
 
-### Phase 9: CI, release workflow, README
-
-**GitHub Actions** (`.github/workflows/`):
-- `ci.yml`: `go test`, `go vet`, `golangci-lint` on push/PR
-- `release.yml`: on tag push, build static binaries for 5 platforms, upload to GH Releases
-
-**README.md**: one-paragraph description, quick-start (3 integration patterns), protocol overview, screenshots/recordings, links to examples.
-
-**LICENSE**: MIT (matches Bubble Tea, lipgloss, goldmark, chroma).
-
-### Phase 10: Stack Bench integration
-
-- Update `app/cli/go.mod`: replace local `packages/agent-tui` with published module
-- Verify `app/cli/main.go` works (may need minor Config field updates)
-- Delete `packages/agent-tui/` from stack-bench
-- Run full demo to confirm visual parity
-
-### Phase 11: Ship v0.1.0
-
-- Tag `v0.1.0`
-- Close PR #198 with migration note
-- Move #199, #200 to new repo
-- Archive this spec
-
 ## Risk Analysis
 
 **Low risk** (file moves + import rewrites):
-- Phase 1 (restructure) — mechanical, verified by `go build`
-- Phase 2 (unify types) — well-understood Go pattern
-- Phases 4-7 (port from main) — copying self-contained packages
+- SB-058 (scaffold) — mechanical, verified by `go build`
+- SB-059 (unify types) — well-understood Go pattern
+- SB-061, SB-063 (stdio, service) — copying self-contained packages
 
 **Medium risk**:
-- Phase 3 (public API) — adapting main's wrapper to PR #198's internals.
-  Main's `app.Config` vs PR #198's `app.New()` signature may differ slightly.
-  Mitigation: compare function signatures before porting.
-- Phase 5 (HTTP enhancements) — merging main's SSE parser improvements into
-  PR #198's parser. Same event types, different code. Mitigation: diff the
-  two parsers, take the superset.
+- SB-060 (public API) — adapting main's wrapper to PR #198's internals.
+  Main's `app.Config` vs PR #198's `app.New()` signature differ. Reconciliation
+  documented in the SSE parser and app model sections above.
+- SB-062 (HTTP enhancements) — merging main's SSE parser improvements into
+  PR #198's parser. Strategy: PR #198 base + main's 4 aliases (~10 lines).
 
-**Zero risk to visual fidelity**: Phases 1-7 never modify rendering logic in
+**Zero risk to visual fidelity**: No issue modifies rendering logic in
 `internal/chat/view.go`, `internal/ui/components/`, `internal/ui/theme/`,
 or `internal/ui/markdown.go`. These are the rendering pipeline and they
 stay frozen. The ONLY acceptable changes to these files are import path
 rewrites (e.g., `github.com/dugshub/stack-bench/app/cli/internal/ui` →
-`github.com/ORG/agentic-tui/internal/ui`). Any other change to rendering
+`github.com/dugshub/agentic-tui/internal/ui`). Any other change to rendering
 files is a bug in the plan execution, not an improvement.
 
-## Open Questions
+## Resolved Decisions
 
-1. **Repo name + org**: `dugshub/agentic-tui`? Decides Go module path.
-2. **Module path**: Use vanity import path or GitHub directly?
-3. **Bubble Tea v2 pin**: Document exact version, it's pre-1.0.
-4. **Keep legacy event aliases forever?** Yes for v0.x, revisit for v1.0.
+1. **Module path**: `github.com/dugshub/agentic-tui` — matches brand, can transfer org later.
+2. **Bubble Tea v2**: Pin `charm.land/bubbletea/v2 v2.0.2` (pre-1.0, document in go.mod).
+3. **Legacy event aliases**: Keep in v0.x for backward compat, revisit for v1.0.
+4. **BranchConversation**: Dropped from Client interface (stack-bench-specific).
+5. **Theme system**: Keep PR #198's YAML-loaded themes (`themes/dark.yml`, `themes/light.yml`, `embed.go`).
+6. **Chat model**: Keep PR #198's `PartType string` constants and struct-based `ToolCallPart` (richer than main's iota pattern).
+7. **SSE parser**: PR #198 base + main's 4 canonical aliases (~10 lines added).
+8. **Stdio protocol**: JSON-RPC 2.0 (already shipped on main, more capable than spec's simpler SSE-over-stdin).
+9. **Work directory**: Build at `packages/agentic-tui/` in this repo. Repo extraction is a post-epic ship task.
 
-## What's NOT in v0.1.0
+## What's NOT in This Epic
 
+- CI/CD pipelines, GitHub Release workflow, README.md (post-epic ship tasks)
+- Stack Bench integration (post-epic: update `app/cli/go.mod`, delete `packages/agent-tui/`)
 - Python SDK wrapper / wheel bundling
 - Homebrew/apt distribution
 - Expandable/interactive parts (#199)
@@ -596,6 +577,12 @@ files is a bug in the plan execution, not an improvement.
 - Tool approval protocol
 - Custom display type plugins
 - Multi-TUI theme isolation
+
+## Epic & Issues
+
+This spec is implemented via **EP-017** with 7 issues (SB-058 through SB-064).
+See `docs/epics/ep-017-agentic-tui-standalone.md` for the full issue table
+and dependency graph.
 
 ## Reference: Source Files
 
