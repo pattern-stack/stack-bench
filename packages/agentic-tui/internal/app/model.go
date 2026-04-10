@@ -38,12 +38,19 @@ type ConversationCreatedMsg struct {
 	Err            error
 }
 
+// Config holds app-level configuration passed from the root tui package.
+type Config struct {
+	AppName        string
+	AssistantLabel string
+}
+
 // Model is the top-level Bubble Tea model.
 type Model struct {
 	width, height int
 	phase         Phase
 	client        types.Client
 	manager       *service.ServiceManager
+	cfg           Config
 
 	// Agent selection
 	agents      []types.AgentSummary
@@ -68,8 +75,7 @@ type Model struct {
 }
 
 // New creates the initial app model.
-func New(client types.Client, mgr *service.ServiceManager) Model {
-	reg := command.DefaultRegistry()
+func New(client types.Client, mgr *service.ServiceManager, reg *command.Registry, cfg Config) Model {
 	return Model{
 		width:    80,
 		height:   24,
@@ -77,6 +83,7 @@ func New(client types.Client, mgr *service.ServiceManager) Model {
 		client:   client,
 		manager:  mgr,
 		registry: reg,
+		cfg:      cfg,
 	}
 }
 
@@ -280,8 +287,12 @@ func (m Model) viewAgentSelect() string {
 
 	var lines []string
 
+	title := "AGENTIC TUI"
+	if m.cfg.AppName != "" {
+		title = strings.ToUpper(m.cfg.AppName)
+	}
 	header := molecules.Header(ctx, molecules.HeaderData{
-		Title: "STACK BENCH",
+		Title: title,
 	})
 	lines = append(lines, header)
 	lines = append(lines, "")

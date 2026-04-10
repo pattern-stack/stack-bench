@@ -41,15 +41,11 @@ func (d *DemoRunner) NextUserMessage() (string, bool) {
 // Auto-selects the demo agent and prefills chat input from the script.
 func NewDemo(script []demo.DemoMessage) Model {
 	client := demo.NewDemoClient(script)
-	return Model{
-		width:      80,
-		height:     24,
-		phase:      PhaseSelectAgent,
-		client:     client,
-		registry:   command.DefaultRegistry(),
-		demo:       true,
-		demoRunner: NewDemoRunner(script),
-	}
+	reg := command.DefaultRegistry()
+	m := New(client, nil, reg, Config{AppName: "Demo"})
+	m.demo = true
+	m.demoRunner = NewDemoRunner(script)
+	return m
 }
 
 // handleDemoAgentsLoaded auto-selects the first agent and creates a conversation.

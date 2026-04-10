@@ -15,15 +15,11 @@ import (
 // All messages are pre-rendered so the user can scroll through immediately.
 func NewGallery() Model {
 	client := &httpclient.StubClient{}
-	m := Model{
-		width:    80,
-		height:   24,
-		phase:    PhaseChat,
-		client:   client,
-		registry: command.DefaultRegistry(),
-		gallery:  true,
-	}
-	m.chat = chat.New(client, "Component Gallery", m.registry)
+	reg := command.DefaultRegistry()
+	m := New(client, nil, reg, Config{AppName: "Gallery"})
+	m.phase = PhaseChat
+	m.gallery = true
+	m.chat = chat.New(client, "Component Gallery", reg)
 	m.chat.SetSize(m.width, m.height-5)
 	m.chat.SetConversationID("gallery")
 	return m
