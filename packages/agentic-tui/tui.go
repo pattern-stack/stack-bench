@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/agentic-tui/internal/app"
 	"github.com/dugshub/agentic-tui/internal/command"
@@ -35,10 +36,12 @@ func New(cfg Config) (*App, error) {
 		cfg.AssistantLabel = strings.ToLower(cfg.AppName) + ":"
 	}
 
-	// Set theme — register custom theme then activate by name
+	// Theme: custom > auto-detect > dark fallback
 	if cfg.Theme != nil {
 		theme.Register(cfg.Theme)
 		theme.SetActive(cfg.Theme.Name)
+	} else if !lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
+		theme.SetActive("light")
 	}
 
 	a := &App{cfg: cfg}

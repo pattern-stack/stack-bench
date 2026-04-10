@@ -291,6 +291,11 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
+	case tea.PasteMsg:
+		if !m.streaming {
+			m.input += msg.Content
+		}
+		return *m, nil
 	case tea.MouseWheelMsg:
 		// Delegate mouse wheel events to the viewport for scrolling.
 		var cmd tea.Cmd
