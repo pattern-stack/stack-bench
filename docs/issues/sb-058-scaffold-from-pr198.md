@@ -4,10 +4,11 @@ title: Scaffold standalone package from PR #198
 status: draft
 epic: EP-017
 depends_on: []
-branch:
+branch: dug/agentic-tui/1-scaffold
 pr:
 stack: agentic-tui
 stack_index: 1
+pr198_source: origin/dugshub/message-parts/2-part-aware-chat
 created: 2026-04-09
 ---
 

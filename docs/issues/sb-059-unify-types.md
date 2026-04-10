@@ -4,7 +4,7 @@ title: Unify types into single source
 status: draft
 epic: EP-017
 depends_on: [SB-058]
-branch:
+branch: dug/agentic-tui/2-unify-types
 pr:
 stack: agentic-tui
 stack_index: 2

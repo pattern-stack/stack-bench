@@ -4,7 +4,7 @@ title: Port HTTP client enhancements from main
 status: draft
 epic: EP-017
 depends_on: [SB-059]
-branch:
+branch: dug/agentic-tui/5-http-enhancements
 pr:
 stack: agentic-tui
 stack_index: 5

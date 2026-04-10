@@ -4,7 +4,7 @@ title: Contract tests, examples, PROTOCOL.md
 status: draft
 epic: EP-017
 depends_on: [SB-061, SB-062]
-branch:
+branch: dug/agentic-tui/7-contract-tests-examples
 pr:
 stack: agentic-tui
 stack_index: 7

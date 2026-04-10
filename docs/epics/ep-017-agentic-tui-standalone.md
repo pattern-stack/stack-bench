@@ -20,13 +20,16 @@ agent framework in any language can drive it via HTTP/SSE or JSON-RPC.
 
 | ID | Title | Status | Branch | Depends On |
 |----|-------|--------|--------|------------|
-| SB-058 | Scaffold standalone package from PR #198 | draft | | -- |
-| SB-059 | Unify types into single source | draft | | SB-058 |
-| SB-060 | Port public API layer from main | draft | | SB-059 |
-| SB-061 | Port JSON-RPC stdio client from main | draft | | SB-059 |
-| SB-062 | Port HTTP client enhancements from main | draft | | SB-059 |
-| SB-063 | Port service lifecycle from main | draft | | SB-059 |
-| SB-064 | Contract tests, examples, PROTOCOL.md | draft | | SB-061, SB-062 |
+| SB-058 | Scaffold standalone package from PR #198 | draft | dug/agentic-tui/1-scaffold | -- |
+| SB-059 | Unify types into single source | draft | dug/agentic-tui/2-unify-types | SB-058 |
+| SB-060 | Port public API layer from main | draft | dug/agentic-tui/3-public-api | SB-059 |
+| SB-061 | Port JSON-RPC stdio client from main | draft | dug/agentic-tui/4-stdio-client | SB-059 |
+| SB-062 | Port HTTP client enhancements from main | draft | dug/agentic-tui/5-http-enhancements | SB-059 |
+| SB-063 | Port service lifecycle from main | draft | dug/agentic-tui/6-service-lifecycle | SB-059 |
+| SB-064 | Contract tests, examples, PROTOCOL.md | draft | dug/agentic-tui/7-contract-tests-examples | SB-061, SB-062 |
+
+**PR #198 source branch**: `origin/dugshub/message-parts/2-part-aware-chat`
+Read files via: `git show origin/dugshub/message-parts/2-part-aware-chat:<path>`
 
 ## Dependency Graph
 

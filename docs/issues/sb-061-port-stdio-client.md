@@ -4,7 +4,7 @@ title: Port JSON-RPC stdio client from main
 status: draft
 epic: EP-017
 depends_on: [SB-059]
-branch:
+branch: dug/agentic-tui/4-stdio-client
 pr:
 stack: agentic-tui
 stack_index: 4

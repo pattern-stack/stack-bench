@@ -2,7 +2,8 @@
 title: agentic-tui — Standalone Package from PR #198
 date: 2026-04-09
 status: draft
-branch: null
+branch: dug/agentic-tui/0-planning
+pr198_branch: origin/dugshub/message-parts/2-part-aware-chat
 depends_on: [2026-04-08-agentic-tui-package.md, 2026-03-22-message-parts.md]
 adrs: []
 ---

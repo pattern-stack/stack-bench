@@ -4,7 +4,7 @@ title: Port service lifecycle from main
 status: draft
 epic: EP-017
 depends_on: [SB-059]
-branch:
+branch: dug/agentic-tui/6-service-lifecycle
 pr:
 stack: agentic-tui
 stack_index: 6

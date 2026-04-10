@@ -4,7 +4,7 @@ title: Port public API layer from main
 status: draft
 epic: EP-017
 depends_on: [SB-059]
-branch:
+branch: dug/agentic-tui/3-public-api
 pr:
 stack: agentic-tui
 stack_index: 3
