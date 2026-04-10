@@ -261,6 +261,10 @@ func renderPart(ctx atoms.RenderContext, part MessagePart, contentWidth int, spi
 	case PartToolCall:
 		return renderToolCallPart(ctx, part, spinners.tool)
 
+	case PartWaiting:
+		inlineCtx := atoms.RenderContext{Width: 0, Theme: ctx.Theme}
+		return spinners.thinking.View(inlineCtx)
+
 	case PartError:
 		return molecules.ErrorBlock(ctx, molecules.ErrorBlockData{
 			Message: part.Content,

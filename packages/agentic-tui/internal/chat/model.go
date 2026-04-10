@@ -35,6 +35,7 @@ const (
 	PartThinking PartType = "thinking"
 	PartToolCall PartType = "tool_call"
 	PartError    PartType = "error"
+	PartWaiting  PartType = "waiting"
 )
 
 // ToolCallState tracks the lifecycle of a tool call.
@@ -456,6 +457,12 @@ func (m *Model) submit() (Model, tea.Cmd) {
 
 	// Regular message
 	m.messages = append(m.messages, TextMessage(RoleUser, text))
+	// Create a skeleton assistant message with a waiting indicator.
+	// The first real chunk will replace it via ensureAssistantMessage.
+	m.messages = append(m.messages, Message{
+		Role:  RoleAssistant,
+		Parts: []MessagePart{{Type: PartWaiting}},
+	})
 	m.streaming = true
 	m.rebuildViewportContent()
 
@@ -511,6 +518,10 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	case types.ChunkToolStart:
 		m.ensureAssistantMessage()
 		last := &m.messages[len(m.messages)-1]
+		// Replace waiting placeholder if it's the only part.
+		if len(last.Parts) == 1 && last.Parts[0].Type == PartWaiting {
+			last.Parts = last.Parts[:0]
+		}
 		last.Parts = append(last.Parts, MessagePart{
 			Type: PartToolCall,
 			ToolCall: &ToolCallPart{
@@ -576,6 +587,11 @@ func (m *Model) ensureAssistantMessage() {
 func (m *Model) appendToLastPart(partType PartType, content string) {
 	m.ensureAssistantMessage()
 	last := &m.messages[len(m.messages)-1]
+	// Replace the waiting placeholder with real content.
+	if len(last.Parts) == 1 && last.Parts[0].Type == PartWaiting {
+		last.Parts[0] = MessagePart{Type: partType, Content: content}
+		return
+	}
 	if len(last.Parts) > 0 {
 		p := &last.Parts[len(last.Parts)-1]
 		if p.Type == partType && !p.Complete {

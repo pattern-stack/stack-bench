@@ -1,0 +1,41 @@
+# agentic-tui demos and development
+
+# List all recipes
+default:
+    @just --list --unsorted
+
+# Scripted conversation replay (no backend)
+demo:
+    cd _examples/demo && go run . --demo
+
+# Component showcase (no backend)
+gallery:
+    cd _examples/demo && go run . --gallery
+
+# All 14 spinner presets (no backend)
+spinners:
+    cd _examples/demo && go run . --spinners
+
+# Chat with Claude Code via Sonnet
+claude:
+    cd _examples/claude-code && go run .
+
+# Chat with Gemini CLI
+gemini:
+    cd _examples/gemini && go run .
+
+# Python echo agent (no API keys)
+echo:
+    cd _examples/stdio-python && go run .
+
+# Build all packages and examples
+build:
+    go build ./...
+
+# Run all tests
+test:
+    go test ./...
+
+# Run quality gates (build + vet + test)
+quality:
+    go build ./... && go vet ./... && go test ./...

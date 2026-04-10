@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -148,6 +149,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat = newChat
 		return m, cmd
 
+	case tea.FocusMsg:
+		// Terminal regained focus — it may have re-shown the cursor.
+		// Write hide-cursor escape directly to force it hidden again.
+		return m, func() tea.Msg {
+			fmt.Fprint(os.Stdout, "\033[?25l")
+			return nil
+		}
+
 	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
@@ -276,6 +285,8 @@ func (m Model) View() tea.View {
 
 	v := tea.NewView(body)
 	v.AltScreen = true
+	v.ReportFocus = true
+	// Cursor is nil — Bubble Tea will hide the terminal cursor.
 	return v
 }
 

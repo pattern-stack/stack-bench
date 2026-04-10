@@ -15,7 +15,7 @@ func main() {
 		AssistantLabel: "claude:",
 		BackendCLI: &tui.CLIAgentConfig{
 			Command: "claude",
-			Args:    []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--bare", "--model", "sonnet"},
+			Args:    []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--model", "sonnet"},
 			Format:  tui.FormatClaude,
 		},
 	})
