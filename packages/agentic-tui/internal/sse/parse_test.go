@@ -4,6 +4,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/dugshub/agentic-tui/internal/types"
 )
 
 func TestParseSSE_ValidEvents(t *testing.T) {
@@ -60,7 +62,7 @@ func TestParseSSE_IgnoresComments(t *testing.T) {
 }
 
 func TestChunkFromSSE_MessageChunk(t *testing.T) {
-	evt := SSEEvent{
+	evt := types.SSEEvent{
 		Event: "agent.message.chunk",
 		Data:  `{"delta":"world"}`,
 	}
@@ -71,8 +73,8 @@ func TestChunkFromSSE_MessageChunk(t *testing.T) {
 	if chunk.Content != "world" {
 		t.Errorf("Content = %q, want %q", chunk.Content, "world")
 	}
-	if chunk.Type != ChunkText {
-		t.Errorf("Type = %q, want %q", chunk.Type, ChunkText)
+	if chunk.Type != types.ChunkText {
+		t.Errorf("Type = %q, want %q", chunk.Type, types.ChunkText)
 	}
 	if chunk.Done {
 		t.Error("expected Done=false")
@@ -80,7 +82,7 @@ func TestChunkFromSSE_MessageChunk(t *testing.T) {
 }
 
 func TestChunkFromSSE_MessageComplete_NoDuplication(t *testing.T) {
-	evt := SSEEvent{
+	evt := types.SSEEvent{
 		Event: "agent.message.complete",
 		Data:  `{"content":"full response","input_tokens":10,"output_tokens":5}`,
 	}
@@ -97,7 +99,7 @@ func TestChunkFromSSE_MessageComplete_NoDuplication(t *testing.T) {
 }
 
 func TestChunkFromSSE_Error(t *testing.T) {
-	evt := SSEEvent{
+	evt := types.SSEEvent{
 		Event: "agent.error",
 		Data:  `{"error_type":"rate_limit","message":"too many requests"}`,
 	}
@@ -111,9 +113,9 @@ func TestChunkFromSSE_Error(t *testing.T) {
 	if chunk.Error == nil {
 		t.Fatal("expected non-nil Error")
 	}
-	apiErr, ok := chunk.Error.(*APIError)
+	apiErr, ok := chunk.Error.(*types.APIError)
 	if !ok {
-		t.Fatalf("expected *APIError, got %T", chunk.Error)
+		t.Fatalf("expected *types.APIError, got %T", chunk.Error)
 	}
 	if apiErr.Type != "rate_limit" {
 		t.Errorf("error Type = %q, want %q", apiErr.Type, "rate_limit")
@@ -122,7 +124,7 @@ func TestChunkFromSSE_Error(t *testing.T) {
 
 func TestChunkFromSSE_Reasoning(t *testing.T) {
 	for _, eventName := range []string{"agent.reasoning", "thinking"} {
-		evt := SSEEvent{
+		evt := types.SSEEvent{
 			Event: eventName,
 			Data:  `{"content":"let me think..."}`,
 		}
@@ -130,8 +132,8 @@ func TestChunkFromSSE_Reasoning(t *testing.T) {
 		if chunk == nil {
 			t.Fatalf("[%s] expected non-nil chunk", eventName)
 		}
-		if chunk.Type != ChunkThinking {
-			t.Errorf("[%s] Type = %q, want %q", eventName, chunk.Type, ChunkThinking)
+		if chunk.Type != types.ChunkThinking {
+			t.Errorf("[%s] Type = %q, want %q", eventName, chunk.Type, types.ChunkThinking)
 		}
 		if chunk.Content != "let me think..." {
 			t.Errorf("[%s] Content = %q, want %q", eventName, chunk.Content, "let me think...")
@@ -141,7 +143,7 @@ func TestChunkFromSSE_Reasoning(t *testing.T) {
 
 func TestChunkFromSSE_ToolStart(t *testing.T) {
 	for _, eventName := range []string{"agent.tool.start", "tool_start"} {
-		evt := SSEEvent{
+		evt := types.SSEEvent{
 			Event: eventName,
 			Data:  `{"tool_name":"search","input":"query"}`,
 		}
@@ -149,8 +151,8 @@ func TestChunkFromSSE_ToolStart(t *testing.T) {
 		if chunk == nil {
 			t.Fatalf("[%s] expected non-nil chunk", eventName)
 		}
-		if chunk.Type != ChunkToolStart {
-			t.Errorf("[%s] Type = %q, want %q", eventName, chunk.Type, ChunkToolStart)
+		if chunk.Type != types.ChunkToolStart {
+			t.Errorf("[%s] Type = %q, want %q", eventName, chunk.Type, types.ChunkToolStart)
 		}
 		if chunk.Content != "search" {
 			t.Errorf("[%s] Content = %q, want %q", eventName, chunk.Content, "search")
@@ -160,7 +162,7 @@ func TestChunkFromSSE_ToolStart(t *testing.T) {
 
 func TestChunkFromSSE_ToolEnd(t *testing.T) {
 	for _, eventName := range []string{"agent.tool.end", "tool_end"} {
-		evt := SSEEvent{
+		evt := types.SSEEvent{
 			Event: eventName,
 			Data:  `{"tool_name":"search","output":"found 3 results"}`,
 		}
@@ -168,8 +170,8 @@ func TestChunkFromSSE_ToolEnd(t *testing.T) {
 		if chunk == nil {
 			t.Fatalf("[%s] expected non-nil chunk", eventName)
 		}
-		if chunk.Type != ChunkToolEnd {
-			t.Errorf("[%s] Type = %q, want %q", eventName, chunk.Type, ChunkToolEnd)
+		if chunk.Type != types.ChunkToolEnd {
+			t.Errorf("[%s] Type = %q, want %q", eventName, chunk.Type, types.ChunkToolEnd)
 		}
 		if chunk.Content != "found 3 results" {
 			t.Errorf("[%s] Content = %q, want %q", eventName, chunk.Content, "found 3 results")
@@ -178,7 +180,7 @@ func TestChunkFromSSE_ToolEnd(t *testing.T) {
 }
 
 func TestChunkFromSSE_Done(t *testing.T) {
-	evt := SSEEvent{Event: "done", Data: "{}"}
+	evt := types.SSEEvent{Event: "done", Data: "{}"}
 	chunk := ChunkFromSSE(evt)
 	if chunk == nil {
 		t.Fatal("expected non-nil chunk")
@@ -189,7 +191,7 @@ func TestChunkFromSSE_Done(t *testing.T) {
 }
 
 func TestChunkFromSSE_UnknownEvent_ReturnsNil(t *testing.T) {
-	evt := SSEEvent{Event: "unknown.event.type", Data: `{"foo":"bar"}`}
+	evt := types.SSEEvent{Event: "unknown.event.type", Data: `{"foo":"bar"}`}
 	chunk := ChunkFromSSE(evt)
 	if chunk != nil {
 		t.Errorf("expected nil for unknown event, got %+v", chunk)
@@ -197,15 +199,15 @@ func TestChunkFromSSE_UnknownEvent_ReturnsNil(t *testing.T) {
 }
 
 func TestChunkFromSSE_InvalidJSON_ReturnsNil(t *testing.T) {
-	evt := SSEEvent{Event: "agent.message.chunk", Data: "not json"}
+	evt := types.SSEEvent{Event: "agent.message.chunk", Data: "not json"}
 	chunk := ChunkFromSSE(evt)
 	if chunk != nil {
 		t.Errorf("expected nil for invalid JSON chunk, got %+v", chunk)
 	}
 }
 
-func collect(ch <-chan SSEEvent) []SSEEvent {
-	var events []SSEEvent
+func collect(ch <-chan types.SSEEvent) []types.SSEEvent {
+	var events []types.SSEEvent
 	for evt := range ch {
 		events = append(events, evt)
 	}

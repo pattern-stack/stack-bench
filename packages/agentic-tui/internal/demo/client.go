@@ -7,8 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dugshub/agentic-tui/internal/httpclient"
-	"github.com/dugshub/agentic-tui/internal/sse"
+	"github.com/dugshub/agentic-tui/internal/types"
 )
 
 // DemoMessage is a single message in a demo script.
@@ -31,22 +30,22 @@ type DemoPart struct {
 }
 
 // DemoClient replays a scripted conversation for demo/testing purposes.
-// It implements the httpclient.Client interface.
+// It implements the types.Client interface.
 type DemoClient struct {
 	script []DemoMessage
 	cursor int
 	mu     sync.Mutex
 }
 
-var _ httpclient.Client = (*DemoClient)(nil)
+var _ types.Client = (*DemoClient)(nil)
 
 // NewDemoClient creates a Client that replays the given script.
 func NewDemoClient(script []DemoMessage) *DemoClient {
 	return &DemoClient{script: script}
 }
 
-func (d *DemoClient) ListAgents(_ context.Context) ([]sse.AgentSummary, error) {
-	return []sse.AgentSummary{
+func (d *DemoClient) ListAgents(_ context.Context) ([]types.AgentSummary, error) {
+	return []types.AgentSummary{
 		{ID: "demo", Name: "Demo Agent", Role: "Scripted replay"},
 	}, nil
 }
@@ -55,7 +54,7 @@ func (d *DemoClient) CreateConversation(_ context.Context, _ string) (string, er
 	return "demo-conversation", nil
 }
 
-func (d *DemoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan sse.StreamChunk, error) {
+func (d *DemoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan types.StreamChunk, error) {
 	d.mu.Lock()
 	var msg *DemoMessage
 	for d.cursor < len(d.script) {
@@ -72,7 +71,7 @@ func (d *DemoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan 
 		msg = &DemoMessage{Role: "assistant", Content: "(end of demo script)"}
 	}
 
-	ch := make(chan sse.StreamChunk, 64)
+	ch := make(chan types.StreamChunk, 64)
 	go func() {
 		defer close(ch)
 		if len(msg.Parts) > 0 {
@@ -80,24 +79,24 @@ func (d *DemoClient) SendMessage(_ context.Context, _ string, _ string) (<-chan 
 		} else {
 			d.streamText(ch, msg.Content)
 		}
-		ch <- sse.StreamChunk{Done: true}
+		ch <- types.StreamChunk{Done: true}
 	}()
 
 	return ch, nil
 }
 
 // streamText streams plain text word-by-word (original behavior).
-func (d *DemoClient) streamText(ch chan<- sse.StreamChunk, content string) {
+func (d *DemoClient) streamText(ch chan<- types.StreamChunk, content string) {
 	lines := strings.Split(content, "\n")
 	for li, line := range lines {
 		if li > 0 {
-			ch <- sse.StreamChunk{Content: "\n", Type: sse.ChunkText}
+			ch <- types.StreamChunk{Content: "\n", Type: types.ChunkText}
 			time.Sleep(15 * time.Millisecond)
 		}
 		trimmed := strings.TrimLeft(line, " \t")
 		indent := line[:len(line)-len(trimmed)]
 		if indent != "" {
-			ch <- sse.StreamChunk{Content: indent, Type: sse.ChunkText}
+			ch <- types.StreamChunk{Content: indent, Type: types.ChunkText}
 		}
 		words := strings.Fields(trimmed)
 		for wi, word := range words {
@@ -105,7 +104,7 @@ func (d *DemoClient) streamText(ch chan<- sse.StreamChunk, content string) {
 			if wi < len(words)-1 {
 				token += " "
 			}
-			ch <- sse.StreamChunk{Content: token, Type: sse.ChunkText}
+			ch <- types.StreamChunk{Content: token, Type: types.ChunkText}
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
@@ -114,21 +113,21 @@ func (d *DemoClient) streamText(ch chan<- sse.StreamChunk, content string) {
 var demoToolCallCounter int
 
 // streamParts streams structured parts with realistic timing.
-func (d *DemoClient) streamParts(ch chan<- sse.StreamChunk, parts []DemoPart) {
+func (d *DemoClient) streamParts(ch chan<- types.StreamChunk, parts []DemoPart) {
 	for _, part := range parts {
 		switch part.Type {
 		case "text":
 			d.streamText(ch, part.Content)
 
 		case "thinking":
-			ch <- sse.StreamChunk{Content: part.Content, Type: sse.ChunkThinking}
+			ch <- types.StreamChunk{Content: part.Content, Type: types.ChunkThinking}
 			time.Sleep(3 * time.Second)
 
 		case "tool_call":
 			demoToolCallCounter++
 			tcID := fmt.Sprintf("demo-tc-%d", demoToolCallCounter)
-			ch <- sse.StreamChunk{
-				Type:        sse.ChunkToolStart,
+			ch <- types.StreamChunk{
+				Type:        types.ChunkToolStart,
 				ToolCallID:  tcID,
 				ToolName:    part.ToolName,
 				DisplayType: part.DisplayType,
@@ -142,8 +141,8 @@ func (d *DemoClient) streamParts(ch chan<- sse.StreamChunk, parts []DemoPart) {
 				dur = 1500
 			}
 			time.Sleep(time.Duration(dur) * time.Millisecond)
-			chunk := sse.StreamChunk{
-				Type:       sse.ChunkToolEnd,
+			chunk := types.StreamChunk{
+				Type:       types.ChunkToolEnd,
 				ToolCallID: tcID,
 				ToolName:   part.ToolName,
 				Result:     part.Result,
@@ -158,24 +157,24 @@ func (d *DemoClient) streamParts(ch chan<- sse.StreamChunk, parts []DemoPart) {
 		case "tool_reject":
 			// A tool that was blocked by a safety gate before execution.
 			// Renders as a PartError under the assistant message.
-			ch <- sse.StreamChunk{
-				Type:     sse.ChunkToolReject,
+			ch <- types.StreamChunk{
+				Type:     types.ChunkToolReject,
 				ToolName: part.ToolName,
 				Content:  part.Content,
 			}
 			time.Sleep(400 * time.Millisecond)
 
 		case "error":
-			ch <- sse.StreamChunk{Content: part.Content, Type: sse.ChunkError}
+			ch <- types.StreamChunk{Content: part.Content, Type: types.ChunkError}
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
 
-func (d *DemoClient) ListConversations(_ context.Context, _ string) ([]sse.Conversation, error) {
+func (d *DemoClient) ListConversations(_ context.Context, _ string) ([]types.Conversation, error) {
 	return nil, nil
 }
 
-func (d *DemoClient) GetConversation(_ context.Context, _ string) (*sse.ConversationDetailResponse, error) {
-	return &sse.ConversationDetailResponse{}, nil
+func (d *DemoClient) GetConversation(_ context.Context, _ string) (*types.ConversationDetailResponse, error) {
+	return &types.ConversationDetailResponse{}, nil
 }

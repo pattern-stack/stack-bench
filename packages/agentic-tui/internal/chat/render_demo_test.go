@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dugshub/agentic-tui/internal/sse"
+	"github.com/dugshub/agentic-tui/internal/types"
 )
 
 // TestRenderDemo_PartAwareConversation renders a realistic agentic conversation
@@ -18,85 +18,85 @@ func TestRenderDemo_PartAwareConversation(t *testing.T) {
 
 	// Simulate the full stream sequence
 	// 1. Thinking
-	m.handleResponse(resp(sse.StreamChunk{
+	m.handleResponse(resp(types.StreamChunk{
 		Content: "The user wants me to read main.go and fix error handling. Let me start by reading the file.",
-		Type:    sse.ChunkThinking,
+		Type:    types.ChunkThinking,
 	}))
 	// 2. Text
-	m.handleResponse(resp(sse.StreamChunk{Content: "I'll read the file first to understand the current error handling.\n", Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Content: "I'll read the file first to understand the current error handling.\n", Type: types.ChunkText}))
 	// 3. Tool call: read_file
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:        sse.ChunkToolStart,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:        types.ChunkToolStart,
 		ToolCallID:  "tc-1",
 		ToolName:    "read_file",
 		DisplayType: "code",
 		Arguments:   map[string]any{"path": "main.go"},
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:       types.ChunkToolEnd,
 		ToolCallID: "tc-1",
 		ToolName:   "read_file",
 		Result:     "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tdata, _ := os.ReadFile(\"config.json\")\n\tfmt.Println(string(data))\n}",
 		DurationMs: 12,
 	}))
 	// 4. Text
-	m.handleResponse(resp(sse.StreamChunk{Content: "Found it — the error from `os.ReadFile` is being silently discarded. Let me fix that.\n", Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Content: "Found it — the error from `os.ReadFile` is being silently discarded. Let me fix that.\n", Type: types.ChunkText}))
 	// 5. Tool call: edit_file
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:        sse.ChunkToolStart,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:        types.ChunkToolStart,
 		ToolCallID:  "tc-2",
 		ToolName:    "edit_file",
 		DisplayType: "diff",
 		Arguments:   map[string]any{"path": "main.go"},
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:       types.ChunkToolEnd,
 		ToolCallID: "tc-2",
 		ToolName:   "edit_file",
 		Result:     "Applied edit to main.go",
 		DurationMs: 45,
 	}))
 	// 6. Tool call: bash (build check)
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:        sse.ChunkToolStart,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:        types.ChunkToolStart,
 		ToolCallID:  "tc-3",
 		ToolName:    "bash",
 		DisplayType: "bash",
 		Arguments:   map[string]any{"command": "go build ./..."},
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:       types.ChunkToolEnd,
 		ToolCallID: "tc-3",
 		ToolName:   "bash",
 		Result:     "",
 		DurationMs: 1200,
 	}))
 	// 7. Final text
-	m.handleResponse(resp(sse.StreamChunk{Content: "Fixed. The error from `os.ReadFile` is now properly checked.", Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Content: "Fixed. The error from `os.ReadFile` is now properly checked.", Type: types.ChunkText}))
 	// 8. Done
-	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	// === Exchange 2: User tests error path ===
 	userMsg2 := TextMessage(RoleUser, "Now delete the config file and test it")
 
 	// Simulate second assistant response
 	m2 := newTestModel()
-	m2.handleResponse(resp(sse.StreamChunk{
-		Type:        sse.ChunkToolStart,
+	m2.handleResponse(resp(types.StreamChunk{
+		Type:        types.ChunkToolStart,
 		ToolCallID:  "tc-4",
 		ToolName:    "bash",
 		DisplayType: "bash",
 		Arguments:   map[string]any{"command": "rm config.json && go run main.go"},
 	}))
-	m2.handleResponse(resp(sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
+	m2.handleResponse(resp(types.StreamChunk{
+		Type:       types.ChunkToolEnd,
 		ToolCallID: "tc-4",
 		ToolName:   "bash",
 		ToolError:  "error: open config.json: no such file or directory\nexit status 1",
 		DurationMs: 350,
 	}))
-	m2.handleResponse(resp(sse.StreamChunk{Content: "The error handling works correctly — it reports the missing file and exits with a non-zero status.", Type: sse.ChunkText}))
-	m2.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m2.handleResponse(resp(types.StreamChunk{Content: "The error handling works correctly — it reports the missing file and exits with a non-zero status.", Type: types.ChunkText}))
+	m2.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	// Render full conversation
 	fmt.Println("\n" + repeat("═", width))

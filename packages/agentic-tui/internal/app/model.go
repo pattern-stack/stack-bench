@@ -11,9 +11,8 @@ import (
 
 	"github.com/dugshub/agentic-tui/internal/chat"
 	"github.com/dugshub/agentic-tui/internal/command"
-	"github.com/dugshub/agentic-tui/internal/httpclient"
 	"github.com/dugshub/agentic-tui/internal/service"
-	"github.com/dugshub/agentic-tui/internal/sse"
+	"github.com/dugshub/agentic-tui/internal/types"
 	"github.com/dugshub/agentic-tui/internal/ui/components/atoms"
 	"github.com/dugshub/agentic-tui/internal/ui/components/molecules"
 	"github.com/dugshub/agentic-tui/internal/ui/theme"
@@ -29,7 +28,7 @@ const (
 
 // AgentsLoadedMsg is sent when the agent list has been fetched.
 type AgentsLoadedMsg struct {
-	Agents []sse.AgentSummary
+	Agents []types.AgentSummary
 	Err    error
 }
 
@@ -43,11 +42,11 @@ type ConversationCreatedMsg struct {
 type Model struct {
 	width, height int
 	phase         Phase
-	client        httpclient.Client
+	client        types.Client
 	manager       *service.ServiceManager
 
 	// Agent selection
-	agents      []sse.AgentSummary
+	agents      []types.AgentSummary
 	agentCursor int
 	loadErr     error
 
@@ -69,7 +68,7 @@ type Model struct {
 }
 
 // New creates the initial app model.
-func New(client httpclient.Client, mgr *service.ServiceManager) Model {
+func New(client types.Client, mgr *service.ServiceManager) Model {
 	reg := command.DefaultRegistry()
 	return Model{
 		width:    80,

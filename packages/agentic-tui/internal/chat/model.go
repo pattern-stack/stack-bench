@@ -10,9 +10,8 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/dugshub/agentic-tui/internal/httpclient"
-	"github.com/dugshub/agentic-tui/internal/sse"
 	"github.com/dugshub/agentic-tui/internal/command"
+	"github.com/dugshub/agentic-tui/internal/types"
 	"github.com/dugshub/agentic-tui/internal/ui/autocomplete"
 	"github.com/dugshub/agentic-tui/internal/ui/components/atoms"
 	"github.com/dugshub/agentic-tui/internal/ui/theme"
@@ -101,7 +100,7 @@ func TextMessage(role Role, content string) Message {
 
 // ResponseMsg is sent by the backend streaming response tea.Cmd.
 type ResponseMsg struct {
-	Chunk sse.StreamChunk
+	Chunk types.StreamChunk
 }
 
 // Model holds the state for the chat view.
@@ -111,9 +110,9 @@ type Model struct {
 	width, height  int
 	conversationID string
 	agentName      string
-	client         httpclient.Client
+	client         types.Client
 	streaming      bool
-	streamCh       <-chan sse.StreamChunk
+	streamCh       <-chan types.StreamChunk
 	registry       *command.Registry
 	autocomplete    autocomplete.Model
 	viewport        viewport.Model
@@ -160,7 +159,7 @@ func chatScrollKeyMap() viewport.KeyMap {
 }
 
 // New creates a fresh chat model.
-func New(client httpclient.Client, agentName string, registry *command.Registry) Model {
+func New(client types.Client, agentName string, registry *command.Registry) Model {
 	vp := viewport.New()
 	vp.SoftWrap = true
 	vp.MouseWheelEnabled = true
@@ -494,17 +493,17 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 	}
 
 	switch chunk.Type {
-	case sse.ChunkText:
+	case types.ChunkText:
 		if chunk.Content != "" {
 			m.appendToLastPart(PartText, chunk.Content)
 		}
 
-	case sse.ChunkThinking:
+	case types.ChunkThinking:
 		if chunk.Content != "" {
 			m.appendToLastPart(PartThinking, chunk.Content)
 		}
 
-	case sse.ChunkToolStart:
+	case types.ChunkToolStart:
 		m.ensureAssistantMessage()
 		last := &m.messages[len(m.messages)-1]
 		last.Parts = append(last.Parts, MessagePart{
@@ -519,10 +518,10 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 			},
 		})
 
-	case sse.ChunkToolEnd:
+	case types.ChunkToolEnd:
 		m.completeToolCall(chunk)
 
-	case sse.ChunkToolReject:
+	case types.ChunkToolReject:
 		m.ensureAssistantMessage()
 		last := &m.messages[len(m.messages)-1]
 		last.Parts = append(last.Parts, MessagePart{
@@ -531,7 +530,7 @@ func (m *Model) handleResponse(msg ResponseMsg) (Model, tea.Cmd) {
 			Complete: true,
 		})
 
-	case sse.ChunkError:
+	case types.ChunkError:
 		m.ensureAssistantMessage()
 		last := &m.messages[len(m.messages)-1]
 		last.Parts = append(last.Parts, MessagePart{
@@ -583,7 +582,7 @@ func (m *Model) appendToLastPart(partType PartType, content string) {
 }
 
 // completeToolCall finds the matching tool call part and fills in the result.
-func (m *Model) completeToolCall(chunk sse.StreamChunk) {
+func (m *Model) completeToolCall(chunk types.StreamChunk) {
 	if len(m.messages) == 0 {
 		return
 	}
@@ -606,7 +605,7 @@ func (m *Model) completeToolCall(chunk sse.StreamChunk) {
 	}
 }
 
-func (m *Model) fillToolCallResult(p *MessagePart, chunk sse.StreamChunk) {
+func (m *Model) fillToolCallResult(p *MessagePart, chunk types.StreamChunk) {
 	if chunk.ToolError != "" {
 		p.ToolCall.State = ToolCallStateError
 		p.ToolCall.Error = chunk.ToolError
@@ -625,15 +624,15 @@ func (m *Model) skipStreaming() {
 	}
 	for chunk := range m.streamCh {
 		switch chunk.Type {
-		case sse.ChunkText:
+		case types.ChunkText:
 			if chunk.Content != "" {
 				m.appendToLastPart(PartText, chunk.Content)
 			}
-		case sse.ChunkThinking:
+		case types.ChunkThinking:
 			if chunk.Content != "" {
 				m.appendToLastPart(PartThinking, chunk.Content)
 			}
-		case sse.ChunkToolStart:
+		case types.ChunkToolStart:
 			m.ensureAssistantMessage()
 			last := &m.messages[len(m.messages)-1]
 			last.Parts = append(last.Parts, MessagePart{
@@ -645,7 +644,7 @@ func (m *Model) skipStreaming() {
 					StartedAt: time.Now(),
 				},
 			})
-		case sse.ChunkToolEnd:
+		case types.ChunkToolEnd:
 			m.completeToolCall(chunk)
 		default:
 			if chunk.Content != "" {
@@ -683,11 +682,11 @@ func prefixAll(strs []string, prefix string) []string {
 	return result
 }
 
-func readStream(ch <-chan sse.StreamChunk) tea.Cmd {
+func readStream(ch <-chan types.StreamChunk) tea.Cmd {
 	return func() tea.Msg {
 		chunk, ok := <-ch
 		if !ok {
-			return ResponseMsg{Chunk: sse.StreamChunk{Done: true}}
+			return ResponseMsg{Chunk: types.StreamChunk{Done: true}}
 		}
 		return ResponseMsg{Chunk: chunk}
 	}

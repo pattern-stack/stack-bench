@@ -9,25 +9,8 @@ import (
 	"time"
 
 	"github.com/dugshub/agentic-tui/internal/sse"
+	"github.com/dugshub/agentic-tui/internal/types"
 )
-
-// Client defines the interface for communicating with the backend.
-type Client interface {
-	// ListAgents returns all available agents.
-	ListAgents(ctx context.Context) ([]sse.AgentSummary, error)
-
-	// SendMessage sends a user message and returns a channel of streamed response chunks.
-	SendMessage(ctx context.Context, conversationID string, content string) (<-chan sse.StreamChunk, error)
-
-	// CreateConversation starts a new conversation with the given agent.
-	CreateConversation(ctx context.Context, agentID string) (string, error)
-
-	// ListConversations returns past conversations, optionally filtered by agent name.
-	ListConversations(ctx context.Context, agentName string) ([]sse.Conversation, error)
-
-	// GetConversation returns full conversation details with messages.
-	GetConversation(ctx context.Context, id string) (*sse.ConversationDetailResponse, error)
-}
 
 // HTTPClient communicates with the backend over HTTP.
 type HTTPClient struct {
@@ -35,7 +18,7 @@ type HTTPClient struct {
 	HTTPClient *http.Client
 }
 
-var _ Client = (*HTTPClient)(nil)
+var _ types.Client = (*HTTPClient)(nil)
 
 // NewHTTPClient creates a client pointing at the given backend base URL.
 // The default timeout of 30s applies to non-streaming requests.
@@ -49,7 +32,7 @@ func NewHTTPClient(baseURL string) *HTTPClient {
 	}
 }
 
-func (c *HTTPClient) ListAgents(ctx context.Context) ([]sse.AgentSummary, error) {
+func (c *HTTPClient) ListAgents(ctx context.Context) ([]types.AgentSummary, error) {
 	// GET /agents/ returns list[str] (agent names)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agents/", nil)
 	if err != nil {
@@ -72,15 +55,15 @@ func (c *HTTPClient) ListAgents(ctx context.Context) ([]sse.AgentSummary, error)
 	}
 
 	// Fetch details for each agent to get role info
-	agents := make([]sse.AgentSummary, 0, len(names))
+	agents := make([]types.AgentSummary, 0, len(names))
 	for _, name := range names {
 		detail, err := c.getAgentDetail(ctx, name)
 		if err != nil {
 			// Fall back to name-only if detail fetch fails
-			agents = append(agents, sse.AgentSummary{ID: name, Name: name, Role: ""})
+			agents = append(agents, types.AgentSummary{ID: name, Name: name, Role: ""})
 			continue
 		}
-		agents = append(agents, sse.AgentSummary{
+		agents = append(agents, types.AgentSummary{
 			ID:   detail.Name,
 			Name: detail.RoleName,
 			Role: detail.Mission,
@@ -90,7 +73,7 @@ func (c *HTTPClient) ListAgents(ctx context.Context) ([]sse.AgentSummary, error)
 	return agents, nil
 }
 
-func (c *HTTPClient) getAgentDetail(ctx context.Context, name string) (*sse.AgentResponse, error) {
+func (c *HTTPClient) getAgentDetail(ctx context.Context, name string) (*types.AgentResponse, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agents/"+name, nil)
 	if err != nil {
 		return nil, err
@@ -106,7 +89,7 @@ func (c *HTTPClient) getAgentDetail(ctx context.Context, name string) (*sse.Agen
 		return nil, fmt.Errorf("get agent %s: HTTP %d", name, resp.StatusCode)
 	}
 
-	var detail sse.AgentResponse
+	var detail types.AgentResponse
 	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
 		return nil, err
 	}
@@ -114,7 +97,7 @@ func (c *HTTPClient) getAgentDetail(ctx context.Context, name string) (*sse.Agen
 }
 
 func (c *HTTPClient) CreateConversation(ctx context.Context, agentID string) (string, error) {
-	body, err := json.Marshal(sse.CreateConversationRequest{AgentName: agentID})
+	body, err := json.Marshal(types.CreateConversationRequest{AgentName: agentID})
 	if err != nil {
 		return "", err
 	}
@@ -135,15 +118,15 @@ func (c *HTTPClient) CreateConversation(ctx context.Context, agentID string) (st
 		return "", fmt.Errorf("create conversation: HTTP %d", resp.StatusCode)
 	}
 
-	var conv sse.ConversationResponse
+	var conv types.ConversationResponse
 	if err := json.NewDecoder(resp.Body).Decode(&conv); err != nil {
 		return "", err
 	}
 	return conv.ID, nil
 }
 
-func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, content string) (<-chan sse.StreamChunk, error) {
-	body, err := json.Marshal(sse.SendMessageRequest{Message: content})
+func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, content string) (<-chan types.StreamChunk, error) {
+	body, err := json.Marshal(types.SendMessageRequest{Message: content})
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +154,7 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 
 	// Parse SSE stream into StreamChunks
 	sseCh := sse.ParseSSE(resp.Body)
-	ch := make(chan sse.StreamChunk, 16)
+	ch := make(chan types.StreamChunk, 16)
 	go func() {
 		defer close(ch)
 		for evt := range sseCh {
@@ -184,13 +167,13 @@ func (c *HTTPClient) SendMessage(ctx context.Context, conversationID string, con
 			}
 		}
 		// Stream ended without a done event
-		ch <- sse.StreamChunk{Done: true}
+		ch <- types.StreamChunk{Done: true}
 	}()
 
 	return ch, nil
 }
 
-func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([]sse.Conversation, error) {
+func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([]types.Conversation, error) {
 	url := c.BaseURL + "/conversations/"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -215,14 +198,14 @@ func (c *HTTPClient) ListConversations(ctx context.Context, agentName string) ([
 		return nil, fmt.Errorf("list conversations: HTTP %d", resp.StatusCode)
 	}
 
-	var conversations []sse.Conversation
+	var conversations []types.Conversation
 	if err := json.NewDecoder(resp.Body).Decode(&conversations); err != nil {
 		return nil, err
 	}
 	return conversations, nil
 }
 
-func (c *HTTPClient) GetConversation(ctx context.Context, id string) (*sse.ConversationDetailResponse, error) {
+func (c *HTTPClient) GetConversation(ctx context.Context, id string) (*types.ConversationDetailResponse, error) {
 	url := fmt.Sprintf("%s/conversations/%s", c.BaseURL, id)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -239,7 +222,7 @@ func (c *HTTPClient) GetConversation(ctx context.Context, id string) (*sse.Conve
 		return nil, fmt.Errorf("get conversation: HTTP %d", resp.StatusCode)
 	}
 
-	var detail sse.ConversationDetailResponse
+	var detail types.ConversationDetailResponse
 	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
 		return nil, err
 	}
@@ -251,19 +234,19 @@ func (c *HTTPClient) GetConversation(ctx context.Context, id string) (*sse.Conve
 // before the backend is wired in.
 type StubClient struct{}
 
-var _ Client = (*StubClient)(nil)
+var _ types.Client = (*StubClient)(nil)
 
-func (s *StubClient) ListAgents(_ context.Context) ([]sse.AgentSummary, error) {
-	return []sse.AgentSummary{
+func (s *StubClient) ListAgents(_ context.Context) ([]types.AgentSummary, error) {
+	return []types.AgentSummary{
 		{ID: "architect", Name: "Architect", Role: "Plans and designs"},
 		{ID: "builder", Name: "Builder", Role: "Implements code"},
 		{ID: "validator", Name: "Validator", Role: "Tests and verifies"},
 	}, nil
 }
 
-func (s *StubClient) SendMessage(_ context.Context, _ string, _ string) (<-chan sse.StreamChunk, error) {
-	ch := make(chan sse.StreamChunk, 1)
-	ch <- sse.StreamChunk{Content: "(backend not connected)", Done: true}
+func (s *StubClient) SendMessage(_ context.Context, _ string, _ string) (<-chan types.StreamChunk, error) {
+	ch := make(chan types.StreamChunk, 1)
+	ch <- types.StreamChunk{Content: "(backend not connected)", Done: true}
 	close(ch)
 	return ch, nil
 }
@@ -272,10 +255,10 @@ func (s *StubClient) CreateConversation(_ context.Context, _ string) (string, er
 	return "stub-conversation-id", nil
 }
 
-func (s *StubClient) ListConversations(_ context.Context, _ string) ([]sse.Conversation, error) {
+func (s *StubClient) ListConversations(_ context.Context, _ string) ([]types.Conversation, error) {
 	return nil, nil
 }
 
-func (s *StubClient) GetConversation(_ context.Context, _ string) (*sse.ConversationDetailResponse, error) {
-	return &sse.ConversationDetailResponse{}, nil
+func (s *StubClient) GetConversation(_ context.Context, _ string) (*types.ConversationDetailResponse, error) {
+	return &types.ConversationDetailResponse{}, nil
 }

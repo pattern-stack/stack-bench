@@ -3,16 +3,16 @@ package chat
 import (
 	"testing"
 
-	"github.com/dugshub/agentic-tui/internal/sse"
+	"github.com/dugshub/agentic-tui/internal/types"
 )
 
 func TestPartAccumulation_TextChunks(t *testing.T) {
 	m := newTestModel()
 
 	// Stream text in 3 chunks
-	m.handleResponse(resp(sse.StreamChunk{Content: "Hello ", Type: sse.ChunkText}))
-	m.handleResponse(resp(sse.StreamChunk{Content: "world", Type: sse.ChunkText}))
-	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Content: "Hello ", Type: types.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Content: "world", Type: types.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	if len(m.messages) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(m.messages))
@@ -38,9 +38,9 @@ func TestPartAccumulation_TextChunks(t *testing.T) {
 func TestPartAccumulation_ThinkingThenText(t *testing.T) {
 	m := newTestModel()
 
-	m.handleResponse(resp(sse.StreamChunk{Content: "Let me think...", Type: sse.ChunkThinking}))
-	m.handleResponse(resp(sse.StreamChunk{Content: "The answer is 42", Type: sse.ChunkText}))
-	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Content: "Let me think...", Type: types.ChunkThinking}))
+	m.handleResponse(resp(types.StreamChunk{Content: "The answer is 42", Type: types.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	msg := m.messages[0]
 	if len(msg.Parts) != 2 {
@@ -58,23 +58,23 @@ func TestPartAccumulation_ToolCallStartEnd(t *testing.T) {
 	m := newTestModel()
 
 	// Text, then tool call, then more text
-	m.handleResponse(resp(sse.StreamChunk{Content: "Let me read that file.", Type: sse.ChunkText}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:        sse.ChunkToolStart,
+	m.handleResponse(resp(types.StreamChunk{Content: "Let me read that file.", Type: types.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{
+		Type:        types.ChunkToolStart,
 		ToolCallID:  "tc-1",
 		ToolName:    "read_file",
 		DisplayType: "code",
 		Arguments:   map[string]any{"path": "/tmp/foo.go"},
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:       types.ChunkToolEnd,
 		ToolCallID: "tc-1",
 		ToolName:   "read_file",
 		Result:     "package main\nfunc main() {}",
 		DurationMs: 42,
 	}))
-	m.handleResponse(resp(sse.StreamChunk{Content: "Here's the file.", Type: sse.ChunkText}))
-	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Content: "Here's the file.", Type: types.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	msg := m.messages[0]
 	if len(msg.Parts) != 3 {
@@ -125,20 +125,20 @@ func TestPartAccumulation_ToolCallStartEnd(t *testing.T) {
 func TestPartAccumulation_ToolCallError(t *testing.T) {
 	m := newTestModel()
 
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:       sse.ChunkToolStart,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:       types.ChunkToolStart,
 		ToolCallID: "tc-err",
 		ToolName:   "bash",
 		DisplayType: "bash",
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:       sse.ChunkToolEnd,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:       types.ChunkToolEnd,
 		ToolCallID: "tc-err",
 		ToolName:   "bash",
 		ToolError:  "command not found",
 		Result:     "",
 	}))
-	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	tc := m.messages[0].Parts[0].ToolCall
 	if tc.State != ToolCallStateError {
@@ -152,12 +152,12 @@ func TestPartAccumulation_ToolCallError(t *testing.T) {
 func TestPartAccumulation_ToolReject(t *testing.T) {
 	m := newTestModel()
 
-	m.handleResponse(resp(sse.StreamChunk{
-		Type:     sse.ChunkToolReject,
+	m.handleResponse(resp(types.StreamChunk{
+		Type:     types.ChunkToolReject,
 		ToolName: "rm_rf",
 		Content:  "tool not allowed",
 	}))
-	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	msg := m.messages[0]
 	if len(msg.Parts) != 1 {
@@ -175,19 +175,19 @@ func TestPartAccumulation_MultipleToolCalls(t *testing.T) {
 	m := newTestModel()
 
 	// Two tool calls in sequence
-	m.handleResponse(resp(sse.StreamChunk{
-		Type: sse.ChunkToolStart, ToolCallID: "tc-1", ToolName: "read_file", DisplayType: "code",
+	m.handleResponse(resp(types.StreamChunk{
+		Type: types.ChunkToolStart, ToolCallID: "tc-1", ToolName: "read_file", DisplayType: "code",
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type: sse.ChunkToolEnd, ToolCallID: "tc-1", Result: "file contents",
+	m.handleResponse(resp(types.StreamChunk{
+		Type: types.ChunkToolEnd, ToolCallID: "tc-1", Result: "file contents",
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type: sse.ChunkToolStart, ToolCallID: "tc-2", ToolName: "edit_file", DisplayType: "diff",
+	m.handleResponse(resp(types.StreamChunk{
+		Type: types.ChunkToolStart, ToolCallID: "tc-2", ToolName: "edit_file", DisplayType: "diff",
 	}))
-	m.handleResponse(resp(sse.StreamChunk{
-		Type: sse.ChunkToolEnd, ToolCallID: "tc-2", Result: "edit applied",
+	m.handleResponse(resp(types.StreamChunk{
+		Type: types.ChunkToolEnd, ToolCallID: "tc-2", Result: "edit applied",
 	}))
-	m.handleResponse(resp(sse.StreamChunk{Done: true, Type: sse.ChunkText}))
+	m.handleResponse(resp(types.StreamChunk{Done: true, Type: types.ChunkText}))
 
 	msg := m.messages[0]
 	if len(msg.Parts) != 2 {
@@ -249,6 +249,6 @@ func newTestModel() Model {
 	return Model{}
 }
 
-func resp(chunk sse.StreamChunk) ResponseMsg {
+func resp(chunk types.StreamChunk) ResponseMsg {
 	return ResponseMsg{Chunk: chunk}
 }

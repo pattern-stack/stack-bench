@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
+
+	"github.com/dugshub/agentic-tui/internal/types"
 )
 
 // ParseSSE reads an SSE stream and sends parsed events to the returned channel.
 // The channel is closed when the stream ends or an error occurs.
 // Unknown event types are silently forwarded — the consumer decides what to handle.
-func ParseSSE(body io.ReadCloser) <-chan SSEEvent {
-	ch := make(chan SSEEvent, 16)
+func ParseSSE(body io.ReadCloser) <-chan types.SSEEvent {
+	ch := make(chan types.SSEEvent, 16)
 	go func() {
 		defer close(ch)
 		defer body.Close()
@@ -25,7 +27,7 @@ func ParseSSE(body io.ReadCloser) <-chan SSEEvent {
 			if line == "" {
 				// Empty line = event boundary
 				if data.Len() > 0 {
-					ch <- SSEEvent{
+					ch <- types.SSEEvent{
 						Event: strings.TrimSpace(event.String()),
 						Data:  strings.TrimSpace(data.String()),
 					}
@@ -47,77 +49,34 @@ func ParseSSE(body io.ReadCloser) <-chan SSEEvent {
 		}
 
 		if err := scanner.Err(); err != nil {
-			ch <- SSEEvent{Event: "error", Data: `{"error_type":"scan_error","message":"` + err.Error() + `"}`}
+			ch <- types.SSEEvent{Event: "error", Data: `{"error_type":"scan_error","message":"` + err.Error() + `"}`}
 		}
 	}()
 	return ch
 }
 
-// SSEChunkData is the JSON payload for agent.message.chunk events.
-type SSEChunkData struct {
-	Delta string `json:"delta"`
-}
-
-// SSEMessageCompleteData is the JSON payload for agent.message.complete events.
-type SSEMessageCompleteData struct {
-	Content      string `json:"content"`
-	InputTokens  int    `json:"input_tokens"`
-	OutputTokens int    `json:"output_tokens"`
-}
-
-// SSEReasoningData is the JSON payload for reasoning/thinking events.
-type SSEReasoningData struct {
-	Content string `json:"content"`
-}
-
-// SSEToolStartData is the JSON payload for tool start events.
-type SSEToolStartData struct {
-	ToolCallID  string         `json:"tool_call_id"`
-	ToolName    string         `json:"tool_name"`
-	DisplayType string         `json:"display_type"`
-	Arguments   map[string]any `json:"arguments"`
-	Input       string         `json:"input"`
-}
-
-// SSEToolEndData is the JSON payload for tool end events.
-type SSEToolEndData struct {
-	ToolCallID  string `json:"tool_call_id"`
-	ToolName    string `json:"tool_name"`
-	DisplayType string `json:"display_type"`
-	Result      any    `json:"result"`
-	Output      string `json:"output"`
-	Error       string `json:"error"`
-	DurationMs  int    `json:"duration_ms"`
-}
-
-// SSEErrorData is the JSON payload for error / agent.error events.
-type SSEErrorData struct {
-	ErrorType string `json:"error_type"`
-	Message   string `json:"message"`
-}
-
 // ChunkFromSSE converts an SSE event into a StreamChunk.
 // Returns nil for events we don't need to surface to the chat UI.
-func ChunkFromSSE(evt SSEEvent) *StreamChunk {
+func ChunkFromSSE(evt types.SSEEvent) *types.StreamChunk {
 	switch evt.Event {
 	case "agent.message.chunk":
 		var d SSEChunkData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{Content: d.Delta, Type: ChunkText}
+		return &types.StreamChunk{Content: d.Delta, Type: types.ChunkText}
 
 	case "agent.message.complete":
 		// Content was already streamed incrementally via chunks.
 		// Only signal completion — do not repeat the full content.
-		return &StreamChunk{Done: true, Type: ChunkText}
+		return &types.StreamChunk{Done: true, Type: types.ChunkText}
 
 	case "agent.reasoning", "thinking":
 		var d SSEReasoningData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{Content: d.Content, Type: ChunkThinking}
+		return &types.StreamChunk{Content: d.Content, Type: types.ChunkThinking}
 
 	case "agent.tool.start", "tool_start":
 		var d SSEToolStartData
@@ -128,9 +87,9 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if name == "" {
 			name = d.Input
 		}
-		return &StreamChunk{
+		return &types.StreamChunk{
 			Content:     name,
-			Type:        ChunkToolStart,
+			Type:        types.ChunkToolStart,
 			ToolCallID:  d.ToolCallID,
 			ToolName:    d.ToolName,
 			DisplayType: d.DisplayType,
@@ -146,9 +105,9 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if r, ok := d.Result.(string); ok && result == "" {
 			result = r
 		}
-		return &StreamChunk{
+		return &types.StreamChunk{
 			Content:     result,
-			Type:        ChunkToolEnd,
+			Type:        types.ChunkToolEnd,
 			ToolCallID:  d.ToolCallID,
 			ToolName:    d.ToolName,
 			DisplayType: d.DisplayType,
@@ -165,27 +124,27 @@ func ChunkFromSSE(evt SSEEvent) *StreamChunk {
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
 			return nil
 		}
-		return &StreamChunk{
+		return &types.StreamChunk{
 			Content:  d.Reason,
-			Type:     ChunkToolReject,
+			Type:     types.ChunkToolReject,
 			ToolName: d.ToolName,
 		}
 
 	case "agent.iteration.start", "agent.iteration.end":
-		return &StreamChunk{Type: ChunkIteration}
+		return &types.StreamChunk{Type: types.ChunkIteration}
 
 	case "done":
-		return &StreamChunk{Done: true, Type: ChunkText}
+		return &types.StreamChunk{Done: true, Type: types.ChunkText}
 
 	case "agent.error", "error":
 		var d SSEErrorData
 		if err := json.Unmarshal([]byte(evt.Data), &d); err != nil {
-			return &StreamChunk{Content: "Error: unknown", Done: true, Error: io.ErrUnexpectedEOF}
+			return &types.StreamChunk{Content: "Error: unknown", Done: true, Error: io.ErrUnexpectedEOF}
 		}
-		return &StreamChunk{
+		return &types.StreamChunk{
 			Content: "Error: " + d.Message,
 			Done:    true,
-			Error:   &APIError{Type: d.ErrorType, Msg: d.Message},
+			Error:   &types.APIError{Type: d.ErrorType, Msg: d.Message},
 		}
 
 	default:

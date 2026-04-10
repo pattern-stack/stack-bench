@@ -1,139 +1,47 @@
 package sse
 
-import "time"
+// SSE-specific parsing data structures used only by parse.go.
+// Shared types (StreamChunk, AgentSummary, etc.) live in internal/types.
 
-// AgentSummary is a display DTO from the backend API, not the canonical agentic-patterns Agent.
-type AgentSummary struct {
-	ID   string
-	Name string
-	Role string
+// SSEChunkData is the JSON payload for agent.message.chunk events.
+type SSEChunkData struct {
+	Delta string `json:"delta"`
 }
 
-// Message represents a chat message exchanged with the backend.
-type Message struct {
-	Role    string // "user" or "assistant"
-	Content string
+// SSEMessageCompleteData is the JSON payload for agent.message.complete events.
+type SSEMessageCompleteData struct {
+	Content      string `json:"content"`
+	InputTokens  int    `json:"input_tokens"`
+	OutputTokens int    `json:"output_tokens"`
 }
 
-// ChunkType identifies the kind of streaming event.
-type ChunkType string
-
-const (
-	ChunkText       ChunkType = "text"
-	ChunkThinking   ChunkType = "thinking"
-	ChunkToolStart  ChunkType = "tool_start"
-	ChunkToolEnd    ChunkType = "tool_end"
-	ChunkToolReject ChunkType = "tool_rejected"
-	ChunkError      ChunkType = "error"
-	ChunkIteration  ChunkType = "iteration"
-	ChunkMsgStart   ChunkType = "msg_start"
-)
-
-// StreamChunk is a piece of a streaming response from the backend.
-type StreamChunk struct {
-	Content string
-	Type    ChunkType
-	Done    bool
-	Error   error
-	// Tool fields (populated for ChunkToolStart / ChunkToolEnd)
-	ToolCallID  string
-	ToolName    string
-	DisplayType string            // "generic", "diff", "code", "bash"
-	Arguments   map[string]any
-	Result      string
-	ToolError   string
-	DurationMs  int
+// SSEReasoningData is the JSON payload for reasoning/thinking events.
+type SSEReasoningData struct {
+	Content string `json:"content"`
 }
 
-// AgentResponse matches the backend GET /agents/{name} response.
-type AgentResponse struct {
-	Name       string  `json:"name"`
-	RoleName   string  `json:"role_name"`
-	Model      string  `json:"model"`
-	Mission    string  `json:"mission"`
-	Background *string `json:"background,omitempty"`
+// SSEToolStartData is the JSON payload for tool start events.
+type SSEToolStartData struct {
+	ToolCallID  string         `json:"tool_call_id"`
+	ToolName    string         `json:"tool_name"`
+	DisplayType string         `json:"display_type"`
+	Arguments   map[string]any `json:"arguments"`
+	Input       string         `json:"input"`
 }
 
-// ConversationResponse matches the backend POST /conversations/ response.
-type ConversationResponse struct {
-	ID              string    `json:"id"`
-	ReferenceNumber *string   `json:"reference_number,omitempty"`
-	AgentName       string    `json:"agent_name"`
-	Model           string    `json:"model"`
-	State           string    `json:"state"`
-	ErrorMessage    *string   `json:"error_message,omitempty"`
-	ExchangeCount   int       `json:"exchange_count"`
-	TotalInputToks  int       `json:"total_input_tokens"`
-	TotalOutputToks int       `json:"total_output_tokens"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+// SSEToolEndData is the JSON payload for tool end events.
+type SSEToolEndData struct {
+	ToolCallID  string `json:"tool_call_id"`
+	ToolName    string `json:"tool_name"`
+	DisplayType string `json:"display_type"`
+	Result      any    `json:"result"`
+	Output      string `json:"output"`
+	Error       string `json:"error"`
+	DurationMs  int    `json:"duration_ms"`
 }
 
-// CreateConversationRequest is the POST body for /conversations/.
-type CreateConversationRequest struct {
-	AgentName string  `json:"agent_name"`
-	Model     *string `json:"model,omitempty"`
-}
-
-// SendMessageRequest is the POST body for /conversations/{id}/send.
-type SendMessageRequest struct {
-	Message string `json:"message"`
-}
-
-// APIError represents an error returned by the backend API.
-type APIError struct {
-	Type string
-	Msg  string
-}
-
-func (e *APIError) Error() string {
-	return e.Type + ": " + e.Msg
-}
-
-// Conversation is a summary of a past conversation for the picker.
-type Conversation struct {
-	ID                string    `json:"id"`
-	AgentName         string    `json:"agent_name"`
-	State             string    `json:"state"`
-	ExchangeCount     int       `json:"exchange_count"`
-	TotalInputTokens  int       `json:"total_input_tokens"`
-	TotalOutputTokens int       `json:"total_output_tokens"`
-	BranchedFromID     *string   `json:"branched_from_id,omitempty"`
-	BranchedAtSequence *int     `json:"branched_at_sequence,omitempty"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
-}
-
-// ConversationDetailResponse is the full conversation with messages.
-type ConversationDetailResponse struct {
-	ID                 string                 `json:"id"`
-	AgentName          string                 `json:"agent_name"`
-	Model              string                 `json:"model"`
-	State              string                 `json:"state"`
-	ExchangeCount      int                    `json:"exchange_count"`
-	Messages           []ConversationMessage  `json:"messages"`
-	BranchedFromID     *string                `json:"branched_from_id,omitempty"`
-	BranchedAtSequence *int                   `json:"branched_at_sequence,omitempty"`
-	CreatedAt          time.Time              `json:"created_at"`
-	UpdatedAt          time.Time              `json:"updated_at"`
-}
-
-// ConversationMessage is a message within a conversation detail response.
-type ConversationMessage struct {
-	ID       string            `json:"id"`
-	Kind     string            `json:"kind"`
-	Sequence int               `json:"sequence"`
-	Parts    []MessagePart     `json:"parts"`
-}
-
-// MessagePart is a part of a message (text, tool_call, etc).
-type MessagePart struct {
-	Type    string  `json:"type"`
-	Content *string `json:"content,omitempty"`
-}
-
-// SSEEvent is a parsed Server-Sent Event.
-type SSEEvent struct {
-	Event string
-	Data  string
+// SSEErrorData is the JSON payload for error / agent.error events.
+type SSEErrorData struct {
+	ErrorType string `json:"error_type"`
+	Message   string `json:"message"`
 }

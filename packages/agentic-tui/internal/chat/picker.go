@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/dugshub/agentic-tui/internal/sse"
+	"github.com/dugshub/agentic-tui/internal/types"
 	"github.com/dugshub/agentic-tui/internal/ui/components/atoms"
 	"github.com/dugshub/agentic-tui/internal/ui/components/molecules"
 	"github.com/dugshub/agentic-tui/internal/ui/theme"
@@ -30,13 +30,13 @@ type ConversationSelectedMsg struct {
 
 // ConversationsLoadedMsg is sent when the conversation list has been fetched.
 type ConversationsLoadedMsg struct {
-	Conversations []sse.Conversation
+	Conversations []types.Conversation
 	Err           error
 }
 
 // PickerModel is a Bubble Tea model for choosing a conversation.
 type PickerModel struct {
-	conversations []sse.Conversation
+	conversations []types.Conversation
 	cursor        int
 	width, height int
 	agentName     string
