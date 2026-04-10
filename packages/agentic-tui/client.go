@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"github.com/dugshub/agentic-tui/internal/cliclient"
+	"github.com/dugshub/agentic-tui/internal/execclient"
 	"github.com/dugshub/agentic-tui/internal/httpclient"
 	"github.com/dugshub/agentic-tui/internal/stdioclient"
 	"github.com/dugshub/agentic-tui/internal/types"
@@ -26,5 +28,29 @@ func NewStdioClient(cfg StdioConfig) (types.Client, error) {
 		Args:    cfg.Args,
 		Dir:     cfg.Dir,
 		Env:     cfg.Env,
+	})
+}
+
+// NewCLIClient creates a Client that spawns a CLI agent per message and parses
+// its JSONL streaming output (Claude, Gemini, etc.).
+func NewCLIClient(cfg CLIAgentConfig) types.Client {
+	return cliclient.New(cliclient.Config{
+		Command: cfg.Command,
+		Args:    cfg.Args,
+		Format:  cliclient.Format(cfg.Format),
+		Dir:     cfg.Dir,
+		Env:     cfg.Env,
+	})
+}
+
+// NewExecClient creates a Client that spawns any CLI command per message
+// and streams its stdout as plain text.
+func NewExecClient(cfg ExecConfig) types.Client {
+	return execclient.New(execclient.Config{
+		Command:        cfg.Command,
+		Args:           cfg.Args,
+		Dir:            cfg.Dir,
+		Env:            cfg.Env,
+		PromptViaStdin: cfg.PromptViaStdin,
 	})
 }

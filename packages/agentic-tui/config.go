@@ -20,10 +20,13 @@ type Config struct {
 	AssistantLabel string
 
 	// Backend specifies how to connect to the backend.
-	// Exactly one of BackendURL, BackendService, or BackendStdio must be set.
-	BackendURL     string       // HTTP/SSE: Direct URL
-	BackendService ServiceNode  // HTTP/SSE: Auto-managed local service
-	BackendStdio   *StdioConfig // JSON-RPC: Spawn subprocess
+	// Exactly one of BackendURL, BackendService, BackendStdio, BackendCLI,
+	// or BackendExec must be set.
+	BackendURL     string         // HTTP/SSE: Direct URL
+	BackendService ServiceNode    // HTTP/SSE: Auto-managed local service
+	BackendStdio   *StdioConfig   // JSON-RPC: Spawn subprocess
+	BackendCLI     *CLIAgentConfig // CLI agent with JSONL streaming (Claude, Gemini, etc.)
+	BackendExec    *ExecConfig    // Raw text CLI (any command)
 
 	// EnvOverride is the environment variable name that overrides BackendURL.
 	EnvOverride string
@@ -61,4 +64,30 @@ type CommandParseResult struct {
 	Flags   map[string]bool
 	Options map[string]string
 	Raw     string
+}
+
+// CLIFormat identifies the JSONL output format of a CLI agent.
+type CLIFormat string
+
+const (
+	FormatClaude CLIFormat = "claude"
+	FormatGemini CLIFormat = "gemini"
+)
+
+// CLIAgentConfig configures a CLI agent that emits JSONL streaming output.
+type CLIAgentConfig struct {
+	Command string    // e.g. "claude", "gemini"
+	Args    []string  // base args BEFORE the prompt
+	Format  CLIFormat // which JSONL parser to use
+	Dir     string    // working directory (optional)
+	Env     []string  // extra env vars (optional)
+}
+
+// ExecConfig configures a raw text CLI command.
+type ExecConfig struct {
+	Command        string   // e.g. "aider"
+	Args           []string // args before the prompt
+	Dir            string   // working directory
+	Env            []string // extra env vars
+	PromptViaStdin bool     // if true, pipe prompt to stdin instead of appending as last arg
 }

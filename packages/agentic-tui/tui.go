@@ -12,7 +12,9 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/dugshub/agentic-tui/internal/app"
+	"github.com/dugshub/agentic-tui/internal/cliclient"
 	"github.com/dugshub/agentic-tui/internal/command"
+	"github.com/dugshub/agentic-tui/internal/execclient"
 	"github.com/dugshub/agentic-tui/internal/httpclient"
 	"github.com/dugshub/agentic-tui/internal/service"
 	"github.com/dugshub/agentic-tui/internal/types"
@@ -74,12 +76,18 @@ func (a *App) resolveBackend() error {
 	if cfg.BackendStdio != nil {
 		backends++
 	}
+	if cfg.BackendCLI != nil {
+		backends++
+	}
+	if cfg.BackendExec != nil {
+		backends++
+	}
 
 	if backends == 0 && cfg.EnvOverride == "" {
-		return fmt.Errorf("agentic-tui: one of BackendURL, BackendService, or BackendStdio must be set")
+		return fmt.Errorf("agentic-tui: one of BackendURL, BackendService, BackendStdio, BackendCLI, or BackendExec must be set")
 	}
 	if backends > 1 {
-		return fmt.Errorf("agentic-tui: only one of BackendURL, BackendService, or BackendStdio may be set")
+		return fmt.Errorf("agentic-tui: only one of BackendURL, BackendService, BackendStdio, BackendCLI, or BackendExec may be set")
 	}
 
 	switch {
@@ -94,6 +102,22 @@ func (a *App) resolveBackend() error {
 			return fmt.Errorf("agentic-tui: stdio client: %w", err)
 		}
 		a.client = c
+	case cfg.BackendCLI != nil:
+		a.client = cliclient.New(cliclient.Config{
+			Command: cfg.BackendCLI.Command,
+			Args:    cfg.BackendCLI.Args,
+			Format:  cliclient.Format(cfg.BackendCLI.Format),
+			Dir:     cfg.BackendCLI.Dir,
+			Env:     cfg.BackendCLI.Env,
+		})
+	case cfg.BackendExec != nil:
+		a.client = execclient.New(execclient.Config{
+			Command:        cfg.BackendExec.Command,
+			Args:           cfg.BackendExec.Args,
+			Dir:            cfg.BackendExec.Dir,
+			Env:            cfg.BackendExec.Env,
+			PromptViaStdin: cfg.BackendExec.PromptViaStdin,
+		})
 	case cfg.EnvOverride != "":
 		// Env var was set but empty — use stub
 		a.client = &httpclient.StubClient{}
