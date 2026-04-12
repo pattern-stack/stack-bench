@@ -2,9 +2,19 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+*.egg
+*.so
 dist/
 .venv/
 .env
+.env.local
+.env*.local
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage/
 
 # Go
 bin/
@@ -14,6 +24,7 @@ node_modules/
 .next/
 .vite/
 build/
+
 /package.json
 /package-lock.json
 
